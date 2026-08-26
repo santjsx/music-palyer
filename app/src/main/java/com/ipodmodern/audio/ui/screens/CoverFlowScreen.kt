@@ -167,8 +167,9 @@ fun CoverFlowScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             if (!album.artworkUri.isNullOrEmpty()) {
+                                val model = if (album.artworkUri.startsWith("/")) java.io.File(album.artworkUri) else album.artworkUri
                                 AsyncImage(
-                                    model = album.artworkUri,
+                                    model = model,
                                     contentDescription = album.title,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
@@ -204,8 +205,9 @@ fun CoverFlowScreen(
                                 .clip(RoundedCornerShape(10.dp))
                         ) {
                             if (!album.artworkUri.isNullOrEmpty()) {
+                                val model = if (album.artworkUri.startsWith("/")) java.io.File(album.artworkUri) else album.artworkUri
                                 AsyncImage(
-                                    model = album.artworkUri,
+                                    model = model,
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()

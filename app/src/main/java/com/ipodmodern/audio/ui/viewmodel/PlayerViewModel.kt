@@ -2,10 +2,10 @@ package com.ipodmodern.audio.ui.viewmodel
 
 import android.app.Application
 import android.media.MediaMetadataRetriever
-import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ipodmodern.audio.core.audio.NativeAudioBridge
+import com.ipodmodern.audio.core.audio.UnifiedAudioEngine
 import com.ipodmodern.audio.core.database.MusicDatabase
 import com.ipodmodern.audio.core.database.entity.AlbumEntity
 import com.ipodmodern.audio.core.database.entity.ArtistEntity
@@ -49,6 +49,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val db = MusicDatabase.getInstance(application)
     val hapticEngine = HapticEngine(application)
     private val lyricsParser = LyricsParser()
+    val audioEngine = UnifiedAudioEngine(application)
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
@@ -67,15 +68,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private fun scanAndLoadLocalMusic() {
         viewModelScope.launch(Dispatchers.IO) {
             val scannedTracks = mutableListOf<Track>()
+            val artDir = File(getApplication<Application>().cacheDir, "artworks").apply { mkdirs() }
 
-            // 1. Scan filesystem directly in /sdcard/Music and standard directories
             val musicDirs = listOf(
                 File("/sdcard/Music"),
                 File("/storage/emulated/0/Music"),
                 File(getApplication<Application>().getExternalFilesDir(null), "Music")
             )
 
-            val mmr = MediaMetadataRetriever()
             for (dir in musicDirs) {
                 if (dir.exists() && dir.isDirectory) {
                     val files = dir.listFiles { f ->
@@ -87,6 +87,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     } ?: emptyArray()
 
                     for (file in files) {
+                        val mmr = MediaMetadataRetriever()
+                        var artworkPath: String? = null
                         try {
                             mmr.setDataSource(file.absolutePath)
                             val title = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
@@ -97,54 +99,71 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                             val durationStr = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                             val duration = durationStr?.toLongOrNull() ?: 240_000L
 
+                            // Extract embedded artwork bytes
+                            val picture = mmr.embeddedPicture
+                            if (picture != null && picture.isNotEmpty()) {
+                                val artFile = File(artDir, "art_${file.nameWithoutExtension.hashCode()}.jpg")
+                                artFile.writeBytes(picture)
+                                artworkPath = artFile.absolutePath
+                            }
+
                             val ext = file.extension.uppercase()
                             val isLossless = ext == "FLAC" || ext == "WAV" || ext == "DSF"
                             val badge = if (isLossless) "LOSSLESS 24-BIT / 96.0kHz" else "MP3 320 KBPS"
 
-                            scannedTracks.add(
-                                Track(
-                                    title = title,
-                                    artist = artist,
-                                    album = album,
-                                    durationMs = duration,
-                                    filePath = file.absolutePath,
-                                    trackNumber = 1,
-                                    year = 2026,
-                                    formatName = ext,
-                                    sampleRate = if (isLossless) 96000 else 44100,
-                                    bitDepth = if (isLossless) 24 else 16,
-                                    badgeText = badge
+                            // Avoid duplicate paths
+                            if (scannedTracks.none { it.filePath == file.absolutePath }) {
+                                scannedTracks.add(
+                                    Track(
+                                        title = title,
+                                        artist = artist,
+                                        album = album,
+                                        durationMs = duration,
+                                        filePath = file.absolutePath,
+                                        artworkUri = artworkPath,
+                                        trackNumber = 1,
+                                        year = 2026,
+                                        formatName = ext,
+                                        sampleRate = if (isLossless) 96000 else 44100,
+                                        bitDepth = if (isLossless) 24 else 16,
+                                        badgeText = badge
+                                    )
                                 )
-                            )
+                            }
                         } catch (e: Exception) {
-                            // Fallback based on filename
                             val name = file.nameWithoutExtension.replace("-", " ").replace("_", " ")
                                 .split(" ").joinToString(" ") { it.replaceFirstChar(Char::titlecase) }
-                            scannedTracks.add(
-                                Track(
-                                    title = name,
-                                    artist = "Local Artist",
-                                    album = "Downloads",
-                                    durationMs = 210_000L,
-                                    filePath = file.absolutePath,
-                                    trackNumber = 1,
-                                    year = 2026,
-                                    formatName = file.extension.uppercase(),
-                                    sampleRate = 44100,
-                                    bitDepth = 16,
-                                    badgeText = "AUDIO 320 KBPS"
+                            if (scannedTracks.none { it.filePath == file.absolutePath }) {
+                                scannedTracks.add(
+                                    Track(
+                                        title = name,
+                                        artist = "Local Artist",
+                                        album = "Downloads",
+                                        durationMs = 210_000L,
+                                        filePath = file.absolutePath,
+                                        artworkUri = null,
+                                        trackNumber = 1,
+                                        year = 2026,
+                                        formatName = file.extension.uppercase(),
+                                        sampleRate = 44100,
+                                        bitDepth = 16,
+                                        badgeText = "AUDIO 320 KBPS"
+                                    )
                                 )
-                            )
+                            }
+                        } finally {
+                            try { mmr.release() } catch (_: Exception) {}
                         }
                     }
                 }
             }
 
-            try {
-                mmr.release()
-            } catch (_: Exception) {}
-
             if (scannedTracks.isNotEmpty()) {
+                // Clear old demo tracks to remove duplicates
+                db.trackDao().clearAll()
+                db.albumDao().clearAll()
+                db.artistDao().clearAll()
+
                 db.trackDao().insertTracks(scannedTracks.map { TrackEntity.fromDomain(it) })
 
                 // Generate Album & Artist entries
@@ -155,7 +174,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                         artist = tracks.first().artist,
                         trackCount = tracks.size,
                         year = tracks.first().year,
-                        artworkUri = null,
+                        artworkUri = tracks.firstOrNull { it.artworkUri != null }?.artworkUri,
                         isHiRes = tracks.any { it.sampleRate > 48000 }
                     )
                 }
@@ -174,88 +193,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 withContext(Dispatchers.Main) {
                     setQueue(scannedTracks, 0, autoPlay = false)
                 }
-            } else {
-                loadSampleTracksIfEmpty()
-            }
-        }
-    }
-
-    private fun loadSampleTracksIfEmpty() {
-        viewModelScope.launch {
-            db.trackDao().getAllTracks().collect { tracks ->
-                if (tracks.isEmpty()) {
-                    val sampleTracks = listOf(
-                        Track(
-                            title = "Time",
-                            artist = "Pink Floyd",
-                            album = "The Dark Side of the Moon",
-                            durationMs = 425_000L,
-                            filePath = "sample://pink_floyd_time.flac",
-                            trackNumber = 4,
-                            year = 1973,
-                            formatName = "FLAC",
-                            sampleRate = 96000,
-                            bitDepth = 24,
-                            badgeText = "HI-RES 24-BIT / 96.0kHz"
-                        ),
-                        Track(
-                            title = "Hotel California (Live Master)",
-                            artist = "Eagles",
-                            album = "Hell Freezes Over",
-                            durationMs = 432_000L,
-                            filePath = "sample://eagles_hotel_california.flac",
-                            trackNumber = 6,
-                            year = 1994,
-                            formatName = "FLAC",
-                            sampleRate = 192000,
-                            bitDepth = 24,
-                            badgeText = "HI-RES 24-BIT / 192.0kHz"
-                        ),
-                        Track(
-                            title = "So What",
-                            artist = "Miles Davis",
-                            album = "Kind of Blue",
-                            durationMs = 562_000L,
-                            filePath = "sample://miles_davis_so_what.dsf",
-                            trackNumber = 1,
-                            year = 1959,
-                            formatName = "DSD",
-                            sampleRate = 2822400,
-                            bitDepth = 1,
-                            badgeText = "DSD256 HI-RES"
-                        ),
-                        Track(
-                            title = "Bohemian Rhapsody",
-                            artist = "Queen",
-                            album = "A Night at the Opera",
-                            durationMs = 354_000L,
-                            filePath = "sample://queen_bohemian_rhapsody.flac",
-                            trackNumber = 11,
-                            year = 1975,
-                            formatName = "FLAC",
-                            sampleRate = 44100,
-                            bitDepth = 16,
-                            badgeText = "LOSSLESS 16-BIT / 44.1kHz"
-                        )
-                    )
-                    db.trackDao().insertTracks(sampleTracks.map { TrackEntity.fromDomain(it) })
-                    db.albumDao().insertAlbums(listOf(
-                        AlbumEntity(title = "The Dark Side of the Moon", artist = "Pink Floyd", trackCount = 1, year = 1973, artworkUri = null, isHiRes = true),
-                        AlbumEntity(title = "Hell Freezes Over", artist = "Eagles", trackCount = 1, year = 1994, artworkUri = null, isHiRes = true),
-                        AlbumEntity(title = "Kind of Blue", artist = "Miles Davis", trackCount = 1, year = 1959, artworkUri = null, isHiRes = true),
-                        AlbumEntity(title = "A Night at the Opera", artist = "Queen", trackCount = 1, year = 1975, artworkUri = null, isHiRes = false)
-                    ))
-                    db.artistDao().insertArtists(listOf(
-                        ArtistEntity(name = "Pink Floyd", albumCount = 1, trackCount = 1),
-                        ArtistEntity(name = "Eagles", albumCount = 1, trackCount = 1),
-                        ArtistEntity(name = "Miles Davis", albumCount = 1, trackCount = 1),
-                        ArtistEntity(name = "Queen", albumCount = 1, trackCount = 1)
-                    ))
-                } else {
-                    if (_uiState.value.currentTrack == null) {
-                        setQueue(tracks.map { it.toDomain() }, 0, autoPlay = false)
-                    }
-                }
             }
         }
     }
@@ -265,8 +202,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         tickerJob = viewModelScope.launch {
             while (isActive) {
                 if (_uiState.value.isPlaying) {
-                    val pos = NativeAudioBridge.getCurrentPositionMs()
-                    val dur = NativeAudioBridge.getDurationMs().coerceAtLeast(_uiState.value.currentTrack?.durationMs ?: 0L)
+                    val pos = audioEngine.getCurrentPosition()
+                    val dur = audioEngine.getDuration().coerceAtLeast(_uiState.value.currentTrack?.durationMs ?: 0L)
                     val precut = NativeAudioBridge.getDynamicPrecutGainDb()
 
                     val lyrics = _uiState.value.lyrics
@@ -281,7 +218,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                         currentLyricText = lyricText
                     )
                 }
-                delay(100)
+                delay(150)
             }
         }
     }
@@ -295,11 +232,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun loadAndPlayCurrent(startPlaying: Boolean) {
         val track = playbackQueue.getOrNull(queueIndex) ?: return
+        audioEngine.loadAndPlay(track.filePath, autoPlay = startPlaying)
         NativeAudioBridge.loadTrack(track.filePath)
-
-        if (startPlaying) {
-            NativeAudioBridge.play()
-        }
 
         val sampleLrc = """
             [00:00.00]${track.title} • ${track.artist}
@@ -326,9 +260,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun togglePlayPause() {
         hapticEngine.performClick()
         if (_uiState.value.isPlaying) {
+            audioEngine.pause()
             NativeAudioBridge.pause()
             _uiState.value = _uiState.value.copy(isPlaying = false)
         } else {
+            audioEngine.play()
             NativeAudioBridge.play()
             _uiState.value = _uiState.value.copy(isPlaying = true)
         }
@@ -345,7 +281,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun prevTrack() {
         hapticEngine.performClick()
         if (_uiState.value.positionMs > 3000L) {
-            NativeAudioBridge.seekTo(0)
+            audioEngine.seekTo(0)
             _uiState.value = _uiState.value.copy(positionMs = 0L)
         } else if (playbackQueue.isNotEmpty()) {
             queueIndex = if (queueIndex - 1 < 0) playbackQueue.size - 1 else queueIndex - 1
@@ -353,8 +289,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun seekTo(positionMs: Long) {
+        audioEngine.seekTo(positionMs)
+        _uiState.value = _uiState.value.copy(positionMs = positionMs)
+    }
+
     fun adjustVolume(deltaTicks: Int) {
         val newVol = (_uiState.value.volume + deltaTicks * 0.04f).coerceIn(0.0f, 1.0f)
+        audioEngine.setVolume(newVol)
         NativeAudioBridge.setVolume(newVol)
         _uiState.value = _uiState.value.copy(volume = newVol, showVolumeOverlay = true)
 
@@ -365,10 +307,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun setVolumeDirect(vol: Float) {
+        val newVol = vol.coerceIn(0.0f, 1.0f)
+        audioEngine.setVolume(newVol)
+        NativeAudioBridge.setVolume(newVol)
+        _uiState.value = _uiState.value.copy(volume = newVol)
+    }
+
     fun seekByTicks(deltaTicks: Int) {
         val deltaMs = deltaTicks * 3000L
         val newPos = (_uiState.value.positionMs + deltaMs).coerceIn(0L, _uiState.value.durationMs)
-        NativeAudioBridge.seekTo(newPos)
+        audioEngine.seekTo(newPos)
         _uiState.value = _uiState.value.copy(positionMs = newPos)
     }
 
@@ -384,6 +333,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val newGain = (currentGain + deltaTicks * 0.5f).coerceIn(-12.0f, 12.0f)
         currentGains[bandIdx] = newGain
 
+        audioEngine.setEqBandGain(bandIdx, newGain)
         NativeAudioBridge.setEqBandGain(bandIdx, newGain)
         val precut = NativeAudioBridge.getDynamicPrecutGainDb()
 
@@ -395,6 +345,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun applyEqPreset(preset: EqualizerPreset) {
+        for (i in 0 until 10) {
+            audioEngine.setEqBandGain(i, preset.bandGains[i])
+        }
         NativeAudioBridge.setEqAllBands(preset.bandGains)
         val precut = NativeAudioBridge.getDynamicPrecutGainDb()
         _uiState.value = _uiState.value.copy(
@@ -402,5 +355,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             dynamicPrecutDb = precut,
             currentPresetName = preset.name
         )
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        audioEngine.release()
     }
 }

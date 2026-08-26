@@ -138,8 +138,9 @@ fun NowPlayingScreen(
             contentAlignment = Alignment.Center
         ) {
             if (!track.artworkUri.isNullOrEmpty()) {
+                val model = if (track.artworkUri.startsWith("/")) java.io.File(track.artworkUri) else track.artworkUri
                 AsyncImage(
-                    model = track.artworkUri,
+                    model = model,
                     contentDescription = "Album Art",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
