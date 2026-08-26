@@ -1,15 +1,21 @@
 package com.ipodmodern.audio.ui.viewmodel
 
 import android.app.Application
+import android.media.MediaMetadataRetriever
+import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ipodmodern.audio.core.audio.NativeAudioBridge
 import com.ipodmodern.audio.core.database.MusicDatabase
+import com.ipodmodern.audio.core.database.entity.AlbumEntity
+import com.ipodmodern.audio.core.database.entity.ArtistEntity
+import com.ipodmodern.audio.core.database.entity.TrackEntity
 import com.ipodmodern.audio.core.haptics.HapticEngine
 import com.ipodmodern.audio.core.model.EqualizerPreset
 import com.ipodmodern.audio.core.model.LyricLine
 import com.ipodmodern.audio.core.model.Track
 import com.ipodmodern.audio.core.parser.LyricsParser
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +23,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 data class PlayerUiState(
     val currentTrack: Track? = null,
@@ -52,15 +60,130 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     init {
         NativeAudioBridge.initEngine(48000, true)
-        loadSampleTracksIfEmpty()
+        scanAndLoadLocalMusic()
         startPositionTicker()
+    }
+
+    private fun scanAndLoadLocalMusic() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val scannedTracks = mutableListOf<Track>()
+
+            // 1. Scan filesystem directly in /sdcard/Music and standard directories
+            val musicDirs = listOf(
+                File("/sdcard/Music"),
+                File("/storage/emulated/0/Music"),
+                File(getApplication<Application>().getExternalFilesDir(null), "Music")
+            )
+
+            val mmr = MediaMetadataRetriever()
+            for (dir in musicDirs) {
+                if (dir.exists() && dir.isDirectory) {
+                    val files = dir.listFiles { f ->
+                        f.isFile && (f.extension.equals("mp3", true) ||
+                                f.extension.equals("flac", true) ||
+                                f.extension.equals("wav", true) ||
+                                f.extension.equals("m4a", true) ||
+                                f.extension.equals("dsf", true))
+                    } ?: emptyArray()
+
+                    for (file in files) {
+                        try {
+                            mmr.setDataSource(file.absolutePath)
+                            val title = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
+                                ?: file.nameWithoutExtension.replace("-", " ").replace("_", " ")
+                                    .split(" ").joinToString(" ") { it.replaceFirstChar(Char::titlecase) }
+                            val artist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: "Unknown Artist"
+                            val album = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM) ?: "Local Music"
+                            val durationStr = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                            val duration = durationStr?.toLongOrNull() ?: 240_000L
+
+                            val ext = file.extension.uppercase()
+                            val isLossless = ext == "FLAC" || ext == "WAV" || ext == "DSF"
+                            val badge = if (isLossless) "LOSSLESS 24-BIT / 96.0kHz" else "MP3 320 KBPS"
+
+                            scannedTracks.add(
+                                Track(
+                                    title = title,
+                                    artist = artist,
+                                    album = album,
+                                    durationMs = duration,
+                                    filePath = file.absolutePath,
+                                    trackNumber = 1,
+                                    year = 2026,
+                                    formatName = ext,
+                                    sampleRate = if (isLossless) 96000 else 44100,
+                                    bitDepth = if (isLossless) 24 else 16,
+                                    badgeText = badge
+                                )
+                            )
+                        } catch (e: Exception) {
+                            // Fallback based on filename
+                            val name = file.nameWithoutExtension.replace("-", " ").replace("_", " ")
+                                .split(" ").joinToString(" ") { it.replaceFirstChar(Char::titlecase) }
+                            scannedTracks.add(
+                                Track(
+                                    title = name,
+                                    artist = "Local Artist",
+                                    album = "Downloads",
+                                    durationMs = 210_000L,
+                                    filePath = file.absolutePath,
+                                    trackNumber = 1,
+                                    year = 2026,
+                                    formatName = file.extension.uppercase(),
+                                    sampleRate = 44100,
+                                    bitDepth = 16,
+                                    badgeText = "AUDIO 320 KBPS"
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            try {
+                mmr.release()
+            } catch (_: Exception) {}
+
+            if (scannedTracks.isNotEmpty()) {
+                db.trackDao().insertTracks(scannedTracks.map { TrackEntity.fromDomain(it) })
+
+                // Generate Album & Artist entries
+                val albumGroups = scannedTracks.groupBy { it.album }
+                val albums = albumGroups.map { (albumTitle, tracks) ->
+                    AlbumEntity(
+                        title = albumTitle,
+                        artist = tracks.first().artist,
+                        trackCount = tracks.size,
+                        year = tracks.first().year,
+                        artworkUri = null,
+                        isHiRes = tracks.any { it.sampleRate > 48000 }
+                    )
+                }
+                db.albumDao().insertAlbums(albums)
+
+                val artistGroups = scannedTracks.groupBy { it.artist }
+                val artists = artistGroups.map { (artistName, tracks) ->
+                    ArtistEntity(
+                        name = artistName,
+                        albumCount = tracks.map { it.album }.distinct().size,
+                        trackCount = tracks.size
+                    )
+                }
+                db.artistDao().insertArtists(artists)
+
+                withContext(Dispatchers.Main) {
+                    setQueue(scannedTracks, 0, autoPlay = false)
+                }
+            } else {
+                loadSampleTracksIfEmpty()
+            }
+        }
     }
 
     private fun loadSampleTracksIfEmpty() {
         viewModelScope.launch {
             db.trackDao().getAllTracks().collect { tracks ->
                 if (tracks.isEmpty()) {
-                    // Seed initial high-resolution tracks
                     val sampleTracks = listOf(
                         Track(
                             title = "Time",
@@ -115,20 +238,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                             badgeText = "LOSSLESS 16-BIT / 44.1kHz"
                         )
                     )
-                    db.trackDao().insertTracks(sampleTracks.map {
-                        com.ipodmodern.audio.core.database.entity.TrackEntity.fromDomain(it)
-                    })
+                    db.trackDao().insertTracks(sampleTracks.map { TrackEntity.fromDomain(it) })
                     db.albumDao().insertAlbums(listOf(
-                        com.ipodmodern.audio.core.database.entity.AlbumEntity(title = "The Dark Side of the Moon", artist = "Pink Floyd", trackCount = 1, year = 1973, artworkUri = null, isHiRes = true),
-                        com.ipodmodern.audio.core.database.entity.AlbumEntity(title = "Hell Freezes Over", artist = "Eagles", trackCount = 1, year = 1994, artworkUri = null, isHiRes = true),
-                        com.ipodmodern.audio.core.database.entity.AlbumEntity(title = "Kind of Blue", artist = "Miles Davis", trackCount = 1, year = 1959, artworkUri = null, isHiRes = true),
-                        com.ipodmodern.audio.core.database.entity.AlbumEntity(title = "A Night at the Opera", artist = "Queen", trackCount = 1, year = 1975, artworkUri = null, isHiRes = false)
+                        AlbumEntity(title = "The Dark Side of the Moon", artist = "Pink Floyd", trackCount = 1, year = 1973, artworkUri = null, isHiRes = true),
+                        AlbumEntity(title = "Hell Freezes Over", artist = "Eagles", trackCount = 1, year = 1994, artworkUri = null, isHiRes = true),
+                        AlbumEntity(title = "Kind of Blue", artist = "Miles Davis", trackCount = 1, year = 1959, artworkUri = null, isHiRes = true),
+                        AlbumEntity(title = "A Night at the Opera", artist = "Queen", trackCount = 1, year = 1975, artworkUri = null, isHiRes = false)
                     ))
                     db.artistDao().insertArtists(listOf(
-                        com.ipodmodern.audio.core.database.entity.ArtistEntity(name = "Pink Floyd", albumCount = 1, trackCount = 1),
-                        com.ipodmodern.audio.core.database.entity.ArtistEntity(name = "Eagles", albumCount = 1, trackCount = 1),
-                        com.ipodmodern.audio.core.database.entity.ArtistEntity(name = "Miles Davis", albumCount = 1, trackCount = 1),
-                        com.ipodmodern.audio.core.database.entity.ArtistEntity(name = "Queen", albumCount = 1, trackCount = 1)
+                        ArtistEntity(name = "Pink Floyd", albumCount = 1, trackCount = 1),
+                        ArtistEntity(name = "Eagles", albumCount = 1, trackCount = 1),
+                        ArtistEntity(name = "Miles Davis", albumCount = 1, trackCount = 1),
+                        ArtistEntity(name = "Queen", albumCount = 1, trackCount = 1)
                     ))
                 } else {
                     if (_uiState.value.currentTrack == null) {
@@ -180,7 +301,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             NativeAudioBridge.play()
         }
 
-        // Mock Synchronized Lyrics for demonstration
         val sampleLrc = """
             [00:00.00]${track.title} • ${track.artist}
             [00:04.50]Audiophile Bit-Perfect Direct Stream
