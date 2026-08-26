@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -43,8 +42,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ipodmodern.audio.core.model.AudioQuality
 import com.ipodmodern.audio.core.model.Track
-import com.ipodmodern.audio.ui.theme.LocalIpodColors
-import com.ipodmodern.audio.ui.theme.iPodSelectionBlue
+import java.io.File
 
 @Composable
 fun MiniPlayerBar(
@@ -58,7 +56,6 @@ fun MiniPlayerBar(
     modifier: Modifier = Modifier
 ) {
     if (track == null) return
-    val colors = LocalIpodColors.current
 
     val progress = if (durationMs > 0) {
         (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
@@ -68,51 +65,59 @@ fun MiniPlayerBar(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .shadow(16.dp, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+            .shadow(24.dp, RoundedCornerShape(18.dp), spotColor = Color(0xFF0A84FF))
+            .clip(RoundedCornerShape(18.dp))
             .background(
                 Brush.verticalGradient(
-                    if (colors.isDarkScreen) {
-                        listOf(Color(0xFF26292E), Color(0xFF191B1F))
-                    } else {
-                        listOf(Color(0xFFF6F6F8), Color(0xFFE5E5EA))
-                    }
+                    listOf(
+                        Color(0xFF181B24).copy(alpha = 0.96f),
+                        Color(0xFF0F1117).copy(alpha = 0.98f)
+                    )
                 )
             )
-            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+            .border(1.2.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(18.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onBarClick() }
     ) {
-        // Slim Progress Bar at Top of Mini-Player
-        LinearProgressIndicator(
-            progress = { progress },
+        // Glowing Slim Progress Bar at Top of Mini-Player
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(2.5.dp),
-            color = iPodSelectionBlue,
-            trackColor = Color.Transparent
-        )
+                .height(3.dp)
+                .background(Color(0xFF222632))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction = progress)
+                    .height(3.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color(0xFF0A84FF), Color(0xFF00C7BE))
+                        )
+                    )
+            )
+        }
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             // Album Art Thumbnail
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF1E2024))
-                    .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(8.dp)),
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF15181F))
+                    .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 if (!track.artworkUri.isNullOrEmpty()) {
-                    val model = if (track.artworkUri.startsWith("/")) java.io.File(track.artworkUri) else track.artworkUri
+                    val model = if (track.artworkUri.startsWith("/")) File(track.artworkUri) else track.artworkUri
                     AsyncImage(
                         model = model,
                         contentDescription = null,
@@ -124,12 +129,12 @@ fun MiniPlayerBar(
                         imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
                         tint = Color.Gray,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             // Metadata Column
             Column(
@@ -140,7 +145,7 @@ fun MiniPlayerBar(
                     text = track.title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = colors.screenText,
+                    color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -149,7 +154,7 @@ fun MiniPlayerBar(
                     Text(
                         text = track.artist,
                         fontSize = 12.sp,
-                        color = Color.Gray,
+                        color = Color(0xFFA1A5B4),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -166,17 +171,23 @@ fun MiniPlayerBar(
             }
 
             // Transport Actions (Play/Pause, Next)
-            IconButton(
-                onClick = onPlayPauseClick,
-                modifier = Modifier.size(38.dp)
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF0A84FF))
+                    .clickable { onPlayPauseClick() },
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = colors.screenText,
-                    modifier = Modifier.size(24.dp)
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.width(8.dp))
 
             IconButton(
                 onClick = onNextClick,
@@ -185,8 +196,8 @@ fun MiniPlayerBar(
                 Icon(
                     imageVector = Icons.Default.FastForward,
                     contentDescription = "Next",
-                    tint = Color.Gray,
-                    modifier = Modifier.size(22.dp)
+                    tint = Color(0xFFC7CAD6),
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }

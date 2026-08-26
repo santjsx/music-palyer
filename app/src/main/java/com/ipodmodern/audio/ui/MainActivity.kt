@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -17,12 +16,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.ipodmodern.audio.ui.components.MiniPlayerBar
-import com.ipodmodern.audio.ui.screens.CoverFlowScreen
+import com.ipodmodern.audio.ui.screens.CoverFlowPlayerScreen
 import com.ipodmodern.audio.ui.screens.DisplayScreen
 import com.ipodmodern.audio.ui.screens.EqualizerScreen
 import com.ipodmodern.audio.ui.screens.LyricsScreen
 import com.ipodmodern.audio.ui.screens.MenuListScreen
-import com.ipodmodern.audio.ui.screens.NowPlayingScreen
 import com.ipodmodern.audio.ui.screens.ScreenType
 import com.ipodmodern.audio.ui.screens.SyncServerScreen
 import com.ipodmodern.audio.ui.theme.ChassisMaterial
@@ -71,7 +69,6 @@ fun IPodAppModernContent(
 ) {
     val playerState by playerViewModel.uiState.collectAsState()
     val navState by menuViewModel.navState.collectAsState()
-    val coverFlowState by coverFlowViewModel.uiState.collectAsState()
     val syncServerState by syncViewModel.serverState.collectAsState()
 
     var activeScreen by remember { mutableStateOf(ScreenType.MENU_MAIN) }
@@ -101,13 +98,15 @@ fun IPodAppModernContent(
     }
 
     val screenTitle = when (activeScreen) {
-        ScreenType.NOW_PLAYING -> "Now Playing"
+        ScreenType.NOW_PLAYING -> "Cover Flow Player"
         ScreenType.COVER_FLOW -> "Cover Flow"
         ScreenType.EQUALIZER -> "10-Band EQ"
         ScreenType.LYRICS -> "Lyrics"
         ScreenType.SYNC_SERVER -> "Wi-Fi Sync"
         else -> navState.screenTitle
     }
+
+    val isPlayerScreen = activeScreen == ScreenType.NOW_PLAYING || activeScreen == ScreenType.COVER_FLOW
 
     DisplayScreen(
         currentScreen = activeScreen,
@@ -116,7 +115,7 @@ fun IPodAppModernContent(
         onBackClick = if (activeScreen != ScreenType.MENU_MAIN || navState.backStack.isNotEmpty()) {
             { handleBack() }
         } else null,
-        bottomBar = if (activeScreen != ScreenType.NOW_PLAYING && activeScreen != ScreenType.LYRICS && playerState.currentTrack != null) {
+        bottomBar = if (!isPlayerScreen && activeScreen != ScreenType.LYRICS && playerState.currentTrack != null) {
             {
                 MiniPlayerBar(
                     track = playerState.currentTrack,
@@ -131,33 +130,27 @@ fun IPodAppModernContent(
         } else null
     ) {
         when (activeScreen) {
-            ScreenType.NOW_PLAYING -> {
-                NowPlayingScreen(
-                    track = playerState.currentTrack,
+            ScreenType.NOW_PLAYING,
+            ScreenType.COVER_FLOW -> {
+                CoverFlowPlayerScreen(
+                    currentTrack = playerState.currentTrack,
+                    allTracks = playerState.allTracks,
+                    currentTrackIndex = (playerState.currentTrackIndex - 1).coerceAtLeast(0),
                     positionMs = playerState.positionMs,
                     durationMs = playerState.durationMs,
                     isPlaying = playerState.isPlaying,
-                    currentTrackIndex = playerState.currentTrackIndex,
-                    totalTracks = playerState.totalTracksInQueue,
-                    currentLyricText = playerState.currentLyricText,
                     volumeLevel = playerState.volume,
+                    currentLyricText = playerState.currentLyricText,
+                    onTrackSelect = { index ->
+                        playerViewModel.playTrackAtIndex(index)
+                    },
                     onPlayPauseClick = { playerViewModel.togglePlayPause() },
                     onNextClick = { playerViewModel.nextTrack() },
                     onPrevClick = { playerViewModel.prevTrack() },
-                    onSeekTo = { playerViewModel.seekByTicks(0) },
-                    onVolumeChange = { playerViewModel.adjustVolume(((it - playerState.volume) * 25).toInt()) },
+                    onSeekTo = { targetMs -> playerViewModel.seekTo(targetMs) },
+                    onVolumeChange = { vol -> playerViewModel.setVolumeDirect(vol) },
                     onLyricsClick = { activeScreen = ScreenType.LYRICS },
                     onEqClick = { activeScreen = ScreenType.EQUALIZER }
-                )
-            }
-            ScreenType.COVER_FLOW -> {
-                CoverFlowScreen(
-                    albums = coverFlowState.albums,
-                    selectedIndex = coverFlowState.selectedIndex,
-                    onIndexChanged = { coverFlowViewModel.onRotate(it - coverFlowState.selectedIndex) },
-                    onAlbumSelect = { album ->
-                        activeScreen = ScreenType.NOW_PLAYING
-                    }
                 )
             }
             ScreenType.EQUALIZER -> {
@@ -192,6 +185,7 @@ fun IPodAppModernContent(
                         menuViewModel.onCenterAction(
                             onPlayTrack = { tracks, startIndex ->
                                 playerViewModel.setQueue(tracks, startIndex, autoPlay = true)
+                                activeScreen = ScreenType.NOW_PLAYING
                             },
                             onNavigateScreen = { targetScreen ->
                                 activeScreen = targetScreen

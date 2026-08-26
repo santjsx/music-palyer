@@ -4,7 +4,6 @@ import android.app.Application
 import android.media.MediaMetadataRetriever
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.ipodmodern.audio.core.audio.NativeAudioBridge
 import com.ipodmodern.audio.core.audio.UnifiedAudioEngine
 import com.ipodmodern.audio.core.database.MusicDatabase
 import com.ipodmodern.audio.core.database.entity.AlbumEntity
@@ -28,6 +27,7 @@ import java.io.File
 
 data class PlayerUiState(
     val currentTrack: Track? = null,
+    val allTracks: List<Track> = emptyList(),
     val isPlaying: Boolean = false,
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
@@ -60,7 +60,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var volumeDismissJob: Job? = null
 
     init {
-        NativeAudioBridge.initEngine(48000, true)
         scanAndLoadLocalMusic()
         startPositionTicker()
     }
@@ -99,7 +98,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                             val durationStr = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                             val duration = durationStr?.toLongOrNull() ?: 240_000L
 
-                            // Extract embedded artwork bytes
                             val picture = mmr.embeddedPicture
                             if (picture != null && picture.isNotEmpty()) {
                                 val artFile = File(artDir, "art_${file.nameWithoutExtension.hashCode()}.jpg")
@@ -111,7 +109,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                             val isLossless = ext == "FLAC" || ext == "WAV" || ext == "DSF"
                             val badge = if (isLossless) "LOSSLESS 24-BIT / 96.0kHz" else "MP3 320 KBPS"
 
-                            // Avoid duplicate paths
                             if (scannedTracks.none { it.filePath == file.absolutePath }) {
                                 scannedTracks.add(
                                     Track(
@@ -159,14 +156,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
 
             if (scannedTracks.isNotEmpty()) {
-                // Clear old demo tracks to remove duplicates
                 db.trackDao().clearAll()
                 db.albumDao().clearAll()
                 db.artistDao().clearAll()
 
                 db.trackDao().insertTracks(scannedTracks.map { TrackEntity.fromDomain(it) })
 
-                // Generate Album & Artist entries
                 val albumGroups = scannedTracks.groupBy { it.album }
                 val albums = albumGroups.map { (albumTitle, tracks) ->
                     AlbumEntity(
@@ -204,7 +199,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 if (_uiState.value.isPlaying) {
                     val pos = audioEngine.getCurrentPosition()
                     val dur = audioEngine.getDuration().coerceAtLeast(_uiState.value.currentTrack?.durationMs ?: 0L)
-                    val precut = NativeAudioBridge.getDynamicPrecutGainDb()
 
                     val lyrics = _uiState.value.lyrics
                     val activeIdx = lyricsParser.findActiveLyricIndex(lyrics, pos)
@@ -213,7 +207,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     _uiState.value = _uiState.value.copy(
                         positionMs = pos,
                         durationMs = dur,
-                        dynamicPrecutDb = precut,
                         activeLyricIndex = activeIdx,
                         currentLyricText = lyricText
                     )
@@ -233,7 +226,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private fun loadAndPlayCurrent(startPlaying: Boolean) {
         val track = playbackQueue.getOrNull(queueIndex) ?: return
         audioEngine.loadAndPlay(track.filePath, autoPlay = startPlaying)
-        NativeAudioBridge.loadTrack(track.filePath)
 
         val sampleLrc = """
             [00:00.00]${track.title} • ${track.artist}
@@ -246,6 +238,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
         _uiState.value = _uiState.value.copy(
             currentTrack = track,
+            allTracks = playbackQueue,
             isPlaying = startPlaying,
             positionMs = 0L,
             durationMs = track.durationMs,
@@ -257,15 +250,21 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         )
     }
 
+    fun playTrackAtIndex(index: Int) {
+        hapticEngine.performClick()
+        if (playbackQueue.isNotEmpty() && index in playbackQueue.indices) {
+            queueIndex = index
+            loadAndPlayCurrent(true)
+        }
+    }
+
     fun togglePlayPause() {
         hapticEngine.performClick()
         if (_uiState.value.isPlaying) {
             audioEngine.pause()
-            NativeAudioBridge.pause()
             _uiState.value = _uiState.value.copy(isPlaying = false)
         } else {
             audioEngine.play()
-            NativeAudioBridge.play()
             _uiState.value = _uiState.value.copy(isPlaying = true)
         }
     }
@@ -297,7 +296,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun adjustVolume(deltaTicks: Int) {
         val newVol = (_uiState.value.volume + deltaTicks * 0.04f).coerceIn(0.0f, 1.0f)
         audioEngine.setVolume(newVol)
-        NativeAudioBridge.setVolume(newVol)
         _uiState.value = _uiState.value.copy(volume = newVol, showVolumeOverlay = true)
 
         volumeDismissJob?.cancel()
@@ -310,7 +308,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun setVolumeDirect(vol: Float) {
         val newVol = vol.coerceIn(0.0f, 1.0f)
         audioEngine.setVolume(newVol)
-        NativeAudioBridge.setVolume(newVol)
         _uiState.value = _uiState.value.copy(volume = newVol)
     }
 
@@ -334,12 +331,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         currentGains[bandIdx] = newGain
 
         audioEngine.setEqBandGain(bandIdx, newGain)
-        NativeAudioBridge.setEqBandGain(bandIdx, newGain)
-        val precut = NativeAudioBridge.getDynamicPrecutGainDb()
 
         _uiState.value = _uiState.value.copy(
             eqGains = currentGains,
-            dynamicPrecutDb = precut,
             currentPresetName = "Custom EQ"
         )
     }
@@ -348,11 +342,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         for (i in 0 until 10) {
             audioEngine.setEqBandGain(i, preset.bandGains[i])
         }
-        NativeAudioBridge.setEqAllBands(preset.bandGains)
-        val precut = NativeAudioBridge.getDynamicPrecutGainDb()
         _uiState.value = _uiState.value.copy(
             eqGains = preset.bandGains.copyOf(),
-            dynamicPrecutDb = precut,
             currentPresetName = preset.name
         )
     }
