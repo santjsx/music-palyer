@@ -64,7 +64,7 @@ object WebPortalAssets {
         }
         .container {
             width: 100%;
-            max-w: 800px;
+            max-width: 800px;
             display: flex;
             flex-direction: column;
             gap: 24px;
@@ -211,66 +211,67 @@ object WebPortalAssets {
     </div>
 
     <script>
-        const dropzone = document.getElementById('dropzone');
-        const fileInput = document.getElementById('fileInput');
-        const uploadList = document.getElementById('uploadList');
-        const fileContainer = document.getElementById('fileContainer');
+        var dropzone = document.getElementById('dropzone');
+        var fileInput = document.getElementById('fileInput');
+        var uploadList = document.getElementById('uploadList');
+        var fileContainer = document.getElementById('fileContainer');
 
-        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
-        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-        dropzone.addEventListener('drop', (e) => {
+        dropzone.addEventListener('dragover', function(e) { e.preventDefault(); dropzone.classList.add('dragover'); });
+        dropzone.addEventListener('dragleave', function() { dropzone.classList.remove('dragover'); });
+        dropzone.addEventListener('drop', function(e) {
             e.preventDefault();
             dropzone.classList.remove('dragover');
             handleFiles(e.dataTransfer.files);
         });
 
-        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        fileInput.addEventListener('change', function(e) { handleFiles(e.target.files); });
 
         function fetchStats() {
             fetch('/api/status')
-                .then(r => r.json())
-                .then(data => {
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
                     document.getElementById('storageFree').innerText = (data.storageFreeBytes / (1024*1024*1024)).toFixed(1) + ' GB';
                     document.getElementById('trackCount').innerText = data.totalTracks;
                 })
-                .catch(() => {});
+                .catch(function() {});
         }
         fetchStats();
 
-        async function handleFiles(files) {
+        function handleFiles(files) {
             if (!files.length) return;
             uploadList.style.display = 'block';
 
-            for (const file of files) {
-                const item = document.createElement('div');
-                item.className = 'file-item';
-                item.innerHTML = `
-                    <div class="file-info" style="width: 100%;">
-                        <div class="file-name">\${file.name}</div>
-                        <div class="file-meta">\${(file.size / (1024*1024)).toFixed(2)} MB • Ingesting...</div>
-                        <div class="progress-bar"><div class="progress-fill" id="p_\${file.name.replace(/[^a-z0-9]/gi, '_')}"></div></div>
-                    </div>
-                `;
-                fileContainer.prepend(item);
+            for (var i = 0; i < files.length; i++) {
+                (function(file) {
+                    var safeId = file.name.replace(/[^a-zA-Z0-9]/g, '_');
+                    var item = document.createElement('div');
+                    item.className = 'file-item';
+                    item.innerHTML = '<div class="file-info" style="width: 100%;">' +
+                        '<div class="file-name">' + file.name + '</div>' +
+                        '<div class="file-meta">' + (file.size / (1024*1024)).toFixed(2) + ' MB • Ingesting...</div>' +
+                        '<div class="progress-bar"><div class="progress-fill" id="p_' + safeId + '"></div></div>' +
+                        '</div>';
+                    fileContainer.prepend(item);
 
-                const formData = new FormData();
-                formData.append('file', file);
+                    var formData = new FormData();
+                    formData.append('file', file);
 
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', '/api/upload', true);
-                xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const pct = Math.round((e.loaded / e.total) * 100);
-                        const bar = document.getElementById('p_' + file.name.replace(/[^a-z0-9]/gi, '_'));
-                        if (bar) bar.style.width = pct + '%';
-                    }
-                };
-                xhr.onload = () => {
-                    item.querySelector('.file-meta').innerText = 'Ingested into Library ✓';
-                    item.querySelector('.file-meta').style.color = 'var(--accent-green)';
-                    fetchStats();
-                };
-                xhr.send(formData);
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/api/upload', true);
+                    xhr.upload.onprogress = function(e) {
+                        if (e.lengthComputable) {
+                            var pct = Math.round((e.loaded / e.total) * 100);
+                            var bar = document.getElementById('p_' + safeId);
+                            if (bar) bar.style.width = pct + '%';
+                        }
+                    };
+                    xhr.onload = function() {
+                        item.querySelector('.file-meta').innerText = 'Ingested into Library ✓';
+                        item.querySelector('.file-meta').style.color = 'var(--accent-green)';
+                        fetchStats();
+                    };
+                    xhr.send(formData);
+                })(files[i]);
             }
         }
     </script>
