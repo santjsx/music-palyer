@@ -57,8 +57,8 @@ fun DisplayScreen(
     isPlaying: Boolean,
     isHoldActive: Boolean,
     batteryLevel: Int = 92,
-    content: @Composable () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
 ) {
     val colors = LocalIpodColors.current
 
