@@ -75,6 +75,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import com.ipodmodern.audio.core.model.Track
+import com.ipodmodern.audio.ui.components.MechanicalAuxKeyDeck
+import com.ipodmodern.audio.ui.components.MechanicalTransportDeck
+import com.ipodmodern.audio.ui.components.VolumeDeck
+import com.ipodmodern.audio.ui.components.WaveformScrubber
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
@@ -429,243 +433,55 @@ fun CoverFlowPlayerScreen(
             }
 
             // ==========================================
-            // 3. PRECISION PROGRESS SCRUBBER BAR
+            // 3. STUDIO WAVEFORM PROGRESS SCRUBBER
             // ==========================================
-            Column(
+            WaveformScrubber(
+                positionMs = positionMs,
+                durationMs = durationMs,
+                onSeekTo = onSeekTo,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp)
-            ) {
-                var sliderPosition by remember { mutableFloatStateOf(0f) }
-                var isSeeking by remember { mutableStateOf(false) }
-
-                val maxDuration = if (durationMs > 0) durationMs.toFloat() else 1f
-                val currentProgress = if (isSeeking) sliderPosition else positionMs.toFloat().coerceIn(0f, maxDuration)
-
-                Slider(
-                    value = currentProgress,
-                    onValueChange = {
-                        isSeeking = true
-                        sliderPosition = it
-                    },
-                    onValueChangeFinished = {
-                        isSeeking = false
-                        onSeekTo(sliderPosition.toLong())
-                    },
-                    valueRange = 0f..maxDuration,
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color.White,
-                        activeTrackColor = Color(0xFF007AFF),
-                        inactiveTrackColor = Color(0xFF262933)
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(24.dp)
-                )
-
-                // Time indicators
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    val currentSec = (currentProgress / 1000).toLong()
-                    val remainingSec = ((maxDuration - currentProgress) / 1000).toLong()
-
-                    Text(
-                        text = String.format(Locale.US, "%02d:%02d", currentSec / 60, currentSec % 60),
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = Color(0xFF8F93A3)
-                    )
-                    Text(
-                        text = String.format(Locale.US, "-%02d:%02d", remainingSec / 60, remainingSec % 60),
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = Color(0xFF8F93A3)
-                    )
-                }
-            }
+                    .padding(horizontal = 4.dp)
+            )
 
             // ==========================================
-            // 4. LUXURY TRANSPORT CONTROLS
+            // 4. 3D MECHANICAL HARDWARE TRANSPORT DECK
             // ==========================================
-            Row(
+            MechanicalTransportDeck(
+                isPlaying = isPlaying,
+                onPrevClick = onPrevClick,
+                onPlayPauseClick = onPlayPauseClick,
+                onNextClick = onNextClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Shuffle Button
-                IconButton(
-                    onClick = { isShuffleActive = !isShuffleActive },
-                    modifier = Modifier.size(42.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Shuffle,
-                        contentDescription = "Shuffle",
-                        tint = if (isShuffleActive) Color(0xFF0A84FF) else Color(0xFF757A8B),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                // Previous Track
-                IconButton(
-                    onClick = onPrevClick,
-                    modifier = Modifier.size(52.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FastRewind,
-                        contentDescription = "Previous",
-                        tint = Color.White,
-                        modifier = Modifier.size(34.dp)
-                    )
-                }
-
-                // Master Glowing Play/Pause Center Button
-                Box(
-                    modifier = Modifier
-                        .size(68.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(
-                                    Color(0xFF0A84FF),
-                                    Color(0xFF0055D4)
-                                )
-                            )
-                        )
-                        .border(1.5.dp, Color.White.copy(alpha = 0.35f), CircleShape)
-                        .shadow(22.dp, CircleShape, spotColor = Color(0xFF0A84FF))
-                        .clickable { onPlayPauseClick() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = Color.White,
-                        modifier = Modifier.size(38.dp)
-                    )
-                }
-
-                // Next Track
-                IconButton(
-                    onClick = onNextClick,
-                    modifier = Modifier.size(52.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FastForward,
-                        contentDescription = "Next",
-                        tint = Color.White,
-                        modifier = Modifier.size(34.dp)
-                    )
-                }
-
-                // Repeat Button
-                IconButton(
-                    onClick = { isRepeatActive = !isRepeatActive },
-                    modifier = Modifier.size(42.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Repeat,
-                        contentDescription = "Repeat",
-                        tint = if (isRepeatActive) Color(0xFF0A84FF) else Color(0xFF757A8B),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
+                    .padding(horizontal = 4.dp)
+            )
 
             // ==========================================
-            // 5. QUICK UTILITIES & VOLUME CONTROLLER
+            // 5. AUXILIARY MECHANICAL FUNCTION KEYS
             // ==========================================
-            Column(
+            MechanicalAuxKeyDeck(
+                isShuffle = isShuffleActive,
+                isRepeat = isRepeatActive,
+                onShuffleToggle = { isShuffleActive = !isShuffleActive },
+                onRepeatToggle = { isRepeatActive = !isRepeatActive },
+                onEqClick = onEqClick,
+                onLyricsClick = onLyricsClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp)
-            ) {
-                // EQ & Lyrics Shortcuts Row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // EQ Button
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF191C25))
-                            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                            .clickable { onEqClick() }
-                            .padding(horizontal = 14.dp, vertical = 6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = "Equalizer",
-                            tint = Color(0xFF0A84FF),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("10-Band EQ", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
-                    }
+                    .padding(horizontal = 4.dp)
+            )
 
-                    // Full Lyrics Button
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF191C25))
-                            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                            .clickable { onLyricsClick() }
-                            .padding(horizontal = 14.dp, vertical = 6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FormatQuote,
-                            contentDescription = "Lyrics",
-                            tint = Color(0xFFFF9F0A),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Lyrics", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-
-                // Volume Slider
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.VolumeDown,
-                        contentDescription = "Volume Down",
-                        tint = Color(0xFF757A8B),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Slider(
-                        value = volumeLevel,
-                        onValueChange = onVolumeChange,
-                        valueRange = 0.0f..1.0f,
-                        colors = SliderDefaults.colors(
-                            thumbColor = Color.White,
-                            activeTrackColor = Color.White.copy(alpha = 0.8f),
-                            inactiveTrackColor = Color(0xFF262933)
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                        contentDescription = "Volume Up",
-                        tint = Color(0xFF757A8B),
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
+            // ==========================================
+            // 6. STUDIO HI-FI TACTILE VOLUME DECK
+            // ==========================================
+            VolumeDeck(
+                volumeLevel = volumeLevel,
+                onVolumeChange = onVolumeChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp)
+            )
         }
     }
 }
