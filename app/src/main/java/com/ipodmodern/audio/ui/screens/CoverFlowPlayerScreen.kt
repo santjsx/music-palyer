@@ -6,6 +6,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
@@ -33,7 +34,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeDown
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.FormatQuote
@@ -74,13 +74,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
-import com.ipodmodern.audio.core.model.Album
 import com.ipodmodern.audio.core.model.Track
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlin.math.sign
+import kotlin.math.tanh
 
 @Composable
 fun CoverFlowPlayerScreen(
@@ -108,14 +109,14 @@ fun CoverFlowPlayerScreen(
     var isShuffleActive by remember { mutableStateOf(false) }
     var isRepeatActive by remember { mutableStateOf(false) }
 
-    // Synchronize animated offset when currentTrackIndex changes externally
+    // Smoothly synchronize position when currentTrackIndex changes externally
     LaunchedEffect(currentTrackIndex) {
-        if (!isUserDragging) {
+        if (!isUserDragging && animatedOffset.targetValue != currentTrackIndex.toFloat()) {
             animatedOffset.animateTo(
                 targetValue = currentTrackIndex.toFloat(),
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessLow
+                    stiffness = Spring.StiffnessMediumLow
                 )
             )
         }
@@ -130,25 +131,25 @@ fun CoverFlowPlayerScreen(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFF040507),
-                        Color(0xFF0B0D12),
-                        Color(0xFF06070A)
+                        Color(0xFF030406),
+                        Color(0xFF090B10),
+                        Color(0xFF050608)
                     )
                 )
             )
     ) {
-        // Ambient dynamic background glow
+        // Dynamic ambient colored aura behind the stage
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(300.dp)
+                .height(280.dp)
                 .align(Alignment.TopCenter)
-                .blur(80.dp)
+                .blur(90.dp)
                 .background(
                     Brush.radialGradient(
                         listOf(
-                            Color(0xFF0A84FF).copy(alpha = 0.22f),
-                            Color(0xFF5E5CE6).copy(alpha = 0.10f),
+                            Color(0xFF007AFF).copy(alpha = 0.26f),
+                            Color(0xFF5856D6).copy(alpha = 0.12f),
                             Color.Transparent
                         )
                     )
@@ -164,25 +165,31 @@ fun CoverFlowPlayerScreen(
         ) {
 
             // ==========================================
-            // 1. TOP SPATIAL 3D COVER FLOW STAGE
+            // 1. BUTTERY-SMOOTH SPATIAL 3D COVER FLOW
             // ==========================================
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(250.dp)
+                    .height(245.dp)
                     .draggable(
                         orientation = Orientation.Horizontal,
                         state = rememberDraggableState { delta ->
                             isUserDragging = true
                             coroutineScope.launch {
-                                val currentVal = animatedOffset.value - (delta / 160f)
-                                val clamped = currentVal.coerceIn(0f, (displayTracks.size - 1).coerceAtLeast(0).toFloat())
+                                val currentVal = animatedOffset.value - (delta / 170f)
+                                val maxIndex = (displayTracks.size - 1).coerceAtLeast(0).toFloat()
+                                val clamped = currentVal.coerceIn(0f, maxIndex)
                                 animatedOffset.snapTo(clamped)
                             }
                         },
-                        onDragStopped = {
+                        onDragStopped = { velocity ->
                             isUserDragging = false
-                            val target = animatedOffset.value.roundToInt().coerceIn(0, (displayTracks.size - 1).coerceAtLeast(0))
+                            val maxIndex = (displayTracks.size - 1).coerceAtLeast(0)
+                            // Calculate velocity flick target
+                            val flickOffset = -(velocity / 900f).coerceIn(-2.5f, 2.5f)
+                            val rawTarget = (animatedOffset.value + flickOffset).roundToInt()
+                            val target = rawTarget.coerceIn(0, maxIndex)
+
                             coroutineScope.launch {
                                 animatedOffset.animateTo(
                                     targetValue = target.toFloat(),
@@ -202,7 +209,7 @@ fun CoverFlowPlayerScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("No Music Available", color = Color.Gray, fontSize = 15.sp)
+                        Text("No Music In Library", color = Color.Gray, fontSize = 15.sp)
                     }
                 } else {
                     val currentIndex = animatedOffset.value.roundToInt().coerceIn(0, displayTracks.size - 1)
@@ -215,22 +222,17 @@ fun CoverFlowPlayerScreen(
                         val offset = i - animatedOffset.value
                         val absOffset = abs(offset)
 
-                        // 3D Matrix Math
-                        val rotationY = when {
-                            offset < -0.1f -> 52f
-                            offset > 0.1f -> -52f
-                            else -> -offset * 520f
-                        }.coerceIn(-58f, 58f)
-
-                        val scale = (1.18f - absOffset * 0.18f).coerceIn(0.68f, 1.18f)
-                        val translationX = offset * 115f
-                        val zIndexVal = 100f - absOffset * 10f
+                        // Continuous, smooth trigonometric 3D rotation & projection math
+                        val rotationY = (-tanh(offset * 2.2f) * 56f).coerceIn(-60f, 60f)
+                        val scale = (1.0f / (1.0f + absOffset * 0.22f) * 1.15f).coerceIn(0.68f, 1.15f)
+                        val translationX = (sign(offset) * 88f + offset * 32f) * (1f - (1f / (1f + absOffset * 0.8f))) + (offset * 75f)
+                        val zIndexVal = 100f - absOffset * 15f
 
                         Box(
                             modifier = Modifier
                                 .zIndex(zIndexVal)
                                 .graphicsLayer {
-                                    this.cameraDistance = 20f
+                                    this.cameraDistance = 22f
                                     this.rotationY = rotationY
                                     this.scaleX = scale
                                     this.scaleY = scale
@@ -254,14 +256,22 @@ fun CoverFlowPlayerScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                // Main Album Card
+                                // 3D Album Artwork Card
                                 Box(
                                     modifier = Modifier
                                         .size(150.dp)
                                         .clip(RoundedCornerShape(12.dp))
-                                        .shadow(32.dp, RoundedCornerShape(12.dp))
-                                        .background(Color(0xFF16181D))
-                                        .border(1.5.dp, Color.White.copy(alpha = if (absOffset < 0.35f) 0.35f else 0.15f), RoundedCornerShape(12.dp)),
+                                        .shadow(
+                                            elevation = if (absOffset < 0.35f) 36.dp else 16.dp,
+                                            shape = RoundedCornerShape(12.dp),
+                                            spotColor = if (absOffset < 0.35f) Color(0xFF007AFF) else Color.Black
+                                        )
+                                        .background(Color(0xFF14161C))
+                                        .border(
+                                            width = if (absOffset < 0.35f) 1.5.dp else 1.dp,
+                                            color = if (absOffset < 0.35f) Color.White.copy(alpha = 0.40f) else Color.White.copy(alpha = 0.15f),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (!track.artworkUri.isNullOrEmpty()) {
@@ -277,19 +287,19 @@ fun CoverFlowPlayerScreen(
                                             imageVector = Icons.Default.MusicNote,
                                             contentDescription = null,
                                             tint = Color.Gray,
-                                            modifier = Modifier.size(56.dp)
+                                            modifier = Modifier.size(54.dp)
                                         )
                                     }
 
-                                    // Specular glass sheen highlight
+                                    // Dynamic Specular Glass Glare
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .background(
                                                 Brush.linearGradient(
                                                     listOf(
-                                                        Color.White.copy(alpha = 0.28f),
-                                                        Color.White.copy(alpha = 0.05f),
+                                                        Color.White.copy(alpha = if (absOffset < 0.35f) 0.30f else 0.12f),
+                                                        Color.White.copy(alpha = 0.04f),
                                                         Color.Transparent
                                                     )
                                                 )
@@ -297,7 +307,7 @@ fun CoverFlowPlayerScreen(
                                     )
                                 }
 
-                                // Floor Mirror Reflection
+                                // High-Definition Floor Mirror Reflection
                                 Box(
                                     modifier = Modifier
                                         .size(width = 150.dp, height = 55.dp)
@@ -313,16 +323,16 @@ fun CoverFlowPlayerScreen(
                                             modifier = Modifier.fillMaxSize()
                                         )
                                     }
-                                    // Mirror fade into floor
+                                    // Smooth Floor Gradient Fade
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .background(
                                                 Brush.verticalGradient(
                                                     listOf(
-                                                        Color(0xFF040507).copy(alpha = 0.30f),
-                                                        Color(0xFF040507).copy(alpha = 0.85f),
-                                                        Color(0xFF040507)
+                                                        Color(0xFF030406).copy(alpha = 0.25f),
+                                                        Color(0xFF030406).copy(alpha = 0.85f),
+                                                        Color(0xFF030406)
                                                     )
                                                 )
                                             )
@@ -340,12 +350,12 @@ fun CoverFlowPlayerScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Song Title
                 Text(
-                    text = activeTrack?.title ?: "Select a song",
+                    text = activeTrack?.title ?: "Select a track",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White,
@@ -354,27 +364,27 @@ fun CoverFlowPlayerScreen(
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 // Artist & Album
                 Text(
                     text = if (activeTrack != null) "${activeTrack.artist} • ${activeTrack.album}" else "iPod Modern",
                     fontSize = 14.sp,
-                    color = Color(0xFFA1A4B0),
+                    color = Color(0xFFA5A9B8),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Audiophile Quality Pill with mini Equalizer bars
+                // Audiophile Quality Pill with pulsating Equalizer bars
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFF15181F))
+                        .background(Color(0xFF141720))
                         .border(1.dp, Color(0xFF00C7BE).copy(alpha = 0.35f), RoundedCornerShape(20.dp))
                         .padding(horizontal = 12.dp, vertical = 5.dp)
                 ) {
@@ -385,26 +395,26 @@ fun CoverFlowPlayerScreen(
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF30D158),
-                        letterSpacing = 0.8.sp
+                        letterSpacing = 0.6.sp
                     )
                 }
 
-                // Live Lyrics Snippet preview
+                // Live Lyrics Snippet chip
                 if (!currentLyricText.isNullOrEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF1E212A).copy(alpha = 0.6f))
+                            .background(Color(0xFF1B1E28).copy(alpha = 0.7f))
                             .clickable { onLyricsClick() }
-                            .padding(horizontal = 14.dp, vertical = 4.dp)
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.FormatQuote,
                             contentDescription = "Lyrics",
                             tint = Color(0xFFFFD60A),
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
@@ -424,7 +434,7 @@ fun CoverFlowPlayerScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
+                    .padding(horizontal = 6.dp)
             ) {
                 var sliderPosition by remember { mutableFloatStateOf(0f) }
                 var isSeeking by remember { mutableStateOf(false) }
@@ -445,8 +455,8 @@ fun CoverFlowPlayerScreen(
                     valueRange = 0f..maxDuration,
                     colors = SliderDefaults.colors(
                         thumbColor = Color.White,
-                        activeTrackColor = Color(0xFF0A84FF),
-                        inactiveTrackColor = Color(0xFF2C2F38)
+                        activeTrackColor = Color(0xFF007AFF),
+                        inactiveTrackColor = Color(0xFF262933)
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -465,13 +475,13 @@ fun CoverFlowPlayerScreen(
                         text = String.format(Locale.US, "%02d:%02d", currentSec / 60, currentSec % 60),
                         fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace,
-                        color = Color.Gray
+                        color = Color(0xFF8F93A3)
                     )
                     Text(
                         text = String.format(Locale.US, "-%02d:%02d", remainingSec / 60, remainingSec % 60),
                         fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace,
-                        color = Color.Gray
+                        color = Color(0xFF8F93A3)
                     )
                 }
             }
@@ -494,7 +504,7 @@ fun CoverFlowPlayerScreen(
                     Icon(
                         imageVector = Icons.Default.Shuffle,
                         contentDescription = "Shuffle",
-                        tint = if (isShuffleActive) Color(0xFF0A84FF) else Color.Gray,
+                        tint = if (isShuffleActive) Color(0xFF0A84FF) else Color(0xFF757A8B),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -521,12 +531,12 @@ fun CoverFlowPlayerScreen(
                             Brush.radialGradient(
                                 listOf(
                                     Color(0xFF0A84FF),
-                                    Color(0xFF0060DF)
+                                    Color(0xFF0055D4)
                                 )
                             )
                         )
                         .border(1.5.dp, Color.White.copy(alpha = 0.35f), CircleShape)
-                        .shadow(20.dp, CircleShape, spotColor = Color(0xFF0A84FF))
+                        .shadow(22.dp, CircleShape, spotColor = Color(0xFF0A84FF))
                         .clickable { onPlayPauseClick() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -559,7 +569,7 @@ fun CoverFlowPlayerScreen(
                     Icon(
                         imageVector = Icons.Default.Repeat,
                         contentDescription = "Repeat",
-                        tint = if (isRepeatActive) Color(0xFF0A84FF) else Color.Gray,
+                        tint = if (isRepeatActive) Color(0xFF0A84FF) else Color(0xFF757A8B),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -571,7 +581,7 @@ fun CoverFlowPlayerScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
+                    .padding(horizontal = 6.dp)
             ) {
                 // EQ & Lyrics Shortcuts Row
                 Row(
@@ -586,7 +596,7 @@ fun CoverFlowPlayerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF1B1E26))
+                            .background(Color(0xFF191C25))
                             .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                             .clickable { onEqClick() }
                             .padding(horizontal = 14.dp, vertical = 6.dp)
@@ -606,7 +616,7 @@ fun CoverFlowPlayerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF1B1E26))
+                            .background(Color(0xFF191C25))
                             .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                             .clickable { onLyricsClick() }
                             .padding(horizontal = 14.dp, vertical = 6.dp)
@@ -630,7 +640,7 @@ fun CoverFlowPlayerScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.VolumeDown,
                         contentDescription = "Volume Down",
-                        tint = Color.Gray,
+                        tint = Color(0xFF757A8B),
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -640,8 +650,8 @@ fun CoverFlowPlayerScreen(
                         valueRange = 0.0f..1.0f,
                         colors = SliderDefaults.colors(
                             thumbColor = Color.White,
-                            activeTrackColor = Color.White.copy(alpha = 0.7f),
-                            inactiveTrackColor = Color(0xFF2C2F38)
+                            activeTrackColor = Color.White.copy(alpha = 0.8f),
+                            inactiveTrackColor = Color(0xFF262933)
                         ),
                         modifier = Modifier
                             .weight(1f)
@@ -651,7 +661,7 @@ fun CoverFlowPlayerScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                         contentDescription = "Volume Up",
-                        tint = Color.Gray,
+                        tint = Color(0xFF757A8B),
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -739,3 +749,4 @@ fun MiniEqualizerVisualizer(isPlaying: Boolean) {
         )
     }
 }
+

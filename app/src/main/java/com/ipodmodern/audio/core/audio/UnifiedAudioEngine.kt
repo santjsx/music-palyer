@@ -1,35 +1,45 @@
 package com.ipodmodern.audio.core.audio
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.media.audiofx.Equalizer
 import android.net.Uri
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
 import java.io.File
 
 class UnifiedAudioEngine(private val context: Context) {
 
-    private var exoPlayer: ExoPlayer? = null
+    private var mediaPlayer: MediaPlayer? = null
     private var equalizer: Equalizer? = null
+    private var currentFilePath: String? = null
+    private var currentVolume: Float = 1.0f
 
     init {
-        initPlayer()
+        initMediaPlayer()
     }
 
-    private fun initPlayer() {
-        exoPlayer = ExoPlayer.Builder(context).build().apply {
-            repeatMode = Player.REPEAT_MODE_OFF
-            volume = 1.0f
-        }
-        setupEqualizer()
-    }
-
-    private fun setupEqualizer() {
+    private fun initMediaPlayer() {
         try {
-            val sessionId = exoPlayer?.audioSessionId ?: 0
-            if (sessionId != 0) {
-                equalizer = Equalizer(0, sessionId).apply {
+            mediaPlayer?.release()
+            mediaPlayer = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .build()
+                )
+                setVolume(currentVolume, currentVolume)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun setupEqualizer(audioSessionId: Int) {
+        try {
+            equalizer?.release()
+            if (audioSessionId != 0) {
+                equalizer = Equalizer(0, audioSessionId).apply {
                     enabled = true
                 }
             }
@@ -39,61 +49,111 @@ class UnifiedAudioEngine(private val context: Context) {
     }
 
     fun loadAndPlay(filePath: String, autoPlay: Boolean = true) {
+        currentFilePath = filePath
         try {
-            val player = exoPlayer ?: return
-            val uri = if (filePath.startsWith("sample://")) {
-                // For sample mock paths, fallback or asset
-                Uri.parse("file://$filePath")
-            } else if (filePath.startsWith("content://") || filePath.startsWith("file://")) {
-                Uri.parse(filePath)
+            initMediaPlayer()
+            val player = mediaPlayer ?: return
+
+            if (filePath.startsWith("content://") || filePath.startsWith("file://")) {
+                player.setDataSource(context, Uri.parse(filePath))
+            } else if (filePath.startsWith("sample://")) {
+                // If mock sample path, skip or return
+                return
             } else {
-                Uri.fromFile(File(filePath))
+                val file = File(filePath)
+                if (file.exists()) {
+                    player.setDataSource(file.absolutePath)
+                } else {
+                    return
+                }
             }
 
-            val mediaItem = MediaItem.fromUri(uri)
-            player.setMediaItem(mediaItem)
             player.prepare()
-            player.playWhenReady = autoPlay
+            setupEqualizer(player.audioSessionId)
+            player.setVolume(currentVolume, currentVolume)
+
+            if (autoPlay) {
+                player.start()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
     fun play() {
-        exoPlayer?.play()
+        try {
+            mediaPlayer?.let {
+                if (!it.isPlaying) {
+                    it.start()
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun pause() {
-        exoPlayer?.pause()
+        try {
+            mediaPlayer?.let {
+                if (it.isPlaying) {
+                    it.pause()
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun stop() {
-        exoPlayer?.stop()
+        try {
+            mediaPlayer?.stop()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun seekTo(positionMs: Long) {
-        exoPlayer?.seekTo(positionMs)
+        try {
+            mediaPlayer?.seekTo(positionMs.toInt())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun setVolume(volume: Float) {
-        exoPlayer?.volume = volume.coerceIn(0.0f, 1.0f)
+        currentVolume = volume.coerceIn(0.0f, 1.0f)
+        try {
+            mediaPlayer?.setVolume(currentVolume, currentVolume)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
-    fun getVolume(): Float {
-        return exoPlayer?.volume ?: 1.0f
-    }
+    fun getVolume(): Float = currentVolume
 
     fun isPlaying(): Boolean {
-        return exoPlayer?.isPlaying == true
+        return try {
+            mediaPlayer?.isPlaying == true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun getCurrentPosition(): Long {
-        return exoPlayer?.currentPosition ?: 0L
+        return try {
+            mediaPlayer?.currentPosition?.toLong() ?: 0L
+        } catch (e: Exception) {
+            0L
+        }
     }
 
     fun getDuration(): Long {
-        val dur = exoPlayer?.duration ?: 0L
-        return if (dur > 0) dur else 0L
+        return try {
+            val dur = mediaPlayer?.duration?.toLong() ?: 0L
+            if (dur > 0) dur else 0L
+        } catch (e: Exception) {
+            0L
+        }
     }
 
     fun setEqBandGain(bandIndex: Int, gainDb: Float) {
@@ -101,7 +161,6 @@ class UnifiedAudioEngine(private val context: Context) {
             val eq = equalizer ?: return
             val numBands = eq.numberOfBands.toInt()
             if (bandIndex in 0 until numBands) {
-                // Android equalizer gain is in millibels (1 dB = 100 mB)
                 val minLevel = eq.bandLevelRange[0].toInt()
                 val maxLevel = eq.bandLevelRange[1].toInt()
                 val mB = (gainDb * 100).toInt().coerceIn(minLevel, maxLevel).toShort()
@@ -113,9 +172,13 @@ class UnifiedAudioEngine(private val context: Context) {
     }
 
     fun release() {
-        equalizer?.release()
-        equalizer = null
-        exoPlayer?.release()
-        exoPlayer = null
+        try {
+            equalizer?.release()
+            equalizer = null
+            mediaPlayer?.release()
+            mediaPlayer = null
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

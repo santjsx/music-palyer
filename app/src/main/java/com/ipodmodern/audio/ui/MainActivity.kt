@@ -181,8 +181,8 @@ fun IPodAppModernContent(
                     items = navState.items,
                     selectedIndex = navState.selectedIndex,
                     onItemClick = { index ->
-                        menuViewModel.onRotate(index - navState.selectedIndex)
                         menuViewModel.onCenterAction(
+                            explicitIndex = index,
                             onPlayTrack = { tracks, startIndex ->
                                 playerViewModel.setQueue(tracks, startIndex, autoPlay = true)
                                 activeScreen = ScreenType.NOW_PLAYING

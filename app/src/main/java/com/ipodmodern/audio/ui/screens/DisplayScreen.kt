@@ -96,22 +96,23 @@ fun DisplayScreen(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
+                            .height(44.dp)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) { onBackClick() }
-                            .padding(end = 8.dp)
+                            .padding(end = 12.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.ChevronLeft,
                             contentDescription = "Back",
                             tint = if (colors.isDarkScreen) Color.White else Color.Black,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                         Text(
                             text = "MENU",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.ExtraBold,
                             color = colors.screenText
                         )
                     }

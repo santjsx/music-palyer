@@ -94,11 +94,16 @@ class MenuViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun onCenterAction(onPlayTrack: (List<Track>, Int) -> Unit, onNavigateScreen: (ScreenType) -> Unit) {
+    fun onCenterAction(
+        explicitIndex: Int? = null,
+        onPlayTrack: (List<Track>, Int) -> Unit,
+        onNavigateScreen: (ScreenType) -> Unit
+    ) {
         val items = _navState.value.items
-        val sel = _navState.value.selectedIndex
+        val sel = explicitIndex ?: _navState.value.selectedIndex
         val item = items.getOrNull(sel) ?: return
         hapticEngine.performClick()
+        _navState.value = _navState.value.copy(selectedIndex = sel)
 
         when (_navState.value.currentScreen) {
             ScreenType.MENU_MAIN -> {
