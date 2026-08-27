@@ -25,6 +25,13 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+data class PlaybackProgress(
+    val positionMs: Long = 0L,
+    val durationMs: Long = 0L,
+    val activeLyricIndex: Int = -1,
+    val currentLyricText: String? = null
+)
+
 data class PlayerUiState(
     val currentTrack: Track? = null,
     val allTracks: List<Track> = emptyList(),
@@ -44,7 +51,7 @@ data class PlayerUiState(
     val eqGains: FloatArray = FloatArray(10) { 0.0f },
     val selectedEqBandIndex: Int = 0,
     val dynamicPrecutDb: Float = 0.0f,
-    val currentPresetName: String = "Lossless Flat",
+    val currentPresetName: String = "Neo Flat",
     val isScanning: Boolean = false
 )
 
@@ -58,6 +65,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+    private val _playbackProgress = MutableStateFlow(PlaybackProgress())
+    val playbackProgress: StateFlow<PlaybackProgress> = _playbackProgress.asStateFlow()
 
     private var originalQueue: List<Track> = emptyList()
     private var playbackQueue: List<Track> = emptyList()
@@ -91,18 +101,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val state = _uiState.value
         when (state.repeatMode) {
             2 -> {
-                // Repeat One
                 seekTo(0)
                 audioEngine.play()
                 _uiState.value = _uiState.value.copy(isPlaying = true)
                 updateForegroundNotification(_uiState.value.currentTrack, true)
             }
             1 -> {
-                // Repeat All
                 nextTrack()
             }
             else -> {
-                // Repeat Off: if not at the end of queue, advance, else stop
                 if (queueIndex < playbackQueue.size - 1) {
                     nextTrack()
                 } else {
@@ -235,7 +242,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                         totalTracksInQueue = if (playbackQueue.isNotEmpty()) playbackQueue.size else scannedTracks.size
                     )
 
-                    // Only set initial queue if NO track is currently selected or playing!
                     if (activeTrack == null && !isPlaying) {
                         setQueue(scannedTracks, 0, autoPlay = false)
                     }
@@ -262,14 +268,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     val activeIdx = if (lyrics.isNotEmpty()) lyricsParser.findActiveLyricIndex(lyrics, pos) else -1
                     val lyricText = if (activeIdx >= 0 && activeIdx < lyrics.size) lyrics[activeIdx].text else null
 
-                    _uiState.value = _uiState.value.copy(
+                    // Emit to dedicated high-frequency flow
+                    _playbackProgress.value = PlaybackProgress(
                         positionMs = pos,
                         durationMs = dur,
                         activeLyricIndex = activeIdx,
                         currentLyricText = lyricText
                     )
                 }
-                delay(150)
+                delay(120)
             }
         }
     }
@@ -284,9 +291,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 allTracks = emptyList(),
                 totalTracksInQueue = 0,
                 isPlaying = false,
-                lyrics = emptyList(),
-                currentLyricText = null
+                lyrics = emptyList()
             )
+            _playbackProgress.value = PlaybackProgress()
             updateForegroundNotification(null, false)
             return
         }
@@ -315,11 +322,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             currentTrack = track,
             allTracks = playbackQueue,
             isPlaying = startPlaying,
-            positionMs = 0L,
-            durationMs = track.durationMs,
             currentTrackIndex = queueIndex + 1,
             totalTracksInQueue = playbackQueue.size,
-            lyrics = realLyrics,
+            lyrics = realLyrics
+        )
+
+        _playbackProgress.value = PlaybackProgress(
+            positionMs = 0L,
+            durationMs = track.durationMs,
             activeLyricIndex = if (realLyrics.isNotEmpty()) 0 else -1,
             currentLyricText = realLyrics.firstOrNull()?.text
         )
@@ -358,9 +368,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun prevTrack() {
         hapticEngine.performClick()
-        if (_uiState.value.positionMs > 3000L) {
+        val currentPos = _playbackProgress.value.positionMs
+        if (currentPos > 3000L) {
             audioEngine.seekTo(0)
-            _uiState.value = _uiState.value.copy(positionMs = 0L)
+            _playbackProgress.value = _playbackProgress.value.copy(positionMs = 0L)
         } else if (playbackQueue.isNotEmpty()) {
             queueIndex = if (queueIndex - 1 < 0) playbackQueue.size - 1 else queueIndex - 1
             loadAndPlayCurrent(true)
@@ -369,7 +380,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun seekTo(positionMs: Long) {
         audioEngine.seekTo(positionMs)
-        _uiState.value = _uiState.value.copy(positionMs = positionMs)
+        _playbackProgress.value = _playbackProgress.value.copy(positionMs = positionMs)
     }
 
     fun adjustVolume(deltaTicks: Int) {
@@ -392,9 +403,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun seekByTicks(deltaTicks: Int) {
         val deltaMs = deltaTicks * 3000L
-        val newPos = (_uiState.value.positionMs + deltaMs).coerceIn(0L, _uiState.value.durationMs)
+        val currentPos = _playbackProgress.value.positionMs
+        val dur = _playbackProgress.value.durationMs
+        val newPos = (currentPos + deltaMs).coerceIn(0L, dur)
         audioEngine.seekTo(newPos)
-        _uiState.value = _uiState.value.copy(positionMs = newPos)
+        _playbackProgress.value = _playbackProgress.value.copy(positionMs = newPos)
     }
 
     // EQ Adjustments

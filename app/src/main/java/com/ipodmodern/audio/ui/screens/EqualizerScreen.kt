@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -46,29 +45,27 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ipodmodern.audio.core.model.EqualizerPreset
-import com.ipodmodern.audio.ui.components.RaycastCard
-import com.ipodmodern.audio.ui.components.RaycastKeycapBadge
-import com.ipodmodern.audio.ui.theme.AetherAmber
-import com.ipodmodern.audio.ui.theme.AetherAsh
-import com.ipodmodern.audio.ui.theme.AetherCanvas
-import com.ipodmodern.audio.ui.theme.AetherCyan
-import com.ipodmodern.audio.ui.theme.AetherCyanGlow
-import com.ipodmodern.audio.ui.theme.AetherEmerald
-import com.ipodmodern.audio.ui.theme.AetherHairline
-import com.ipodmodern.audio.ui.theme.AetherHairlineStrong
-import com.ipodmodern.audio.ui.theme.AetherInk
-import com.ipodmodern.audio.ui.theme.AetherMute
-import com.ipodmodern.audio.ui.theme.AetherPrimaryWhite
-import com.ipodmodern.audio.ui.theme.AetherRadiusMd
-import com.ipodmodern.audio.ui.theme.AetherRadiusSm
-import com.ipodmodern.audio.ui.theme.AetherSurface
-import com.ipodmodern.audio.ui.theme.AetherSurfaceElevated
-import com.ipodmodern.audio.ui.theme.AetherViolet
+import com.ipodmodern.audio.ui.components.NeoBadge
+import com.ipodmodern.audio.ui.components.NeoCard
+import com.ipodmodern.audio.ui.components.NeoIconButton
+import com.ipodmodern.audio.ui.theme.NeoBgDark
+import com.ipodmodern.audio.ui.theme.NeoBlack
+import com.ipodmodern.audio.ui.theme.NeoBlue
+import com.ipodmodern.audio.ui.theme.NeoBorderWidth
+import com.ipodmodern.audio.ui.theme.NeoGreen
+import com.ipodmodern.audio.ui.theme.NeoMuted
+import com.ipodmodern.audio.ui.theme.NeoPink
+import com.ipodmodern.audio.ui.theme.NeoPurple
+import com.ipodmodern.audio.ui.theme.NeoRadiusLg
+import com.ipodmodern.audio.ui.theme.NeoRadiusMd
+import com.ipodmodern.audio.ui.theme.NeoRadiusSm
+import com.ipodmodern.audio.ui.theme.NeoWhite
+import com.ipodmodern.audio.ui.theme.NeoYellow
 import java.util.Locale
 
-val AETHER_BAND_LABELS = listOf("31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k")
+val NEO_BAND_LABELS = listOf("31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k")
 
-val AETHER_STUDIO_PRESETS = listOf(
+val NEO_STUDIO_PRESETS = listOf(
     EqualizerPreset("Flat", FloatArray(10) { 0.0f }),
     EqualizerPreset("Master", floatArrayOf(2.5f, 2.0f, 1.0f, 0.0f, 0.0f, 0.5f, 1.5f, 2.0f, 2.5f, 3.0f)),
     EqualizerPreset("Bass Surge", floatArrayOf(6.0f, 5.0f, 3.5f, 1.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.5f)),
@@ -81,221 +78,126 @@ val AETHER_STUDIO_PRESETS = listOf(
 @Composable
 fun EqualizerScreen(
     bandGains: FloatArray,
-    selectedBandIndex: Int,
-    onBandGainChange: (Int, Float) -> Unit = { _, _ -> },
-    onPresetSelect: (EqualizerPreset) -> Unit = {},
-    dynamicPrecutDb: Float,
-    presetName: String = "Audiophile Custom",
+    selectedBandIndex: Int = 0,
+    onBandGainChange: (Int, Float) -> Unit,
+    onPresetSelect: (EqualizerPreset) -> Unit,
+    dynamicPrecutDb: Float = 0.0f,
+    presetName: String = "Neo Flat",
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
-    val scrollState = rememberScrollState()
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(AetherCanvas)
-            .verticalScroll(scrollState)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .background(NeoBgDark)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+            .padding(bottom = 140.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // MARK: - Header Bar & Headroom Monitor
+        // Top Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 6.dp),
+                .padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
                 Text(
-                    text = "AETHER DSP STUDIO",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AetherCyan,
-                    letterSpacing = 1.4.sp
+                    text = "NEO DSP STUDIO",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
+                    color = NeoYellow,
+                    letterSpacing = 1.sp
                 )
-                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = presetName.uppercase(),
-                    fontSize = 18.sp,
+                    text = "10-BAND PARAMETRIC EQUALIZER",
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = AetherInk,
-                    letterSpacing = 0.2.sp
+                    fontFamily = FontFamily.Monospace,
+                    color = NeoWhite
                 )
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Reset to Flat Action Pill
-                Box(
-                    modifier = Modifier
-                        .clip(AetherRadiusMd)
-                        .background(AetherSurfaceElevated)
-                        .border(1.dp, AetherHairline, AetherRadiusMd)
-                        .clickable {
-                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            onPresetSelect(AETHER_STUDIO_PRESETS.first())
-                        }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.RestartAlt,
-                            contentDescription = "Reset Flat",
-                            tint = AetherInk,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Text(
-                            text = "FLAT",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AetherInk,
-                            letterSpacing = 0.4.sp
-                        )
-                    }
-                }
-
-                // Headroom Keycap Badge
-                RaycastKeycapBadge(
-                    text = String.format(Locale.US, "HEADROOM: %.1f dB", dynamicPrecutDb),
-                    textColor = if (dynamicPrecutDb < -0.1f) AetherAmber else AetherEmerald,
-                    accentColor = if (dynamicPrecutDb < -0.1f) AetherAmber else AetherEmerald
-                )
-            }
+            NeoIconButton(
+                icon = Icons.Default.RestartAlt,
+                contentDescription = "Reset EQ",
+                onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    onPresetSelect(EqualizerPreset("Flat", FloatArray(10) { 0.0f }))
+                },
+                backgroundColor = NeoYellow,
+                size = 40.dp
+            )
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // MARK: - Parametric Response Card
-        RaycastCard(
+        // Neo Response Curve Box
+        NeoCard(
+            backgroundColor = NeoWhite,
+            cornerRadius = 14.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(104.dp),
-            shape = AetherRadiusMd,
-            backgroundColor = AetherSurface
+                .height(150.dp)
         ) {
-            Canvas(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 10.dp)) {
-                val w = size.width
-                val h = size.height
-                val midY = h / 2f
+            Canvas(modifier = Modifier.fillMaxSize().padding(14.dp)) {
+                val width = size.width
+                val height = size.height
+                val midY = height / 2f
 
-                // 0dB Center reference line
+                // Draw Grid
                 drawLine(
-                    color = AetherHairlineStrong,
+                    color = NeoBlack.copy(alpha = 0.3f),
                     start = Offset(0f, midY),
-                    end = Offset(w, midY),
-                    strokeWidth = 1.dp.toPx()
+                    end = Offset(width, midY),
+                    strokeWidth = 2f
                 )
 
-                // Grid lines at +6dB and -6dB
-                drawLine(
-                    color = AetherHairline,
-                    start = Offset(0f, midY - h * 0.28f),
-                    end = Offset(w, midY - h * 0.28f),
-                    strokeWidth = 1.dp.toPx()
-                )
-                drawLine(
-                    color = AetherHairline,
-                    start = Offset(0f, midY + h * 0.28f),
-                    end = Offset(w, midY + h * 0.28f),
-                    strokeWidth = 1.dp.toPx()
-                )
+                // Response Curve
+                val path = Path()
+                val stepX = width / 9f
 
-                // Compute frequency curve points
-                val points = mutableListOf<Offset>()
-                val numBands = 10
-                val dx = w / (numBands - 1)
-
-                for (i in 0 until numBands) {
+                for (i in 0 until 10) {
                     val gain = bandGains.getOrElse(i) { 0.0f }
-                    val y = midY - (gain / 12.0f) * (midY * 0.82f)
-                    points.add(Offset(i * dx, y))
+                    val y = midY - (gain / 12.0f) * (height / 2.2f)
+                    val x = i * stepX
+
+                    if (i == 0) {
+                        path.moveTo(x, y)
+                    } else {
+                        val prevGain = bandGains.getOrElse(i - 1) { 0.0f }
+                        val prevY = midY - (prevGain / 12.0f) * (height / 2.2f)
+                        val prevX = (i - 1) * stepX
+                        val cx = (prevX + x) / 2f
+                        path.cubicTo(cx, prevY, cx, y, x, y)
+                    }
                 }
 
-                // Construct smooth spline path
-                val strokePath = Path()
-                val fillPath = Path()
-
-                strokePath.moveTo(points[0].x, points[0].y)
-                fillPath.moveTo(points[0].x, points[0].y)
-
-                for (i in 0 until points.size - 1) {
-                    val p0 = points[i]
-                    val p1 = points[i + 1]
-                    val cx = (p0.x + p1.x) / 2f
-                    strokePath.cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
-                    fillPath.cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
-                }
-
-                fillPath.lineTo(w, h)
-                fillPath.lineTo(0f, h)
-                fillPath.close()
-
-                // Subtle Under-curve Gradient Fill
                 drawPath(
-                    path = fillPath,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            AetherCyan.copy(alpha = 0.25f),
-                            AetherViolet.copy(alpha = 0.05f),
-                            Color.Transparent
-                        )
+                    path = path,
+                    color = NeoBlack,
+                    style = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round)
+                )
+
+                // Peak Points
+                for (i in 0 until 10) {
+                    val gain = bandGains.getOrElse(i) { 0.0f }
+                    val y = midY - (gain / 12.0f) * (height / 2.2f)
+                    val x = i * stepX
+                    drawCircle(
+                        color = NeoYellow,
+                        radius = 5.dp.toPx(),
+                        center = Offset(x, y)
                     )
-                )
-
-                // Crisp Cyan Stroke Line
-                drawPath(
-                    path = strokePath,
-                    color = AetherCyan,
-                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
-                )
-
-                // Band Anchor Dots
-                points.forEach { pt ->
-                    drawCircle(color = AetherPrimaryWhite, radius = 2.5.dp.toPx(), center = pt)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // MARK: - Preset Chips Carousel
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            AETHER_STUDIO_PRESETS.forEach { preset ->
-                val isSelected = preset.name.equals(presetName, ignoreCase = true)
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (isSelected) AetherSurfaceElevated else Color.Transparent)
-                        .border(
-                            1.dp,
-                            if (isSelected) AetherCyan else AetherHairline,
-                            CircleShape
-                        )
-                        .clickable {
-                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            onPresetSelect(preset)
-                        }
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = preset.name,
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) AetherPrimaryWhite else AetherMute
+                    drawCircle(
+                        color = NeoBlack,
+                        radius = 5.dp.toPx(),
+                        center = Offset(x, y),
+                        style = Stroke(width = 2.dp.toPx())
                     )
                 }
             }
@@ -303,129 +205,126 @@ fun EqualizerScreen(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // MARK: - 10 Frequency Band Precision Vertical Faders Card
-        RaycastCard(
+        // Preset Pills
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 2.dp),
-            shape = AetherRadiusMd,
-            backgroundColor = AetherSurface
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(210.dp)
-                    .padding(horizontal = 8.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                for (i in 0 until 10) {
-                    val gain = bandGains.getOrElse(i) { 0.0f }
-                    val normalizedGain = ((gain + 12.0f) / 24.0f).coerceIn(0.0f, 1.0f)
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .weight(1f)
-                            .pointerInput(Unit) {
-                                detectVerticalDragGestures { change, dragAmount ->
-                                    change.consume()
-                                    val deltaDb = -dragAmount / 8f
-                                    val newGain = (gain + deltaDb).coerceIn(-12.0f, 12.0f)
-                                    onBandGainChange(i, newGain)
-                                }
-                            }
-                    ) {
-                        // Gain Decibel Readout Text
-                        Text(
-                            text = String.format(Locale.US, "%+.0f", gain),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = when {
-                                gain > 0.1f -> AetherCyan
-                                gain < -0.1f -> AetherAmber
-                                else -> AetherMute
-                            },
-                            fontFamily = FontFamily.Monospace
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        // Vertical Fader Track
-                        Box(
-                            modifier = Modifier
-                                .width(14.dp)
-                                .weight(1f)
-                                .clip(RoundedCornerShape(7.dp))
-                                .background(AetherSurfaceElevated)
-                                .border(1.dp, AetherHairline, RoundedCornerShape(7.dp)),
-                            contentAlignment = Alignment.BottomCenter
-                        ) {
-                            // 0dB Center Reference Dash
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(1.dp)
-                                    .align(Alignment.Center)
-                                    .background(AetherHairlineStrong)
-                            )
-
-                            // Active Fill Track
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxHeight(normalizedGain)
-                                    .background(
-                                        if (gain > 0.1f) AetherCyan.copy(alpha = 0.5f)
-                                        else if (gain < -0.1f) AetherAmber.copy(alpha = 0.35f)
-                                        else AetherHairlineStrong
-                                    )
-                            )
-
-                            // Tactile White Circular Fader Knob
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight(normalizedGain)
-                                    .align(Alignment.BottomCenter),
-                                contentAlignment = Alignment.TopCenter
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(14.dp)
-                                        .clip(CircleShape)
-                                        .background(AetherPrimaryWhite)
-                                        .border(1.dp, AetherCyan, CircleShape)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        // Frequency Band Label
-                        Text(
-                            text = AETHER_BAND_LABELS[i],
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = AetherInk,
-                            fontFamily = FontFamily.Monospace,
-                            textAlign = TextAlign.Center
-                        )
+            NEO_STUDIO_PRESETS.forEach { preset ->
+                val isSelected = preset.name.equals(presetName, ignoreCase = true)
+                NeoCard(
+                    backgroundColor = if (isSelected) NeoYellow else NeoWhite,
+                    shadowOffset = if (isSelected) 3.dp else 2.dp,
+                    cornerRadius = 10.dp,
+                    onClick = {
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        onPresetSelect(preset)
                     }
+                ) {
+                    Text(
+                        text = preset.name.uppercase(),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        color = NeoBlack,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
+        // 10 Precision Vertical Faders
+        NeoCard(
+            backgroundColor = NeoWhite,
+            cornerRadius = 16.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                for (i in 0 until 10) {
+                    val gain = bandGains.getOrElse(i) { 0.0f }
+                    NeoFaderColumn(
+                        label = NEO_BAND_LABELS[i],
+                        gainDb = gain,
+                        onGainChange = { newGain -> onBandGainChange(i, newGain) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NeoFaderColumn(
+    label: String,
+    gainDb: Float,
+    onGainChange: (Float) -> Unit
+) {
+    val view = LocalView.current
+    val normalizedGain = ((gainDb + 12f) / 24f).coerceIn(0f, 1f)
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
         Text(
-            text = "Sculpt 10-Band Biquad DSP response curve in real-time",
-            fontSize = 11.sp,
-            color = AetherAsh,
-            textAlign = TextAlign.Center
+            text = "${if (gainDb > 0) "+" else ""}${gainDb.toInt()}",
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace,
+            color = NeoBlack
         )
 
-        // Bottom spacing so nothing is ever clipped by floating Mini Player or Nav Bar
-        Spacer(modifier = Modifier.height(140.dp))
+        // Fader Track
+        Box(
+            modifier = Modifier
+                .width(18.dp)
+                .height(130.dp)
+                .clip(RoundedCornerShape(9.dp))
+                .background(NeoBgDark)
+                .border(2.dp, NeoBlack, RoundedCornerShape(9.dp))
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures { change, dragAmount ->
+                        change.consume()
+                        val deltaDb = -dragAmount / 5f
+                        val newGain = (gainDb + deltaDb).coerceIn(-12f, 12f)
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        onGainChange(newGain)
+                    }
+                },
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            // Fill
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(normalizedGain)
+                    .background(NeoYellow)
+            )
+
+            // Center indicator thumb
+            Box(
+                modifier = Modifier
+                    .size(14.dp)
+                    .clip(CircleShape)
+                    .background(NeoWhite)
+                    .border(2.dp, NeoBlack, CircleShape)
+            )
+        }
+
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Black,
+            color = NeoBlack
+        )
     }
 }

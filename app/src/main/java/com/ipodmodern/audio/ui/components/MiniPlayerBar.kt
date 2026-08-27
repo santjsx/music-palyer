@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
@@ -33,7 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
@@ -42,16 +42,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ipodmodern.audio.core.model.Track
-import com.ipodmodern.audio.ui.theme.AetherCyan
-import com.ipodmodern.audio.ui.theme.AetherHairline
-import com.ipodmodern.audio.ui.theme.AetherInk
-import com.ipodmodern.audio.ui.theme.AetherMute
-import com.ipodmodern.audio.ui.theme.AetherOnPrimary
-import com.ipodmodern.audio.ui.theme.AetherPrimaryWhite
-import com.ipodmodern.audio.ui.theme.AetherRadiusLg
-import com.ipodmodern.audio.ui.theme.AetherRadiusSm
-import com.ipodmodern.audio.ui.theme.AetherSurface
-import com.ipodmodern.audio.ui.theme.AetherSurfaceElevated
+import com.ipodmodern.audio.ui.theme.NeoBlack
+import com.ipodmodern.audio.ui.theme.NeoBorderWidth
+import com.ipodmodern.audio.ui.theme.NeoRadiusLg
+import com.ipodmodern.audio.ui.theme.NeoRadiusSm
+import com.ipodmodern.audio.ui.theme.NeoWhite
+import com.ipodmodern.audio.ui.theme.NeoYellow
 
 @Composable
 fun MiniPlayerBar(
@@ -79,9 +75,15 @@ fun MiniPlayerBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 4.dp)
-            .clip(AetherRadiusLg)
-            .background(AetherSurface)
-            .border(1.dp, AetherHairline, AetherRadiusLg)
+            .neoShadow(
+                offsetX = 3.dp,
+                offsetY = 3.dp,
+                color = NeoBlack,
+                cornerRadius = 14.dp
+            )
+            .clip(NeoRadiusLg)
+            .background(NeoWhite)
+            .border(NeoBorderWidth, NeoBlack, NeoRadiusLg)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onBarClick()
@@ -94,13 +96,13 @@ fun MiniPlayerBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Album Art Thumbnail (38px)
+            // Album Art Thumbnail
             Box(
                 modifier = Modifier
                     .size(38.dp)
-                    .clip(AetherRadiusSm)
-                    .background(AetherSurfaceElevated)
-                    .border(1.dp, AetherHairline, AetherRadiusSm),
+                    .clip(NeoRadiusSm)
+                    .background(NeoBlack)
+                    .border(2.dp, NeoBlack, NeoRadiusSm),
                 contentAlignment = Alignment.Center
             ) {
                 if (artworkBitmap != null) {
@@ -114,7 +116,7 @@ fun MiniPlayerBar(
                     Icon(
                         imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
-                        tint = AetherMute,
+                        tint = NeoYellow,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -128,15 +130,16 @@ fun MiniPlayerBar(
                 Text(
                     text = track.title,
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AetherInk,
+                    fontWeight = FontWeight.Black,
+                    color = NeoBlack,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = track.artist,
                     fontSize = 11.sp,
-                    color = AetherMute,
+                    fontWeight = FontWeight.Bold,
+                    color = NeoBlack.copy(alpha = 0.7f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -145,9 +148,10 @@ fun MiniPlayerBar(
             // Mini Play/Pause Button
             Box(
                 modifier = Modifier
-                    .size(34.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
-                    .background(AetherPrimaryWhite)
+                    .background(NeoYellow)
+                    .border(2.dp, NeoBlack, CircleShape)
                     .clickable {
                         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         onPlayPauseClick()
@@ -162,8 +166,8 @@ fun MiniPlayerBar(
                     Icon(
                         imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (playing) "Pause" else "Play",
-                        tint = AetherOnPrimary,
-                        modifier = Modifier.size(18.dp)
+                        tint = NeoBlack,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -171,10 +175,10 @@ fun MiniPlayerBar(
             // Next Track Button
             Box(
                 modifier = Modifier
-                    .size(34.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
-                    .background(AetherSurfaceElevated)
-                    .border(1.dp, AetherHairline, CircleShape)
+                    .background(NeoWhite)
+                    .border(2.dp, NeoBlack, CircleShape)
                     .clickable {
                         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         onNextClick()
@@ -184,29 +188,25 @@ fun MiniPlayerBar(
                 Icon(
                     imageVector = Icons.Default.SkipNext,
                     contentDescription = "Next",
-                    tint = AetherInk,
-                    modifier = Modifier.size(16.dp)
+                    tint = NeoBlack,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
 
-        // Hairline Progress Track at Bottom Edge
+        // Neo Progress Bar at bottom
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(2.dp)
+                .height(3.dp)
                 .align(Alignment.BottomCenter)
-                .background(AetherHairline)
+                .background(NeoBlack.copy(alpha = 0.2f))
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(progress)
                     .fillMaxHeight()
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(AetherCyan, AetherPrimaryWhite)
-                        )
-                    )
+                    .background(NeoYellow)
             )
         }
     }

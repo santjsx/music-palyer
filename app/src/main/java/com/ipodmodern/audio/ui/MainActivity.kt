@@ -36,8 +36,8 @@ import com.ipodmodern.audio.ui.screens.ModernLibraryScreen
 import com.ipodmodern.audio.ui.screens.ModernNowPlayingScreen
 import com.ipodmodern.audio.ui.screens.ScreenType
 import com.ipodmodern.audio.ui.screens.SyncServerScreen
-import com.ipodmodern.audio.ui.theme.AmberCanvas
 import com.ipodmodern.audio.ui.theme.ModernAppTheme
+import com.ipodmodern.audio.ui.theme.NeoBgDark
 import com.ipodmodern.audio.ui.viewmodel.CoverFlowViewModel
 import com.ipodmodern.audio.ui.viewmodel.MenuViewModel
 import com.ipodmodern.audio.ui.viewmodel.PlayerViewModel
@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
             ModernAppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = AmberCanvas
+                    color = NeoBgDark
                 ) {
                     ModernMusicAppContent(
                         playerViewModel = playerViewModel,
@@ -142,9 +142,9 @@ fun ModernMusicAppContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(AmberCanvas)
+            .background(NeoBgDark)
     ) {
-        // MARK: - Instant Zero-Lag Screen Switcher
+        // MARK: - Instant Zero-Delay Screen Routing
         when (activeScreen) {
             ScreenType.NOW_PLAYING,
             ScreenType.COVER_FLOW -> {
@@ -152,14 +152,12 @@ fun ModernMusicAppContent(
                     currentTrack = playerState.currentTrack,
                     allTracks = playerState.allTracks,
                     currentTrackIndex = playerState.currentTrackIndex,
-                    positionMs = playerState.positionMs,
-                    durationMs = playerState.durationMs,
                     isPlaying = playerState.isPlaying,
                     volumeLevel = playerState.volume,
                     isShuffle = playerState.isShuffle,
                     repeatMode = playerState.repeatMode,
                     isFavorite = playerState.currentTrack?.let { playerState.favoriteTrackIds.contains(it.id) } == true,
-                    currentLyricText = playerState.currentLyricText,
+                    playbackProgressFlow = playerViewModel.playbackProgress,
                     onPlayPauseClick = { playerViewModel.togglePlayPause() },
                     onNextClick = { playerViewModel.nextTrack() },
                     onPrevClick = { playerViewModel.prevTrack() },
@@ -177,9 +175,10 @@ fun ModernMusicAppContent(
                 )
             }
             ScreenType.LYRICS -> {
+                val progress by playerViewModel.playbackProgress.collectAsState()
                 LyricsScreen(
                     lyrics = playerState.lyrics,
-                    activeLyricIndex = playerState.activeLyricIndex,
+                    activeLyricIndex = progress.activeLyricIndex,
                     songTitle = playerState.currentTrack?.title ?: "Now Playing",
                     onSeekTo = { timestampMs ->
                         playerViewModel.seekTo(timestampMs)
@@ -246,11 +245,12 @@ fun ModernMusicAppContent(
                     .navigationBarsPadding()
             ) {
                 if (playerState.currentTrack != null) {
+                    val progress by playerViewModel.playbackProgress.collectAsState()
                     MiniPlayerBar(
                         track = playerState.currentTrack,
                         isPlaying = playerState.isPlaying,
-                        positionMs = playerState.positionMs,
-                        durationMs = playerState.durationMs,
+                        positionMs = progress.positionMs,
+                        durationMs = progress.durationMs,
                         onBarClick = { activeScreen = ScreenType.NOW_PLAYING },
                         onPlayPauseClick = { playerViewModel.togglePlayPause() },
                         onNextClick = { playerViewModel.nextTrack() }

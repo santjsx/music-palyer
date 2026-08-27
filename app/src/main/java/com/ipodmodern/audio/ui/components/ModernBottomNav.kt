@@ -14,9 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.PlayCircleOutline
-import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -31,20 +31,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ipodmodern.audio.ui.screens.ScreenType
-import com.ipodmodern.audio.ui.theme.AetherCyan
-import com.ipodmodern.audio.ui.theme.AetherHairline
-import com.ipodmodern.audio.ui.theme.AetherMute
-import com.ipodmodern.audio.ui.theme.AetherPrimaryWhite
-import com.ipodmodern.audio.ui.theme.AetherRadiusLg
-import com.ipodmodern.audio.ui.theme.AetherRadiusXl
-import com.ipodmodern.audio.ui.theme.AetherSurface
-import com.ipodmodern.audio.ui.theme.AetherSurfaceElevated
+import com.ipodmodern.audio.ui.theme.NeoBlack
+import com.ipodmodern.audio.ui.theme.NeoBorderWidth
+import com.ipodmodern.audio.ui.theme.NeoMuted
+import com.ipodmodern.audio.ui.theme.NeoRadiusLg
+import com.ipodmodern.audio.ui.theme.NeoRadiusXl
+import com.ipodmodern.audio.ui.theme.NeoWhite
+import com.ipodmodern.audio.ui.theme.NeoYellow
 
 enum class ModernTab(val title: String, val icon: ImageVector) {
-    LIBRARY("Library", Icons.Default.QueueMusic),
+    LIBRARY("Library", Icons.AutoMirrored.Filled.QueueMusic),
     NOW_PLAYING("Playing", Icons.Default.PlayCircleOutline),
     EQUALIZER("10-EQ", Icons.Default.Equalizer),
-    SYNC("Wi-Fi Sync", Icons.Default.Wifi)
+    SYNC("Sync", Icons.Default.Wifi)
 }
 
 @Composable
@@ -66,9 +65,15 @@ fun ModernBottomNavIsland(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 6.dp)
-            .clip(AetherRadiusXl)
-            .background(AetherSurface)
-            .border(1.dp, AetherHairline, AetherRadiusXl)
+            .neoShadow(
+                offsetX = 4.dp,
+                offsetY = 4.dp,
+                color = NeoBlack,
+                cornerRadius = 20.dp
+            )
+            .clip(NeoRadiusXl)
+            .background(NeoWhite)
+            .border(NeoBorderWidth, NeoBlack, NeoRadiusXl)
             .padding(vertical = 6.dp, horizontal = 8.dp)
     ) {
         Row(
@@ -82,34 +87,34 @@ fun ModernBottomNavIsland(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .clip(AetherRadiusLg)
-                        .background(if (isSelected) AetherSurfaceElevated else Color.Transparent)
+                        .clip(NeoRadiusLg)
+                        .background(if (isSelected) NeoYellow else Color.Transparent)
                         .border(
-                            1.dp,
-                            if (isSelected) AetherCyan else Color.Transparent,
-                            AetherRadiusLg
+                            2.dp,
+                            if (isSelected) NeoBlack else Color.Transparent,
+                            NeoRadiusLg
                         )
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             onTabSelected(tab)
                         }
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
                 ) {
                     Icon(
                         imageVector = tab.icon,
                         contentDescription = tab.title,
-                        tint = if (isSelected) AetherCyan else AetherMute,
+                        tint = if (isSelected) NeoBlack else NeoMuted,
                         modifier = Modifier.size(20.dp)
                     )
 
                     Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
-                        text = tab.title,
+                        text = tab.title.uppercase(),
                         fontSize = 10.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) AetherPrimaryWhite else AetherMute,
-                        letterSpacing = 0.2.sp
+                        fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
+                        color = if (isSelected) NeoBlack else NeoMuted,
+                        letterSpacing = 0.5.sp
                     )
                 }
             }

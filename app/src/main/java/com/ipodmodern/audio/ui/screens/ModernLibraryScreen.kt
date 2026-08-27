@@ -2,6 +2,9 @@ package com.ipodmodern.audio.ui.screens
 
 import android.graphics.BitmapFactory
 import android.view.HapticFeedbackConstants
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,7 +15,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,22 +27,18 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -66,26 +64,30 @@ import com.ipodmodern.audio.core.model.Album
 import com.ipodmodern.audio.core.model.Artist
 import com.ipodmodern.audio.core.model.Track
 import com.ipodmodern.audio.ui.components.AetherAudioVisualizer
-import com.ipodmodern.audio.ui.components.RaycastCard
-import com.ipodmodern.audio.ui.components.RaycastPrimaryButton
-import com.ipodmodern.audio.ui.components.RaycastSecondaryButton
-import com.ipodmodern.audio.ui.theme.AetherCanvas
-import com.ipodmodern.audio.ui.theme.AetherCyan
-import com.ipodmodern.audio.ui.theme.AetherHairline
-import com.ipodmodern.audio.ui.theme.AetherHairlineStrong
-import com.ipodmodern.audio.ui.theme.AetherInk
-import com.ipodmodern.audio.ui.theme.AetherMute
-import com.ipodmodern.audio.ui.theme.AetherPrimaryWhite
-import com.ipodmodern.audio.ui.theme.AetherRadiusMd
-import com.ipodmodern.audio.ui.theme.AetherRadiusSm
-import com.ipodmodern.audio.ui.theme.AetherRose
-import com.ipodmodern.audio.ui.theme.AetherSurface
-import com.ipodmodern.audio.ui.theme.AetherSurfaceCard
-import com.ipodmodern.audio.ui.theme.AetherSurfaceElevated
+import com.ipodmodern.audio.ui.components.NeoBadge
+import com.ipodmodern.audio.ui.components.NeoButton
+import com.ipodmodern.audio.ui.components.NeoCard
+import com.ipodmodern.audio.ui.components.NeoIconButton
+import com.ipodmodern.audio.ui.components.neoShadow
+import com.ipodmodern.audio.ui.theme.NeoBgDark
+import com.ipodmodern.audio.ui.theme.NeoBlack
+import com.ipodmodern.audio.ui.theme.NeoBlue
+import com.ipodmodern.audio.ui.theme.NeoBorderWidth
+import com.ipodmodern.audio.ui.theme.NeoGreen
+import com.ipodmodern.audio.ui.theme.NeoMuted
+import com.ipodmodern.audio.ui.theme.NeoPink
+import com.ipodmodern.audio.ui.theme.NeoPurple
+import com.ipodmodern.audio.ui.theme.NeoRadiusLg
+import com.ipodmodern.audio.ui.theme.NeoRadiusMd
+import com.ipodmodern.audio.ui.theme.NeoRadiusSm
+import com.ipodmodern.audio.ui.theme.NeoWhite
+import com.ipodmodern.audio.ui.theme.NeoYellow
 import java.util.Locale
 
-enum class LibraryCategory {
-    SONGS, ALBUMS, ARTISTS, FAVORITES
+enum class LibraryCategory(val title: String) {
+    SONGS("Songs"),
+    ALBUMS("Albums"),
+    ARTISTS("Artists")
 }
 
 @Composable
@@ -105,45 +107,41 @@ fun ModernLibraryScreen(
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
-    var selectedCategory by remember { mutableStateOf(LibraryCategory.SONGS) }
     var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf(LibraryCategory.SONGS) }
 
-    // Real-time search filtering
-    val filteredTracks = remember(tracks, searchQuery, selectedCategory, favoriteTrackIds) {
-        val base = if (selectedCategory == LibraryCategory.FAVORITES) {
-            tracks.filter { favoriteTrackIds.contains(it.id) }
-        } else {
-            tracks
-        }
-        if (searchQuery.isBlank()) {
-            base
-        } else {
-            base.filter {
-                it.title.contains(searchQuery, ignoreCase = true) ||
-                        it.artist.contains(searchQuery, ignoreCase = true) ||
-                        it.album.contains(searchQuery, ignoreCase = true)
-            }
+    val filteredTracks = remember(tracks, searchQuery) {
+        if (searchQuery.isBlank()) tracks
+        else tracks.filter {
+            it.title.contains(searchQuery, ignoreCase = true) ||
+                    it.artist.contains(searchQuery, ignoreCase = true) ||
+                    it.album.contains(searchQuery, ignoreCase = true)
         }
     }
 
     val filteredAlbums = remember(albums, searchQuery) {
         if (searchQuery.isBlank()) albums
-        else albums.filter { it.title.contains(searchQuery, ignoreCase = true) || it.artist.contains(searchQuery, ignoreCase = true) }
+        else albums.filter {
+            it.title.contains(searchQuery, ignoreCase = true) ||
+                    it.artist.contains(searchQuery, ignoreCase = true)
+        }
     }
 
     val filteredArtists = remember(artists, searchQuery) {
         if (searchQuery.isBlank()) artists
-        else artists.filter { it.name.contains(searchQuery, ignoreCase = true) }
+        else artists.filter {
+            it.name.contains(searchQuery, ignoreCase = true)
+        }
     }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(AetherCanvas)
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .background(NeoBgDark)
+            .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
-        // MARK: - Header Bar with Aether branding
+        // Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -153,91 +151,57 @@ fun ModernLibraryScreen(
         ) {
             Column {
                 Text(
-                    text = "AETHER AUDIO",
+                    text = "AETHER",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black,
+                    color = NeoYellow,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = "${tracks.size} LOSSLESS TRACKS",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = AetherCyan,
-                    letterSpacing = 1.4.sp
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "${tracks.size} Lossless Tracks",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AetherInk,
-                    letterSpacing = 0.2.sp
+                    fontFamily = FontFamily.Monospace,
+                    color = NeoWhite
                 )
             }
 
-            // Rescan / Refresh Button
-            Box(
-                modifier = Modifier
-                    .clip(AetherRadiusMd)
-                    .background(AetherSurfaceElevated)
-                    .border(1.dp, AetherHairline, AetherRadiusMd)
-                    .clickable {
-                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                        onRescanClick()
-                    }
-                    .padding(horizontal = 12.dp, vertical = 7.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    if (isScanning) {
-                        CircularProgressIndicator(
-                            color = AetherCyan,
-                            modifier = Modifier.size(12.dp),
-                            strokeWidth = 1.5.dp
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Rescan",
-                            tint = AetherInk,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                    Text(
-                        text = if (isScanning) "SCANNING..." else "RESCAN",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AetherInk,
-                        letterSpacing = 0.5.sp
-                    )
-                }
-            }
+            NeoIconButton(
+                icon = Icons.Default.Refresh,
+                contentDescription = "Scan",
+                onClick = onRescanClick,
+                backgroundColor = NeoWhite,
+                size = 42.dp
+            )
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // MARK: - Unclipped Precision Search Input (BasicTextField)
+        // Neo-Brutalist Search Bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp)
-                .clip(AetherRadiusMd)
-                .background(AetherSurfaceElevated)
-                .border(
-                    1.dp,
-                    if (searchQuery.isNotEmpty()) AetherCyan else AetherHairline,
-                    AetherRadiusMd
+                .neoShadow(
+                    offsetX = 3.dp,
+                    offsetY = 3.dp,
+                    color = NeoBlack,
+                    cornerRadius = 12.dp
                 )
-                .padding(horizontal = 12.dp),
-            contentAlignment = Alignment.CenterStart
+                .clip(NeoRadiusMd)
+                .background(NeoWhite)
+                .border(NeoBorderWidth, NeoBlack, NeoRadiusMd)
+                .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = if (searchQuery.isNotEmpty()) AetherCyan else AetherMute,
-                    modifier = Modifier.size(16.dp)
+                    contentDescription = null,
+                    tint = NeoBlack,
+                    modifier = Modifier.size(18.dp)
                 )
 
                 Box(
@@ -247,20 +211,21 @@ fun ModernLibraryScreen(
                     if (searchQuery.isEmpty()) {
                         Text(
                             text = "Search tracks, artists, albums...",
-                            color = AetherMute,
                             fontSize = 13.sp,
-                            maxLines = 1
+                            fontWeight = FontWeight.Medium,
+                            color = NeoMuted
                         )
                     }
+
                     BasicTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         singleLine = true,
-                        cursorBrush = SolidColor(AetherCyan),
+                        cursorBrush = SolidColor(NeoBlack),
                         textStyle = TextStyle(
-                            color = AetherInk,
+                            color = NeoBlack,
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Bold
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -270,52 +235,10 @@ fun ModernLibraryScreen(
                     Icon(
                         imageVector = Icons.Default.Clear,
                         contentDescription = "Clear",
-                        tint = AetherInk,
+                        tint = NeoBlack,
                         modifier = Modifier
-                            .size(16.dp)
-                            .clickable {
-                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                searchQuery = ""
-                            }
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // MARK: - Pill-Tabs (Songs, Albums, Artists, Favorites)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf(
-                LibraryCategory.SONGS to "Songs (${tracks.size})",
-                LibraryCategory.ALBUMS to "Albums (${albums.size})",
-                LibraryCategory.ARTISTS to "Artists (${artists.size})",
-                LibraryCategory.FAVORITES to "Favorites (${favoriteTrackIds.size})"
-            ).forEach { (category, title) ->
-                val isSelected = selectedCategory == category
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(if (isSelected) AetherSurfaceElevated else Color.Transparent)
-                        .border(
-                            1.dp,
-                            if (isSelected) AetherCyan else AetherHairline,
-                            CircleShape
-                        )
-                        .clickable {
-                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            selectedCategory = category
-                        }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = title,
-                        fontSize = 11.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) AetherPrimaryWhite else AetherMute
+                            .size(18.dp)
+                            .clickable { searchQuery = "" }
                     )
                 }
             }
@@ -323,38 +246,73 @@ fun ModernLibraryScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // MARK: - Action Buttons (Shuffle All / Play All)
-        if (selectedCategory == LibraryCategory.SONGS || selectedCategory == LibraryCategory.FAVORITES) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                RaycastPrimaryButton(
-                    text = "Shuffle All",
-                    icon = Icons.Default.Shuffle,
+        // Neo Category Tabs
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            LibraryCategory.values().forEach { cat ->
+                val isSelected = cat == selectedCategory
+                NeoCard(
+                    backgroundColor = if (isSelected) NeoYellow else NeoWhite,
+                    shadowOffset = if (isSelected) 3.dp else 2.dp,
+                    cornerRadius = 10.dp,
+                    modifier = Modifier.weight(1f),
                     onClick = {
-                        if (filteredTracks.isNotEmpty()) onShuffleAll(filteredTracks)
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-
-                RaycastSecondaryButton(
-                    text = "Play All",
-                    icon = Icons.Default.PlayArrow,
-                    onClick = {
-                        if (filteredTracks.isNotEmpty()) onPlayAll(filteredTracks)
-                    },
-                    modifier = Modifier.weight(1f)
-                )
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        selectedCategory = cat
+                    }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = cat.title.uppercase(),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
+                            color = NeoBlack
+                        )
+                    }
+                }
             }
-
-            Spacer(modifier = Modifier.height(10.dp))
         }
 
-        // MARK: - Content Views with 120fps Stable Keys
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Quick Shuffle / Play All Row
+        if (selectedCategory == LibraryCategory.SONGS && filteredTracks.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                NeoButton(
+                    text = "Shuffle",
+                    icon = Icons.Default.Shuffle,
+                    backgroundColor = NeoPurple,
+                    textColor = NeoWhite,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onShuffleAll(filteredTracks) }
+                )
+
+                NeoButton(
+                    text = "Play All",
+                    icon = Icons.Default.PlayArrow,
+                    backgroundColor = NeoGreen,
+                    textColor = NeoWhite,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onPlayAll(filteredTracks) }
+                )
+            }
+        }
+
+        // Main List Content
         when (selectedCategory) {
-            LibraryCategory.SONGS,
-            LibraryCategory.FAVORITES -> {
+            LibraryCategory.SONGS -> {
                 if (filteredTracks.isEmpty()) {
                     Box(
                         modifier = Modifier
@@ -363,27 +321,32 @@ fun ModernLibraryScreen(
                         contentAlignment = Alignment.TopCenter
                     ) {
                         Text(
-                            text = if (selectedCategory == LibraryCategory.FAVORITES) "No favorite tracks yet." else "No tracks found.",
-                            color = AetherMute,
-                            fontSize = 13.sp
+                            text = if (isScanning) "Scanning device audio..." else "No tracks found.",
+                            color = NeoWhite,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 140.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        itemsIndexed(
-                            items = filteredTracks,
-                            key = { _, track -> track.id }
-                        ) { index, track ->
-                            val isCurrentPlaying = activeTrack?.id == track.id
-                            CommandPaletteTrackRow(
+                        items(
+                            filteredTracks,
+                            key = { it.id }
+                        ) { track ->
+                            val isCurrent = activeTrack?.id == track.id
+                            NeoTrackRow(
                                 track = track,
-                                isPlaying = isCurrentPlaying && isPlaying,
+                                isCurrent = isCurrent,
+                                isPlaying = isCurrent && isPlaying,
                                 isFavorite = favoriteTrackIds.contains(track.id),
-                                onClick = { onTrackSelect(filteredTracks, index) },
+                                onClick = {
+                                    val idx = filteredTracks.indexOf(track)
+                                    onTrackSelect(filteredTracks, idx)
+                                },
                                 onToggleFavorite = { onToggleFavorite(track.id) }
                             )
                         }
@@ -398,7 +361,7 @@ fun ModernLibraryScreen(
                             .padding(top = 40.dp),
                         contentAlignment = Alignment.TopCenter
                     ) {
-                        Text(text = "No albums found.", color = AetherMute, fontSize = 13.sp)
+                        Text(text = "No albums found.", color = NeoWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
                 } else {
                     LazyVerticalGrid(
@@ -412,7 +375,7 @@ fun ModernLibraryScreen(
                             items = filteredAlbums,
                             key = { it.title + "_" + it.artist }
                         ) { album ->
-                            RaycastAlbumCard(album = album)
+                            NeoAlbumCard(album = album)
                         }
                     }
                 }
@@ -425,19 +388,19 @@ fun ModernLibraryScreen(
                             .padding(top = 40.dp),
                         contentAlignment = Alignment.TopCenter
                     ) {
-                        Text(text = "No artists found.", color = AetherMute, fontSize = 13.sp)
+                        Text(text = "No artists found.", color = NeoWhite, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 140.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(
                             filteredArtists,
                             key = { it.name }
                         ) { artist ->
-                            RaycastArtistRow(artist = artist)
+                            NeoArtistRow(artist = artist)
                         }
                     }
                 }
@@ -447,156 +410,129 @@ fun ModernLibraryScreen(
 }
 
 /**
- * Aether Single Track Row with instant touch reaction.
+ * Neo-Brutalist Track Row.
  */
 @Composable
-fun CommandPaletteTrackRow(
+fun NeoTrackRow(
     track: Track,
+    isCurrent: Boolean,
     isPlaying: Boolean,
     isFavorite: Boolean,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit
 ) {
-    val view = LocalView.current
     val artworkBitmap = remember(track.artworkUri) {
         track.artworkUri?.let { path ->
             try { BitmapFactory.decodeFile(path) } catch (e: Exception) { null }
         }
     }
 
-    val durationText = remember(track.durationMs) {
-        val totalSec = track.durationMs / 1000
-        val m = totalSec / 60
-        val s = totalSec % 60
-        String.format(Locale.US, "%d:%02d", m, s)
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(AetherRadiusSm)
-            .background(if (isPlaying) AetherSurfaceCard else AetherSurface)
-            .border(
-                1.dp,
-                if (isPlaying) AetherCyan else AetherHairline,
-                AetherRadiusSm
-            )
-            .clickable {
-                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                onClick()
-            }
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    NeoCard(
+        backgroundColor = if (isCurrent) NeoYellow else NeoWhite,
+        shadowOffset = if (isCurrent) 3.dp else 2.dp,
+        cornerRadius = 12.dp,
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick
     ) {
-        // 44px Album Art Tile
-        Box(
+        Row(
             modifier = Modifier
-                .size(44.dp)
-                .clip(AetherRadiusSm)
-                .background(AetherSurfaceElevated)
-                .border(1.dp, AetherHairline, AetherRadiusSm),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (artworkBitmap != null) {
-                Image(
-                    bitmap = artworkBitmap.asImageBitmap(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+            // Artwork Box
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(NeoRadiusSm)
+                    .background(NeoBlack)
+                    .border(2.dp, NeoBlack, NeoRadiusSm),
+                contentAlignment = Alignment.Center
+            ) {
+                if (artworkBitmap != null) {
+                    Image(
+                        bitmap = artworkBitmap.asImageBitmap(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint = NeoYellow,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // Title & Artist
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = track.title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black,
+                    color = NeoBlack,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.MusicNote,
-                    contentDescription = null,
-                    tint = AetherMute,
-                    modifier = Modifier.size(20.dp)
+                Text(
+                    text = track.artist,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = NeoBlack.copy(alpha = 0.75f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            if (isPlaying) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.6f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AetherAudioVisualizer(isPlaying = true)
-                }
+            // Visualizer if playing
+            if (isCurrent && isPlaying) {
+                AetherAudioVisualizer(
+                    isPlaying = true
+                )
             }
-        }
 
-        // Title & Artist
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = track.title,
-                fontSize = 13.sp,
-                fontWeight = if (isPlaying) FontWeight.Bold else FontWeight.Medium,
-                color = if (isPlaying) AetherCyan else AetherInk,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Text(
-                text = "${track.artist} · ${track.album}",
-                fontSize = 11.sp,
-                color = AetherMute,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+            // Favorite Button
+            Icon(
+                imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                contentDescription = "Favorite",
+                tint = if (isFavorite) NeoPink else NeoBlack,
+                modifier = Modifier
+                    .size(22.dp)
+                    .clickable { onToggleFavorite() }
             )
         }
-
-        // Duration Keycap
-        Text(
-            text = durationText,
-            fontSize = 11.sp,
-            color = AetherMute,
-            fontFamily = FontFamily.Monospace
-        )
-
-        // Favorite Heart Button
-        Icon(
-            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-            contentDescription = "Favorite",
-            tint = if (isFavorite) AetherRose else AetherMute,
-            modifier = Modifier
-                .size(18.dp)
-                .clickable {
-                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                    onToggleFavorite()
-                }
-        )
     }
 }
 
 /**
- * 2-Column Aether Album Card.
+ * Neo-Brutalist Album Card.
  */
 @Composable
-fun RaycastAlbumCard(album: Album) {
+fun NeoAlbumCard(album: Album) {
     val artworkBitmap = remember(album.artworkUri) {
         album.artworkUri?.let { path ->
             try { BitmapFactory.decodeFile(path) } catch (e: Exception) { null }
         }
     }
 
-    RaycastCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AetherRadiusMd
+    NeoCard(
+        backgroundColor = NeoWhite,
+        cornerRadius = 14.dp,
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier.padding(8.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.0f)
-                    .clip(AetherRadiusSm)
-                    .background(AetherSurfaceElevated)
-                    .border(1.dp, AetherHairline, AetherRadiusSm),
+                    .height(130.dp)
+                    .background(NeoBlack)
+                    .border(NeoBorderWidth, NeoBlack, RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 if (artworkBitmap != null) {
@@ -608,81 +544,76 @@ fun RaycastAlbumCard(album: Album) {
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Default.Album,
+                        imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
-                        tint = AetherMute,
-                        modifier = Modifier.size(36.dp)
+                        tint = NeoYellow,
+                        modifier = Modifier.size(40.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = album.title,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = AetherInk,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Text(
-                text = "${album.artist} · ${album.trackCount} tracks",
-                fontSize = 10.sp,
-                color = AetherMute,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp)
+            ) {
+                Text(
+                    text = album.title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Black,
+                    color = NeoBlack,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${album.artist} • ${album.trackCount} tracks",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = NeoMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
 
 /**
- * Aether Artist Row.
+ * Neo-Brutalist Artist Row.
  */
 @Composable
-fun RaycastArtistRow(artist: Artist) {
-    RaycastCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = AetherRadiusSm
+fun NeoArtistRow(artist: Artist) {
+    NeoCard(
+        backgroundColor = NeoWhite,
+        cornerRadius = 12.dp,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(AetherSurfaceElevated)
-                    .border(1.dp, AetherHairline, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    tint = AetherInk,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
+            Column {
                 Text(
                     text = artist.name,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AetherInk
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black,
+                    color = NeoBlack
                 )
                 Text(
-                    text = "${artist.albumCount} albums · ${artist.trackCount} tracks",
+                    text = "${artist.albumCount} albums • ${artist.trackCount} tracks",
                     fontSize = 11.sp,
-                    color = AetherMute
+                    fontWeight = FontWeight.Bold,
+                    color = NeoMuted
                 )
             }
+            NeoBadge(
+                text = "ARTIST",
+                backgroundColor = NeoPurple,
+                textColor = NeoWhite
+            )
         }
     }
 }
