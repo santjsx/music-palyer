@@ -30,14 +30,19 @@ import androidx.core.content.ContextCompat
 import com.ipodmodern.audio.ui.components.MiniPlayerBar
 import com.ipodmodern.audio.ui.components.ModernBottomNavIsland
 import com.ipodmodern.audio.ui.components.ModernTab
+import com.ipodmodern.audio.ui.screens.EffectsScreen
 import com.ipodmodern.audio.ui.screens.EqualizerScreen
 import com.ipodmodern.audio.ui.screens.LyricsScreen
+import com.ipodmodern.audio.ui.screens.ModernHomeScreen
 import com.ipodmodern.audio.ui.screens.ModernLibraryScreen
 import com.ipodmodern.audio.ui.screens.ModernNowPlayingScreen
+import com.ipodmodern.audio.ui.screens.PlayingQueueScreen
+import com.ipodmodern.audio.ui.screens.PlaylistsScreen
 import com.ipodmodern.audio.ui.screens.ScreenType
+import com.ipodmodern.audio.ui.screens.SettingsScreen
 import com.ipodmodern.audio.ui.screens.SyncServerScreen
 import com.ipodmodern.audio.ui.theme.ModernAppTheme
-import com.ipodmodern.audio.ui.theme.NeoBgDark
+import com.ipodmodern.audio.ui.theme.ObsidianBg
 import com.ipodmodern.audio.ui.viewmodel.CoverFlowViewModel
 import com.ipodmodern.audio.ui.viewmodel.MenuViewModel
 import com.ipodmodern.audio.ui.viewmodel.PlayerViewModel
@@ -87,7 +92,7 @@ class MainActivity : ComponentActivity() {
             ModernAppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = NeoBgDark
+                    color = ObsidianBg
                 ) {
                     ModernMusicAppContent(
                         playerViewModel = playerViewModel,
@@ -116,20 +121,11 @@ fun ModernMusicAppContent(
     fun handleBack() {
         playerViewModel.hapticEngine.performClick()
         when (activeScreen) {
-            ScreenType.LYRICS -> {
-                activeScreen = ScreenType.NOW_PLAYING
-            }
-            ScreenType.NOW_PLAYING,
-            ScreenType.COVER_FLOW,
-            ScreenType.EQUALIZER,
-            ScreenType.SYNC_SERVER -> {
-                activeScreen = ScreenType.MENU_MAIN
-            }
-            else -> {
-                if (!menuViewModel.onMenuBack()) {
-                    activeScreen = ScreenType.MENU_MAIN
-                }
-            }
+            ScreenType.NOW_PLAYING -> activeScreen = ScreenType.MENU_MAIN
+            ScreenType.EQUALIZER, ScreenType.EFFECTS, ScreenType.PLAYING_QUEUE -> activeScreen = ScreenType.NOW_PLAYING
+            ScreenType.LYRICS -> activeScreen = ScreenType.NOW_PLAYING
+            ScreenType.SYNC_SERVER -> activeScreen = ScreenType.SETTINGS
+            else -> activeScreen = ScreenType.MENU_MAIN
         }
     }
 
@@ -137,41 +133,97 @@ fun ModernMusicAppContent(
         handleBack()
     }
 
-    val isFullScreenModal = activeScreen == ScreenType.NOW_PLAYING || activeScreen == ScreenType.LYRICS
+    val isFullScreenModal = activeScreen == ScreenType.NOW_PLAYING ||
+            activeScreen == ScreenType.LYRICS ||
+            activeScreen == ScreenType.EQUALIZER ||
+            activeScreen == ScreenType.EFFECTS ||
+            activeScreen == ScreenType.PLAYING_QUEUE
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NeoBgDark)
+            .background(ObsidianBg)
     ) {
-        // MARK: - Instant Zero-Delay Screen Routing
+        // MARK: - Screen Router
         when (activeScreen) {
+            ScreenType.MENU_MAIN -> {
+                ModernHomeScreen(
+                    playerViewModel = playerViewModel,
+                    onNavigateToSongs = { activeScreen = ScreenType.MENU_MUSIC },
+                    onNavigateToAlbums = { activeScreen = ScreenType.MENU_MUSIC },
+                    onNavigateToArtists = { activeScreen = ScreenType.MENU_MUSIC },
+                    onNavigateToPlaylists = { activeScreen = ScreenType.PLAYLISTS },
+                    onNavigateToNowPlaying = { activeScreen = ScreenType.NOW_PLAYING },
+                    onOpenSyncHub = { activeScreen = ScreenType.SYNC_SERVER }
+                )
+            }
+            ScreenType.MENU_MUSIC,
+            ScreenType.MENU_SONGS,
+            ScreenType.MENU_ALBUMS,
+            ScreenType.MENU_ARTISTS -> {
+                ModernLibraryScreen(
+                    tracks = playerState.allTracks,
+                    albums = menuViewModel.cachedAlbums,
+                    artists = menuViewModel.cachedArtists,
+                    activeTrack = playerState.currentTrack,
+                    isPlaying = playerState.isPlaying,
+                    onTrackSelect = { track ->
+                        playerViewModel.playTrack(track)
+                        activeScreen = ScreenType.NOW_PLAYING
+                    },
+                    onShuffleAll = {
+                        if (playerState.allTracks.isNotEmpty()) {
+                            playerViewModel.playTrack(playerState.allTracks.random())
+                            activeScreen = ScreenType.NOW_PLAYING
+                        }
+                    }
+                )
+            }
             ScreenType.NOW_PLAYING,
             ScreenType.COVER_FLOW -> {
                 ModernNowPlayingScreen(
-                    currentTrack = playerState.currentTrack,
-                    allTracks = playerState.allTracks,
-                    currentTrackIndex = playerState.currentTrackIndex,
-                    isPlaying = playerState.isPlaying,
-                    volumeLevel = playerState.volume,
-                    isShuffle = playerState.isShuffle,
-                    repeatMode = playerState.repeatMode,
-                    isFavorite = playerState.currentTrack?.let { playerState.favoriteTrackIds.contains(it.id) } == true,
-                    playbackProgressFlow = playerViewModel.playbackProgress,
-                    onPlayPauseClick = { playerViewModel.togglePlayPause() },
-                    onNextClick = { playerViewModel.nextTrack() },
-                    onPrevClick = { playerViewModel.prevTrack() },
-                    onTrackSelect = { index -> playerViewModel.playTrackAtIndex(index) },
-                    onSeekTo = { targetMs -> playerViewModel.seekTo(targetMs) },
-                    onVolumeChange = { vol -> playerViewModel.setVolumeDirect(vol) },
-                    onToggleShuffle = { playerViewModel.toggleShuffle() },
-                    onToggleRepeat = { playerViewModel.toggleRepeat() },
-                    onToggleFavorite = {
-                        playerState.currentTrack?.let { playerViewModel.toggleFavorite(it.id) }
+                    playerViewModel = playerViewModel,
+                    onBackClick = { activeScreen = ScreenType.MENU_MAIN },
+                    onOpenEqualizer = { activeScreen = ScreenType.EQUALIZER },
+                    onOpenQueue = { activeScreen = ScreenType.PLAYING_QUEUE },
+                    onOpenLyrics = { activeScreen = ScreenType.LYRICS }
+                )
+            }
+            ScreenType.PLAYLISTS -> {
+                PlaylistsScreen(
+                    playerViewModel = playerViewModel
+                )
+            }
+            ScreenType.SETTINGS -> {
+                SettingsScreen(
+                    onOpenEqualizer = { activeScreen = ScreenType.EQUALIZER },
+                    onOpenEffects = { activeScreen = ScreenType.EFFECTS },
+                    onOpenSyncHub = { activeScreen = ScreenType.SYNC_SERVER }
+                )
+            }
+            ScreenType.EQUALIZER -> {
+                EqualizerScreen(
+                    bandGains = playerState.eqGains,
+                    selectedBandIndex = playerState.selectedEqBandIndex,
+                    onBandGainChange = { band, gain ->
+                        playerViewModel.selectEqBand(band)
+                        playerViewModel.adjustSelectedEqBand(((gain - playerState.eqGains[band]) * 2).toInt())
                     },
-                    onLyricsClick = { activeScreen = ScreenType.LYRICS },
-                    onEqClick = { activeScreen = ScreenType.EQUALIZER },
-                    onCollapseClick = { activeScreen = ScreenType.MENU_MAIN }
+                    onPresetSelect = { playerViewModel.applyEqPreset(it) },
+                    dynamicPrecutDb = playerState.dynamicPrecutDb,
+                    presetName = playerState.currentPresetName,
+                    onBackClick = { activeScreen = ScreenType.NOW_PLAYING }
+                )
+            }
+            ScreenType.EFFECTS -> {
+                EffectsScreen(
+                    onBackClick = { activeScreen = ScreenType.SETTINGS }
+                )
+            }
+            ScreenType.PLAYING_QUEUE -> {
+                PlayingQueueScreen(
+                    playerViewModel = playerViewModel,
+                    onBackClick = { activeScreen = ScreenType.NOW_PLAYING }
                 )
             }
             ScreenType.LYRICS -> {
@@ -186,52 +238,10 @@ fun ModernMusicAppContent(
                     onBackClick = { activeScreen = ScreenType.NOW_PLAYING }
                 )
             }
-            ScreenType.EQUALIZER -> {
-                EqualizerScreen(
-                    bandGains = playerState.eqGains,
-                    selectedBandIndex = playerState.selectedEqBandIndex,
-                    onBandGainChange = { band, gain ->
-                        playerViewModel.selectEqBand(band)
-                        playerViewModel.adjustSelectedEqBand(((gain - playerState.eqGains[band]) * 2).toInt())
-                    },
-                    onPresetSelect = { playerViewModel.applyEqPreset(it) },
-                    dynamicPrecutDb = playerState.dynamicPrecutDb,
-                    presetName = playerState.currentPresetName
-                )
-            }
             ScreenType.SYNC_SERVER -> {
                 SyncServerScreen(
                     serverState = syncServerState,
                     onRescanClick = { playerViewModel.rescanLibrary() }
-                )
-            }
-            else -> {
-                ModernLibraryScreen(
-                    tracks = playerState.allTracks,
-                    albums = menuViewModel.cachedAlbums,
-                    artists = menuViewModel.cachedArtists,
-                    activeTrack = playerState.currentTrack,
-                    isPlaying = playerState.isPlaying,
-                    isScanning = playerState.isScanning,
-                    favoriteTrackIds = playerState.favoriteTrackIds,
-                    onTrackSelect = { trackList, index ->
-                        playerViewModel.setQueue(trackList, index, autoPlay = true)
-                        activeScreen = ScreenType.NOW_PLAYING
-                    },
-                    onShuffleAll = { trackList ->
-                        playerViewModel.shuffleAll(trackList)
-                        activeScreen = ScreenType.NOW_PLAYING
-                    },
-                    onPlayAll = { trackList ->
-                        playerViewModel.playAll(trackList, 0)
-                        activeScreen = ScreenType.NOW_PLAYING
-                    },
-                    onToggleFavorite = { trackId ->
-                        playerViewModel.toggleFavorite(trackId)
-                    },
-                    onRescanClick = {
-                        playerViewModel.rescanLibrary()
-                    }
                 )
             }
         }
@@ -251,9 +261,15 @@ fun ModernMusicAppContent(
                         isPlaying = playerState.isPlaying,
                         positionMs = progress.positionMs,
                         durationMs = progress.durationMs,
+                        isFavorite = playerState.currentTrack?.let { playerState.favoriteTrackIds.contains(it.id) } == true,
                         onBarClick = { activeScreen = ScreenType.NOW_PLAYING },
                         onPlayPauseClick = { playerViewModel.togglePlayPause() },
-                        onNextClick = { playerViewModel.nextTrack() }
+                        onNextClick = { playerViewModel.nextTrack() },
+                        onPrevClick = { playerViewModel.prevTrack() },
+                        onFavoriteClick = {
+                            playerState.currentTrack?.let { playerViewModel.toggleFavorite(it.id) }
+                        },
+                        onQueueClick = { activeScreen = ScreenType.PLAYING_QUEUE }
                     )
                 }
 
@@ -262,10 +278,11 @@ fun ModernMusicAppContent(
                     onTabSelected = { tab ->
                         playerViewModel.hapticEngine.performClick()
                         activeScreen = when (tab) {
-                            ModernTab.LIBRARY -> ScreenType.MENU_MAIN
-                            ModernTab.NOW_PLAYING -> ScreenType.NOW_PLAYING
-                            ModernTab.EQUALIZER -> ScreenType.EQUALIZER
-                            ModernTab.SYNC -> ScreenType.SYNC_SERVER
+                            ModernTab.HOME -> ScreenType.MENU_MAIN
+                            ModernTab.LIBRARY -> ScreenType.MENU_MUSIC
+                            ModernTab.PLAYER -> ScreenType.NOW_PLAYING
+                            ModernTab.PLAYLISTS -> ScreenType.PLAYLISTS
+                            ModernTab.SETTINGS -> ScreenType.SETTINGS
                         }
                     }
                 )

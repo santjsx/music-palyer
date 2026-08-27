@@ -46,6 +46,9 @@ enum class ScreenType {
     NOW_PLAYING,
     COVER_FLOW,
     EQUALIZER,
+    EFFECTS,
+    PLAYING_QUEUE,
+    PLAYLISTS,
     LYRICS,
     SYNC_SERVER,
     SETTINGS

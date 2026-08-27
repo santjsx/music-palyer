@@ -15,12 +15,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
-import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material.icons.filled.PlayCircleOutline
-import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,19 +37,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ipodmodern.audio.ui.screens.ScreenType
-import com.ipodmodern.audio.ui.theme.NeoBlack
-import com.ipodmodern.audio.ui.theme.NeoBorderWidth
-import com.ipodmodern.audio.ui.theme.NeoMuted
-import com.ipodmodern.audio.ui.theme.NeoRadiusLg
-import com.ipodmodern.audio.ui.theme.NeoRadiusXl
-import com.ipodmodern.audio.ui.theme.NeoWhite
-import com.ipodmodern.audio.ui.theme.NeoYellow
+import com.ipodmodern.audio.ui.theme.MintAccent
+import com.ipodmodern.audio.ui.theme.ObsidianBg
+import com.ipodmodern.audio.ui.theme.ObsidianBorder
+import com.ipodmodern.audio.ui.theme.ObsidianElevated
+import com.ipodmodern.audio.ui.theme.ObsidianSurface
+import com.ipodmodern.audio.ui.theme.RadiusFull
+import com.ipodmodern.audio.ui.theme.RadiusXl
+import com.ipodmodern.audio.ui.theme.TextMuted
+import com.ipodmodern.audio.ui.theme.TextPrimary
+import com.ipodmodern.audio.ui.theme.TextSecondary
 
 enum class ModernTab(val title: String, val icon: ImageVector) {
+    HOME("Home", Icons.Default.Home),
     LIBRARY("Library", Icons.AutoMirrored.Filled.QueueMusic),
-    NOW_PLAYING("Playing", Icons.Default.PlayCircleOutline),
-    EQUALIZER("10-EQ", Icons.Default.Equalizer),
-    SYNC("Sync", Icons.Default.Wifi)
+    PLAYER("Player", Icons.Default.PlayCircleOutline),
+    PLAYLISTS("Playlists", Icons.Default.LibraryMusic),
+    SETTINGS("Settings", Icons.Default.Settings)
 }
 
 @Composable
@@ -60,26 +65,21 @@ fun ModernBottomNavIsland(
     val view = LocalView.current
 
     val activeTab = when (currentScreen) {
-        ScreenType.NOW_PLAYING, ScreenType.COVER_FLOW -> ModernTab.NOW_PLAYING
-        ScreenType.EQUALIZER -> ModernTab.EQUALIZER
-        ScreenType.SYNC_SERVER -> ModernTab.SYNC
-        else -> ModernTab.LIBRARY
+        ScreenType.MENU_MAIN -> ModernTab.HOME
+        ScreenType.MENU_MUSIC, ScreenType.MENU_SONGS, ScreenType.MENU_ALBUMS, ScreenType.MENU_ARTISTS -> ModernTab.LIBRARY
+        ScreenType.NOW_PLAYING, ScreenType.COVER_FLOW -> ModernTab.PLAYER
+        ScreenType.SETTINGS -> ModernTab.SETTINGS
+        else -> ModernTab.HOME
     }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 6.dp)
-            .neoShadow(
-                offsetX = 4.dp,
-                offsetY = 4.dp,
-                color = NeoBlack,
-                cornerRadius = 20.dp
-            )
-            .clip(NeoRadiusXl)
-            .background(NeoWhite)
-            .border(NeoBorderWidth, NeoBlack, NeoRadiusXl)
-            .padding(vertical = 6.dp, horizontal = 8.dp)
+            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .clip(RadiusXl)
+            .background(ObsidianSurface)
+            .border(1.dp, ObsidianBorder, RadiusXl)
+            .padding(vertical = 6.dp, horizontal = 4.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -90,7 +90,7 @@ fun ModernBottomNavIsland(
                 val isSelected = tab == activeTab
 
                 val scale by animateFloatAsState(
-                    targetValue = if (isSelected) 1.05f else 1.0f,
+                    targetValue = if (isSelected) 1.08f else 1.0f,
                     animationSpec = spring(dampingRatio = 0.65f, stiffness = 1600f),
                     label = "tab_scale"
                 )
@@ -102,34 +102,25 @@ fun ModernBottomNavIsland(
                             scaleX = scale
                             scaleY = scale
                         }
-                        .clip(NeoRadiusLg)
-                        .background(if (isSelected) NeoYellow else Color.Transparent)
-                        .border(
-                            2.dp,
-                            if (isSelected) NeoBlack else Color.Transparent,
-                            NeoRadiusLg
-                        )
+                        .clip(RadiusFull)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             onTabSelected(tab)
                         }
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Icon(
                         imageVector = tab.icon,
                         contentDescription = tab.title,
-                        tint = if (isSelected) NeoBlack else NeoMuted,
-                        modifier = Modifier.size(20.dp)
+                        tint = if (isSelected) MintAccent else TextMuted,
+                        modifier = Modifier.size(22.dp)
                     )
-
                     Spacer(modifier = Modifier.height(2.dp))
-
                     Text(
-                        text = tab.title.uppercase(),
+                        text = tab.title,
+                        color = if (isSelected) MintAccent else TextMuted,
                         fontSize = 10.sp,
-                        fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
-                        color = if (isSelected) NeoBlack else NeoMuted,
-                        letterSpacing = 0.5.sp
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                     )
                 }
             }

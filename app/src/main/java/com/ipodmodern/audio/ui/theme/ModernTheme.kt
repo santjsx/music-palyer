@@ -1,190 +1,209 @@
 package com.ipodmodern.audio.ui.theme
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-// MARK: - Neo-Brutalism Color System (Inspired by neo-brutalism-ui-library)
-val NeoBlack = Color(0xFF000000)               // Core Solid Black for 3px borders, shadows, text
-val NeoWhite = Color(0xFFFFFFFF)               // Crisp High-Contrast White
-val NeoBg = Color(0xFFF4F0EA)                  // Warm Cream Canvas / Paper substrate
-val NeoBgDark = Color(0xFF141416)              // Neo-Brutalist Deep Void Alternative
-val NeoSurface = Color(0xFFFFFFFF)             // Card fill
-val NeoSurfaceElevated = Color(0xFFFFF9E6)     // Light yellow tint surface
+// MARK: - Obsidian & Mint Modern Dark Theme System
+val ObsidianBg = Color(0xFF0D0F12)              // Deep obsidian background
+val ObsidianSurface = Color(0xFF16191E)         // Surface card fill
+val ObsidianElevated = Color(0xFF1E2229)        // Elevated pill & popup fill
+val ObsidianPill = Color(0xFF242932)            // Pill button / Search bar background
+val ObsidianTrackBg = Color(0xFF2B313D)         // Inactive seekbar & fader background
 
-// MARK: - Neo-Brutalist Pop Palette
-val NeoYellow = Color(0xFFFFE600)              // Electric Yellow (Hero CTA)
-val NeoPurple = Color(0xFFA388EE)              // Neo Violet / Lavender
-val NeoGreen = Color(0xFF23A094)               // Retro Mint / Emerald
-val NeoPink = Color(0xFFFF6B6B)                // Hot Coral Pink
-val NeoBlue = Color(0xFF5694FF)                // Electric Sky Blue
-val NeoOrange = Color(0xFFFF8400)              // Vibrant Tangerine
-val NeoMuted = Color(0xFF71717A)               // Neutral secondary text
+val ObsidianBorder = Color(0x14FFFFFF)          // 1px Hairline border (8% white)
+val ObsidianBorderSubtle = Color(0x0AFFFFFF)    // Faint subtle border (4% white)
+val ObsidianBorderHighlight = Color(0x33FFFFFF) // Active border (20% white)
 
-// MARK: - Standardized Neo-Brutalism Geometry
-val NeoBorderWidth = 2.5.dp
-val NeoBorderThick = 3.dp
-val NeoShadowOffset = 4.dp
-val NeoShadowOffsetSmall = 3.dp
+// MARK: - Mint Green Accent Palette
+val MintAccent = Color(0xFF7AE898)              // Core vibrant Mint Accent
+val MintAccentLight = Color(0xFFA3F2B8)         // Soft Mint
+val MintAccentDark = Color(0xFF3EA35E)          // Deep Mint
+val MintGlow = Color(0x337AE898)                // 20% Alpha Glow for Waveforms & Knobs
+val MintPillBg = Color(0x247AE898)              // Semi-transparent mint badge background
 
-val NeoRadiusSm = RoundedCornerShape(8.dp)
-val NeoRadiusMd = RoundedCornerShape(12.dp)
-val NeoRadiusLg = RoundedCornerShape(16.dp)
-val NeoRadiusXl = RoundedCornerShape(22.dp)
-val NeoRadiusFull = RoundedCornerShape(9999.dp)
+// MARK: - Typography Colors
+val TextPrimary = Color(0xFFFFFFFF)             // High-contrast primary title
+val TextSecondary = Color(0xFF9299A8)           // Subtitles & artist names
+val TextMuted = Color(0xFF5C6370)               // Duration, metadata, captions
+val TextDark = Color(0xFF383D48)                // Placeholder text
+
+// MARK: - Standardized Radii
+val RadiusSm = RoundedCornerShape(8.dp)
+val RadiusMd = RoundedCornerShape(14.dp)
+val RadiusLg = RoundedCornerShape(18.dp)
+val RadiusXl = RoundedCornerShape(24.dp)
+val RadiusFull = RoundedCornerShape(9999.dp)
 
 // Legacy Aliases for Seamless Codebase Compatibility
-val AmberCanvas = NeoBgDark
-val AmberSurface = NeoBlack
-val AmberSurfaceElevated = NeoSurface
-val AmberSurfaceCard = NeoSurface
-val AmberButtonFg = NeoYellow
-val AmberHairline = NeoBlack
-val AmberHairlineSoft = NeoBlack
-val AmberHairlineStrong = NeoBlack
-val AmberGold = NeoYellow
-val AmberGoldGlow = NeoYellow.copy(alpha = 0.35f)
+val NeoBlack = ObsidianBg
+val NeoWhite = TextPrimary
+val NeoBg = ObsidianSurface
+val NeoBgDark = ObsidianBg
+val NeoSurface = ObsidianSurface
+val NeoSurfaceElevated = ObsidianElevated
+val NeoYellow = MintAccent
+val NeoPurple = Color(0xFFA388EE)
+val NeoGreen = MintAccent
+val NeoPink = Color(0xFFFF6B6B)
+val NeoBlue = Color(0xFF5694FF)
+val NeoOrange = Color(0xFFFF8400)
+val NeoMuted = TextSecondary
+
+val NeoBorderWidth = 1.dp
+val NeoBorderThick = 1.dp
+val NeoShadowOffset = 0.dp
+val NeoShadowOffsetSmall = 0.dp
+
+val NeoRadiusSm = RadiusSm
+val NeoRadiusMd = RadiusMd
+val NeoRadiusLg = RadiusLg
+val NeoRadiusXl = RadiusXl
+val NeoRadiusFull = RadiusFull
+
+val AmberCanvas = ObsidianBg
+val AmberSurface = ObsidianSurface
+val AmberSurfaceElevated = ObsidianElevated
+val AmberSurfaceCard = ObsidianSurface
+val AmberButtonFg = MintAccent
+val AmberHairline = ObsidianBorder
+val AmberHairlineSoft = ObsidianBorderSubtle
+val AmberHairlineStrong = ObsidianBorderHighlight
+val AmberGold = MintAccent
+val AmberGoldGlow = MintGlow
 val AmberCognac = NeoOrange
-val AmberChampagne = NeoBg
-val AmberEmerald = NeoGreen
+val AmberChampagne = ObsidianSurface
+val AmberEmerald = MintAccent
 val AmberRose = NeoPink
-val AmberPrimaryWhite = NeoWhite
-val AmberPrimaryPressed = NeoYellow
-val AmberOnPrimary = NeoBlack
-val AmberInk = NeoWhite
-val AmberBody = NeoBg
-val AmberCharcoal = NeoMuted
-val AmberMute = NeoMuted
-val AmberAsh = NeoBlack
+val AmberPrimaryWhite = TextPrimary
+val AmberPrimaryPressed = MintAccentLight
+val AmberOnPrimary = ObsidianBg
+val AmberInk = TextPrimary
+val AmberBody = ObsidianSurface
+val AmberCharcoal = TextSecondary
+val AmberMute = TextMuted
+val AmberAsh = ObsidianBg
 
-val AmberRadiusXs = NeoRadiusSm
-val AmberRadiusSm = NeoRadiusSm
-val AmberRadiusMd = NeoRadiusMd
-val AmberRadiusLg = NeoRadiusLg
-val AmberRadiusXl = NeoRadiusXl
-val AmberRadiusFull = NeoRadiusFull
+val AmberRadiusXs = RadiusSm
+val AmberRadiusSm = RadiusSm
+val AmberRadiusMd = RadiusMd
+val AmberRadiusLg = RadiusLg
+val AmberRadiusXl = RadiusXl
+val AmberRadiusFull = RadiusFull
 
-val RaycastCanvas = NeoBgDark
-val RaycastSurface = NeoSurface
-val RaycastSurfaceElevated = NeoSurfaceElevated
-val RaycastSurfaceCard = NeoSurface
-val RaycastButtonFg = NeoYellow
-val RaycastHairline = NeoBlack
-val RaycastHairlineSoft = NeoBlack
-val RaycastHairlineStrong = NeoBlack
-val RaycastPrimaryWhite = NeoWhite
-val RaycastPrimaryPressed = NeoYellow
-val RaycastOnPrimary = NeoBlack
-val RaycastInk = NeoWhite
-val RaycastBody = NeoBg
-val RaycastCharcoal = NeoMuted
-val RaycastMute = NeoMuted
-val RaycastAsh = NeoBlack
-val RaycastStone = NeoMuted
+val RaycastCanvas = ObsidianBg
+val RaycastSurface = ObsidianSurface
+val RaycastSurfaceElevated = ObsidianElevated
+val RaycastSurfaceCard = ObsidianSurface
+val RaycastButtonFg = MintAccent
+val RaycastHairline = ObsidianBorder
+val RaycastHairlineSoft = ObsidianBorderSubtle
+val RaycastHairlineStrong = ObsidianBorderHighlight
+val RaycastPrimaryWhite = TextPrimary
+val RaycastPrimaryPressed = MintAccentLight
+val RaycastOnPrimary = ObsidianBg
+val RaycastInk = TextPrimary
+val RaycastBody = ObsidianSurface
+val RaycastCharcoal = TextSecondary
+val RaycastMute = TextMuted
+val RaycastAsh = ObsidianBg
+val RaycastStone = TextSecondary
 val RaycastAccentBlue = NeoBlue
 val RaycastAccentBlueSoft = NeoBlue.copy(alpha = 0.25f)
-val RaycastAccentGreen = NeoGreen
-val RaycastAccentGreenSoft = NeoGreen.copy(alpha = 0.25f)
-val RaycastAccentYellow = NeoYellow
-val RaycastAccentYellowSoft = NeoYellow.copy(alpha = 0.25f)
+val RaycastAccentGreen = MintAccent
+val RaycastAccentGreenSoft = MintGlow
+val RaycastAccentYellow = MintAccent
+val RaycastAccentYellowSoft = MintGlow
 val RaycastAccentRed = NeoPink
 val RaycastAccentRedSoft = NeoPink.copy(alpha = 0.25f)
-val RaycastKeycapGradient = Brush.verticalGradient(listOf(NeoYellow, NeoOrange))
+val RaycastKeycapGradient = Brush.verticalGradient(listOf(MintAccent, MintAccentDark))
 
-val AetherCanvas = NeoBgDark
-val AetherSurface = NeoSurface
-val AetherSurfaceElevated = NeoSurfaceElevated
-val AetherSurfaceCard = NeoSurface
-val AetherButtonFg = NeoYellow
-val AetherHairline = NeoBlack
-val AetherHairlineSoft = NeoBlack
-val AetherHairlineStrong = NeoBlack
-val AetherPrimaryWhite = NeoWhite
-val AetherPrimaryPressed = NeoYellow
-val AetherOnPrimary = NeoBlack
-val AetherInk = NeoWhite
-val AetherBody = NeoBg
-val AetherCharcoal = NeoMuted
-val AetherMute = NeoMuted
-val AetherAsh = NeoBlack
-val AetherCyan = NeoYellow
-val AetherCyanGlow = NeoYellow.copy(alpha = 0.35f)
+val AetherCanvas = ObsidianBg
+val AetherSurface = ObsidianSurface
+val AetherSurfaceElevated = ObsidianElevated
+val AetherSurfaceCard = ObsidianSurface
+val AetherButtonFg = MintAccent
+val AetherHairline = ObsidianBorder
+val AetherHairlineSoft = ObsidianBorderSubtle
+val AetherHairlineStrong = ObsidianBorderHighlight
+val AetherPrimaryWhite = TextPrimary
+val AetherPrimaryPressed = MintAccentLight
+val AetherOnPrimary = ObsidianBg
+val AetherInk = TextPrimary
+val AetherBody = ObsidianSurface
+val AetherCharcoal = TextSecondary
+val AetherMute = TextMuted
+val AetherAsh = ObsidianBg
+val AetherCyan = MintAccent
+val AetherCyanGlow = MintGlow
 val AetherViolet = NeoPurple
-val AetherAmber = NeoYellow
-val AetherEmerald = NeoGreen
+val AetherAmber = MintAccent
+val AetherEmerald = MintAccent
 val AetherRose = NeoPink
 val AetherKeycapGradient = RaycastKeycapGradient
 
-val AetherRadiusXs = NeoRadiusSm
-val AetherRadiusSm = NeoRadiusSm
-val AetherRadiusMd = NeoRadiusMd
-val AetherRadiusLg = NeoRadiusLg
-val AetherRadiusXl = NeoRadiusXl
-val AetherRadiusFull = NeoRadiusFull
+val AetherRadiusXs = RadiusSm
+val AetherRadiusSm = RadiusSm
+val AetherRadiusMd = RadiusMd
+val AetherRadiusLg = RadiusLg
+val AetherRadiusXl = RadiusXl
+val AetherRadiusFull = RadiusFull
 
-val RaycastRadiusXs = NeoRadiusSm
-val RaycastRadiusSm = NeoRadiusSm
-val RaycastRadiusMd = NeoRadiusMd
-val RaycastRadiusLg = NeoRadiusLg
-val RaycastRadiusXl = NeoRadiusXl
-val RaycastRadiusFull = NeoRadiusFull
+val RaycastRadiusXs = RadiusSm
+val RaycastRadiusSm = RadiusSm
+val RaycastRadiusMd = RadiusMd
+val RaycastRadiusLg = RadiusLg
+val RaycastRadiusXl = RadiusXl
+val RaycastRadiusFull = RadiusFull
 
-val ModernBgDark = NeoBgDark
-val ModernSurfaceDark = NeoSurface
-val ModernCardDark = NeoSurface
-val ModernTextPrimary = NeoWhite
-val ModernTextSecondary = NeoBg
-val ModernTextMuted = NeoMuted
+val ModernBgDark = ObsidianBg
+val ModernSurfaceDark = ObsidianSurface
+val ModernCardDark = ObsidianSurface
+val ModernTextPrimary = TextPrimary
+val ModernTextSecondary = TextSecondary
+val ModernTextMuted = TextMuted
 val ModernAccentBlue = NeoBlue
-val ModernAccentCyan = NeoYellow
+val ModernAccentCyan = MintAccent
 val ModernAccentPurple = NeoPurple
-val ModernAccentEmerald = NeoGreen
-val ModernAccentGold = NeoYellow
-val ModernHeroGradient = Brush.linearGradient(listOf(NeoYellow, NeoOrange))
+val ModernAccentEmerald = MintAccent
+val ModernAccentGold = MintAccent
+val ModernHeroGradient = Brush.linearGradient(listOf(MintAccent, MintAccentDark))
 
 @Immutable
-data class NeoBrutalismColorSystem(
-    val bg: Color = NeoBgDark,
-    val surface: Color = NeoSurface,
-    val black: Color = NeoBlack,
-    val white: Color = NeoWhite,
-    val yellow: Color = NeoYellow,
-    val purple: Color = NeoPurple,
-    val green: Color = NeoGreen,
-    val pink: Color = NeoPink,
-    val blue: Color = NeoBlue,
-    val orange: Color = NeoOrange
+data class ModernColorSystem(
+    val bg: Color = ObsidianBg,
+    val surface: Color = ObsidianSurface,
+    val elevated: Color = ObsidianElevated,
+    val pill: Color = ObsidianPill,
+    val border: Color = ObsidianBorder,
+    val mint: Color = MintAccent,
+    val textPrimary: Color = TextPrimary,
+    val textSecondary: Color = TextSecondary,
+    val textMuted: Color = TextMuted
 )
 
-val LocalNeoColors = staticCompositionLocalOf { NeoBrutalismColorSystem() }
+val LocalModernColors = staticCompositionLocalOf { ModernColorSystem() }
 
 @Composable
 fun ModernAppTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = darkColorScheme(
-        primary = NeoYellow,
-        onPrimary = NeoBlack,
-        background = NeoBgDark,
-        onBackground = NeoWhite,
-        surface = NeoBgDark,
-        onSurface = NeoWhite,
-        surfaceVariant = NeoSurface,
-        onSurfaceVariant = NeoBlack,
-        outline = NeoBlack
+        primary = MintAccent,
+        onPrimary = ObsidianBg,
+        background = ObsidianBg,
+        onBackground = TextPrimary,
+        surface = ObsidianSurface,
+        onSurface = TextPrimary,
+        surfaceVariant = ObsidianElevated,
+        onSurfaceVariant = TextSecondary,
+        outline = ObsidianBorder
     )
 
     MaterialTheme(

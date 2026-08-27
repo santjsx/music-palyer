@@ -20,10 +20,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -39,12 +45,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ipodmodern.audio.core.model.Track
-import com.ipodmodern.audio.ui.theme.NeoBlack
-import com.ipodmodern.audio.ui.theme.NeoBorderWidth
-import com.ipodmodern.audio.ui.theme.NeoRadiusLg
-import com.ipodmodern.audio.ui.theme.NeoRadiusSm
-import com.ipodmodern.audio.ui.theme.NeoWhite
-import com.ipodmodern.audio.ui.theme.NeoYellow
+import com.ipodmodern.audio.ui.theme.MintAccent
+import com.ipodmodern.audio.ui.theme.MintAccentDark
+import com.ipodmodern.audio.ui.theme.ObsidianBg
+import com.ipodmodern.audio.ui.theme.ObsidianBorder
+import com.ipodmodern.audio.ui.theme.ObsidianElevated
+import com.ipodmodern.audio.ui.theme.ObsidianSurface
+import com.ipodmodern.audio.ui.theme.ObsidianTrackBg
+import com.ipodmodern.audio.ui.theme.RadiusLg
+import com.ipodmodern.audio.ui.theme.RadiusMd
+import com.ipodmodern.audio.ui.theme.RadiusSm
+import com.ipodmodern.audio.ui.theme.TextMuted
+import com.ipodmodern.audio.ui.theme.TextPrimary
+import com.ipodmodern.audio.ui.theme.TextSecondary
 import java.io.File
 
 @Composable
@@ -53,9 +66,13 @@ fun MiniPlayerBar(
     isPlaying: Boolean,
     positionMs: Long,
     durationMs: Long,
+    isFavorite: Boolean = false,
     onBarClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
     onNextClick: () -> Unit,
+    onPrevClick: () -> Unit = {},
+    onFavoriteClick: () -> Unit = {},
+    onQueueClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (track == null) return
@@ -67,124 +84,177 @@ fun MiniPlayerBar(
         track.artworkUri?.let { File(it) }
     }
 
+    val posMin = (positionMs / 1000) / 60
+    val posSec = (positionMs / 1000) % 60
+    val durMin = (durationMs / 1000) / 60
+    val durSec = (durationMs / 1000) % 60
+    val timeText = String.format("%d:%02d / %d:%02d", posMin, posSec, durMin, durSec)
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 4.dp)
-            .neoShadow(
-                offsetX = 3.dp,
-                offsetY = 3.dp,
-                color = NeoBlack,
-                cornerRadius = 14.dp
-            )
-            .clip(NeoRadiusLg)
-            .background(NeoWhite)
-            .border(NeoBorderWidth, NeoBlack, NeoRadiusLg)
+            .padding(horizontal = 10.dp, vertical = 3.dp)
+            .clip(RadiusLg)
+            .background(ObsidianElevated)
+            .border(1.dp, ObsidianBorder, RadiusLg)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onBarClick()
             }
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            // Album Art Thumbnail (120fps AsyncImage)
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Thin progress indicator bar along top edge
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(NeoRadiusSm)
-                    .background(NeoBlack)
-                    .border(2.dp, NeoBlack, NeoRadiusSm),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(ObsidianTrackBg)
             ) {
-                if (artworkFile != null && artworkFile.exists()) {
-                    AsyncImage(
-                        model = artworkFile,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = NeoYellow,
-                        modifier = Modifier.size(18.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progress)
+                        .fillMaxHeight()
+                        .background(MintAccent)
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Album Art Thumbnail (120fps AsyncImage)
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RadiusMd)
+                        .background(ObsidianSurface)
+                        .border(1.dp, ObsidianBorder, RadiusMd),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (artworkFile != null && artworkFile.exists()) {
+                        AsyncImage(
+                            model = artworkFile,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = MintAccent,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                // Title, Artist & Duration Text
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    AnimatedContent(
+                        targetState = track.title,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        label = "mini_title"
+                    ) { targetTitle ->
+                        Text(
+                            text = targetTitle,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Text(
+                        text = "${track.artist}  •  $timeText",
+                        color = TextSecondary,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-            }
 
-            // Title & Artist
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = track.title,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Black,
-                    color = NeoBlack,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                // Previous Button
+                Icon(
+                    imageVector = Icons.Default.SkipPrevious,
+                    contentDescription = "Previous",
+                    tint = TextSecondary,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onPrevClick()
+                        }
                 )
-                Text(
-                    text = track.artist,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = NeoBlack.copy(alpha = 0.75f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+
+                // Play / Pause Circle
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(MintAccent)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onPlayPauseClick()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) "Pause" else "Play",
+                        tint = ObsidianBg,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // Next Button
+                Icon(
+                    imageVector = Icons.Default.SkipNext,
+                    contentDescription = "Next",
+                    tint = TextSecondary,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onNextClick()
+                        }
+                )
+
+                // Favorite Heart
+                Icon(
+                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "Favorite",
+                    tint = if (isFavorite) MintAccent else TextMuted,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onFavoriteClick()
+                        }
+                )
+
+                // Queue Button
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                    contentDescription = "Queue",
+                    tint = TextMuted,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onQueueClick()
+                        }
                 )
             }
-
-            // Real-time mini visualizer if playing
-            if (isPlaying) {
-                AetherAudioVisualizer(
-                    isPlaying = true
-                )
-            }
-
-            // Mini Play/Pause Button
-            NeoIconButton(
-                icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = if (isPlaying) "Pause" else "Play",
-                onClick = onPlayPauseClick,
-                backgroundColor = NeoYellow,
-                size = 38.dp,
-                iconSize = 20.dp,
-                isCircle = true
-            )
-
-            // Mini Next Button
-            NeoIconButton(
-                icon = Icons.Default.SkipNext,
-                contentDescription = "Next",
-                onClick = onNextClick,
-                backgroundColor = NeoWhite,
-                size = 38.dp,
-                iconSize = 20.dp,
-                isCircle = true
-            )
-        }
-
-        // Neo Progress Bar at bottom
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(3.5.dp)
-                .align(Alignment.BottomCenter)
-                .background(NeoBlack.copy(alpha = 0.15f))
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(progress)
-                    .fillMaxHeight()
-                    .background(NeoYellow)
-            )
         }
     }
 }

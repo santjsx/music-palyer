@@ -342,6 +342,25 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         updateForegroundNotification(track, startPlaying)
     }
 
+    fun playTrack(track: Track) {
+        hapticEngine.performClick()
+        val index = playbackQueue.indexOfFirst { it.id == track.id }
+        if (index >= 0) {
+            queueIndex = index
+            loadAndPlayCurrent(true)
+        } else {
+            setQueue(listOf(track) + playbackQueue, 0, autoPlay = true)
+        }
+    }
+
+    fun setVolume(vol: Float) {
+        setVolumeDirect(vol)
+    }
+
+    fun toggleFavorite() {
+        _uiState.value.currentTrack?.let { toggleFavorite(it.id) }
+    }
+
     fun playTrackAtIndex(index: Int) {
         hapticEngine.performClick()
         if (playbackQueue.isNotEmpty() && index in playbackQueue.indices) {
