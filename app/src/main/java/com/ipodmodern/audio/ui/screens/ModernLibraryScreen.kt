@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -52,7 +53,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -107,12 +107,16 @@ fun ModernLibraryScreen(
     var selectedCategory by remember { mutableStateOf<LibraryCategory?>(null) }
     var selectedAlbum by remember { mutableStateOf<Album?>(null) }
     var selectedArtist by remember { mutableStateOf<Artist?>(null) }
+    var selectedFolder by remember { mutableStateOf<String?>(null) }
+    var selectedGenre by remember { mutableStateOf<String?>(null) }
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
-    // Intercept hardware/gesture back to pop detail views
-    BackHandler(enabled = selectedAlbum != null || selectedArtist != null || selectedCategory != null || isSearchActive) {
+    // Intercept hardware/gesture back to pop detail views cleanly
+    BackHandler(enabled = selectedFolder != null || selectedGenre != null || selectedAlbum != null || selectedArtist != null || selectedCategory != null || isSearchActive) {
         when {
+            selectedFolder != null -> selectedFolder = null
+            selectedGenre != null -> selectedGenre = null
             selectedAlbum != null -> selectedAlbum = null
             selectedArtist != null -> selectedArtist = null
             selectedCategory != null -> selectedCategory = null
@@ -121,6 +125,34 @@ fun ModernLibraryScreen(
                 searchQuery = ""
             }
         }
+    }
+
+    if (selectedFolder != null) {
+        val folderName = selectedFolder!!
+        val folderTracks = tracks.filter { (File(it.filePath).parentFile?.name ?: "Storage") == folderName }
+        GenericTrackListScreen(
+            title = folderName,
+            subtitle = "Folder",
+            tracks = folderTracks,
+            activeTrack = activeTrack,
+            onBack = { selectedFolder = null },
+            onTrackSelect = onTrackSelect
+        )
+        return
+    }
+
+    if (selectedGenre != null) {
+        val genreName = selectedGenre!!
+        val genreTracks = tracks.filter { it.genre.ifBlank { "Pop / Soundtrack" }.equals(genreName, ignoreCase = true) }
+        GenericTrackListScreen(
+            title = genreName,
+            subtitle = "Genre",
+            tracks = genreTracks,
+            activeTrack = activeTrack,
+            onBack = { selectedGenre = null },
+            onTrackSelect = onTrackSelect
+        )
+        return
     }
 
     if (selectedAlbum != null) {
@@ -168,7 +200,9 @@ fun ModernLibraryScreen(
             onBack = { selectedCategory = null },
             onTrackSelect = onTrackSelect,
             onAlbumSelect = { selectedAlbum = it },
-            onArtistSelect = { selectedArtist = it }
+            onArtistSelect = { selectedArtist = it },
+            onFolderSelect = { selectedFolder = it },
+            onGenreSelect = { selectedGenre = it }
         )
         return
     }
@@ -275,6 +309,9 @@ fun ModernLibraryScreen(
 
         // 2. Category List Rows (Songs, Albums, Artists, Genres, Folders)
         item {
+            val folderCount = tracks.map { File(it.filePath).parentFile?.name ?: "Storage" }.distinct().size
+            val genreCount = tracks.map { it.genre.ifBlank { "Soundtrack" } }.distinct().size
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -313,7 +350,7 @@ fun ModernLibraryScreen(
                 LibraryCategoryRow(
                     icon = Icons.Default.GraphicEq,
                     title = "Genres",
-                    count = 12,
+                    count = genreCount.coerceAtLeast(1),
                     onClick = { selectedCategory = LibraryCategory.GENRES }
                 )
 
@@ -322,13 +359,13 @@ fun ModernLibraryScreen(
                 LibraryCategoryRow(
                     icon = Icons.Default.Folder,
                     title = "Folders",
-                    count = 4,
+                    count = folderCount.coerceAtLeast(1),
                     onClick = { selectedCategory = LibraryCategory.FOLDERS }
                 )
             }
         }
 
-        // 3. Recently Added Section
+        // 3. Recently Added Section Header
         item {
             Row(
                 modifier = Modifier
@@ -366,96 +403,105 @@ fun ModernLibraryScreen(
         }
 
         items(filteredTracks) { track ->
-            val isCurrent = track.id == activeTrack?.id
-            val artworkFile = remember(track.artworkUri) {
-                track.artworkUri?.let { File(it) }
-            }
-
-            SleekCard(
-                modifier = Modifier.fillMaxWidth(),
-                backgroundColor = if (isCurrent) ObsidianElevated else ObsidianSurface,
-                shape = RadiusLg,
+            ModernTrackRow(
+                track = track,
+                isCurrent = track.id == activeTrack?.id,
                 onClick = { onTrackSelect(track) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ModernTrackRow(
+    track: Track,
+    isCurrent: Boolean,
+    onClick: () -> Unit
+) {
+    val view = LocalView.current
+    val artworkFile = remember(track.artworkUri) {
+        track.artworkUri?.let { File(it) }
+    }
+
+    SleekCard(
+        modifier = Modifier.fillMaxWidth(),
+        backgroundColor = if (isCurrent) ObsidianElevated else ObsidianSurface,
+        shape = RadiusLg,
+        onClick = onClick
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Artwork Thumbnail
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RadiusMd)
+                    .background(ObsidianElevated),
+                contentAlignment = Alignment.Center
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Artwork Thumbnail
-                    Box(
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(RadiusMd)
-                            .background(ObsidianElevated),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (artworkFile != null && artworkFile.exists()) {
-                            AsyncImage(
-                                model = artworkFile,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.MusicNote,
-                                contentDescription = null,
-                                tint = MintAccent,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-
-                    // Metadata
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = track.title,
-                            color = if (isCurrent) MintAccent else TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = track.artist,
-                            color = TextSecondary,
-                            fontSize = 12.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    // Play Trigger
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(if (isCurrent) MintAccent else ObsidianElevated)
-                            .clickable {
-                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                onTrackSelect(track)
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Play",
-                            tint = if (isCurrent) ObsidianBg else TextPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    // 3-dots
+                if (artworkFile != null && artworkFile.exists()) {
+                    AsyncImage(
+                        model = artworkFile,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Options",
-                        tint = TextMuted,
-                        modifier = Modifier.size(20.dp)
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint = MintAccent,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
+            }
+
+            // Title & Artist Column (Properly Constrained with maxLines=1 and ellipsis)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = track.title,
+                    color = if (isCurrent) MintAccent else TextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = track.artist,
+                    color = TextSecondary,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            // Play Trigger
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(if (isCurrent) MintAccent else ObsidianElevated)
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        onClick()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Play",
+                    tint = if (isCurrent) ObsidianBg else TextPrimary,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }
@@ -523,7 +569,9 @@ fun CategorySubScreen(
     onBack: () -> Unit,
     onTrackSelect: (Track) -> Unit,
     onAlbumSelect: (Album) -> Unit,
-    onArtistSelect: (Artist) -> Unit
+    onArtistSelect: (Artist) -> Unit,
+    onFolderSelect: (String) -> Unit,
+    onGenreSelect: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -563,46 +611,11 @@ fun CategorySubScreen(
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
                     items(tracks) { track ->
-                        val isCurrent = track.id == activeTrack?.id
-                        SleekCard(
-                            modifier = Modifier.fillMaxWidth(),
-                            backgroundColor = if (isCurrent) ObsidianElevated else ObsidianSurface,
-                            shape = RadiusLg,
+                        ModernTrackRow(
+                            track = track,
+                            isCurrent = track.id == activeTrack?.id,
                             onClick = { onTrackSelect(track) }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = track.title,
-                                        color = if (isCurrent) MintAccent else TextPrimary,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = "${track.artist} • ${track.album}",
-                                        color = TextSecondary,
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = "Play",
-                                    tint = if (isCurrent) MintAccent else TextMuted,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
+                        )
                     }
                 }
             }
@@ -627,7 +640,7 @@ fun CategorySubScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(150.dp)
+                                    .aspectRatio(1f)
                                     .clip(RadiusLg)
                                     .background(ObsidianSurface)
                                     .border(1.dp, ObsidianBorder, RadiusLg),
@@ -710,7 +723,9 @@ fun CategorySubScreen(
                                         text = artist.name,
                                         color = TextPrimary,
                                         fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
                                         text = "${artist.trackCount} Songs",
@@ -730,42 +745,197 @@ fun CategorySubScreen(
                     }
                 }
             }
-            else -> {
+            LibraryCategory.FOLDERS -> {
+                val folderGroups = tracks.groupBy { File(it.filePath).parentFile?.name ?: "Storage" }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
-                    items(tracks) { track ->
+                    items(folderGroups.entries.toList()) { (folderName, folderTracks) ->
                         SleekCard(
                             modifier = Modifier.fillMaxWidth(),
                             backgroundColor = ObsidianSurface,
                             shape = RadiusLg,
-                            onClick = { onTrackSelect(track) }
+                            onClick = { onFolderSelect(folderName) }
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(14.dp),
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
-                                Text(
-                                    text = track.title,
-                                    color = TextPrimary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Text(
-                                    text = track.artist,
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(RadiusMd)
+                                        .background(ObsidianElevated),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Folder,
+                                        contentDescription = null,
+                                        tint = MintAccent,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = folderName,
+                                        color = TextPrimary,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "${folderTracks.size} Songs",
+                                        color = TextMuted,
+                                        fontSize = 12.sp
+                                    )
+                                }
+
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = TextMuted,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
                     }
                 }
+            }
+            LibraryCategory.GENRES -> {
+                val genreGroups = tracks.groupBy { it.genre.ifBlank { "Pop / Soundtrack" } }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 120.dp)
+                ) {
+                    items(genreGroups.entries.toList()) { (genreName, genreTracks) ->
+                        SleekCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = ObsidianSurface,
+                            shape = RadiusLg,
+                            onClick = { onGenreSelect(genreName) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(RadiusMd)
+                                        .background(ObsidianElevated),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.GraphicEq,
+                                        contentDescription = null,
+                                        tint = MintAccent,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = genreName,
+                                        color = TextPrimary,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "${genreTracks.size} Songs",
+                                        color = TextMuted,
+                                        fontSize = 12.sp
+                                    )
+                                }
+
+                                Icon(
+                                    imageVector = Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = TextMuted,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GenericTrackListScreen(
+    title: String,
+    subtitle: String,
+    tracks: List<Track>,
+    activeTrack: Track?,
+    onBack: () -> Unit,
+    onTrackSelect: (Track) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(ObsidianBg)
+            .statusBarsPadding()
+            .padding(horizontal = 20.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            SleekIconButton(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                onClick = onBack,
+                size = 38.dp,
+                iconSize = 20.dp,
+                contentDescription = "Back"
+            )
+
+            Column {
+                Text(
+                    text = subtitle.uppercase(),
+                    color = MintAccent,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = title,
+                    color = TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 120.dp)
+        ) {
+            items(tracks) { track ->
+                ModernTrackRow(
+                    track = track,
+                    isCurrent = track.id == activeTrack?.id,
+                    onClick = { onTrackSelect(track) }
+                )
             }
         }
     }
@@ -830,6 +1000,7 @@ fun AlbumDetailScreen(
                     Box(
                         modifier = Modifier
                             .size(110.dp)
+                            .aspectRatio(1f)
                             .clip(RadiusXl)
                             .background(ObsidianSurface)
                             .border(1.dp, ObsidianBorder, RadiusXl),
@@ -865,7 +1036,9 @@ fun AlbumDetailScreen(
                         Text(
                             text = album.artist,
                             color = TextSecondary,
-                            fontSize = 13.sp
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = "${tracks.size} tracks",
@@ -923,37 +1096,11 @@ fun AlbumDetailScreen(
             }
 
             items(tracks) { track ->
-                val isCurrent = track.id == activeTrack?.id
-                SleekCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    backgroundColor = if (isCurrent) ObsidianElevated else ObsidianSurface,
-                    shape = RadiusLg,
+                ModernTrackRow(
+                    track = track,
+                    isCurrent = track.id == activeTrack?.id,
                     onClick = { onTrackSelect(track) }
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = track.title,
-                            color = if (isCurrent) MintAccent else TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Play",
-                            tint = if (isCurrent) MintAccent else TextMuted,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
+                )
             }
         }
     }
@@ -1088,37 +1235,11 @@ fun ArtistDetailScreen(
             }
 
             items(tracks) { track ->
-                val isCurrent = track.id == activeTrack?.id
-                SleekCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    backgroundColor = if (isCurrent) ObsidianElevated else ObsidianSurface,
-                    shape = RadiusLg,
+                ModernTrackRow(
+                    track = track,
+                    isCurrent = track.id == activeTrack?.id,
                     onClick = { onTrackSelect(track) }
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = track.title,
-                            color = if (isCurrent) MintAccent else TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Play",
-                            tint = if (isCurrent) MintAccent else TextMuted,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
+                )
             }
         }
     }

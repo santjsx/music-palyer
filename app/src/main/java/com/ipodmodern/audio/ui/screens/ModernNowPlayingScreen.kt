@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,36 +44,29 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ipodmodern.audio.core.model.Track
 import com.ipodmodern.audio.ui.components.RotaryLoudnessKnob
-import com.ipodmodern.audio.ui.components.SleekCard
 import com.ipodmodern.audio.ui.components.SleekIconButton
 import com.ipodmodern.audio.ui.components.SleekPlayButton
 import com.ipodmodern.audio.ui.components.WaveformVisualizer
 import com.ipodmodern.audio.ui.theme.MintAccent
-import com.ipodmodern.audio.ui.theme.MintGlow
 import com.ipodmodern.audio.ui.theme.ObsidianBg
 import com.ipodmodern.audio.ui.theme.ObsidianBorder
 import com.ipodmodern.audio.ui.theme.ObsidianElevated
@@ -86,9 +80,7 @@ import com.ipodmodern.audio.ui.theme.TextMuted
 import com.ipodmodern.audio.ui.theme.TextPrimary
 import com.ipodmodern.audio.ui.theme.TextSecondary
 import com.ipodmodern.audio.ui.viewmodel.PlayerViewModel
-import kotlinx.coroutines.launch
 import java.io.File
-import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -103,7 +95,6 @@ fun ModernNowPlayingScreen(
     val uiState by playerViewModel.uiState.collectAsState()
     val progressState by playerViewModel.playbackProgress.collectAsState()
     val view = LocalView.current
-    val coroutineScope = rememberCoroutineScope()
 
     val currentTrack = uiState.currentTrack
     val queue = uiState.allTracks.ifEmpty { listOfNotNull(currentTrack) }
@@ -159,14 +150,16 @@ fun ModernNowPlayingScreen(
             .fillMaxSize()
             .background(ObsidianBg)
             .statusBarsPadding()
-            .padding(horizontal = 20.dp),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 6.dp)
+            .padding(bottom = 30.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // 1. Top Navigation Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp),
+                .padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -195,41 +188,26 @@ fun ModernNowPlayingScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // 2. Hardware-Accelerated 120fps Artwork Pager Deck
+        // 2. Clean 1:1 Aspect Ratio Artwork Pager with Crisp Page Spacing
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1.1f),
-            contentPadding = PaddingValues(horizontal = 24.dp)
+                .padding(horizontal = 10.dp),
+            pageSpacing = 20.dp,
+            contentPadding = PaddingValues(horizontal = 0.dp)
         ) { page ->
             val pageTrack = queue.getOrNull(page)
             val artworkFile = remember(pageTrack?.artworkUri) {
                 pageTrack?.artworkUri?.let { File(it) }
             }
 
-            val pageOffset by remember(pagerState) {
-                derivedStateOf {
-                    ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
-                }
-            }
-
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        val absOffset = pageOffset.absoluteValue
-                        scaleX = 1f - (absOffset * 0.12f).coerceIn(0f, 0.25f)
-                        scaleY = 1f - (absOffset * 0.12f).coerceIn(0f, 0.25f)
-                        alpha = 1f - (absOffset * 0.4f).coerceIn(0f, 0.7f)
-                        rotationY = pageOffset * -15f
-                        transformOrigin = TransformOrigin(
-                            pivotFractionX = if (pageOffset < 0) 1f else 0f,
-                            pivotFractionY = 0.5f
-                        )
-                    }
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
                     .clip(RadiusXl)
                     .background(ObsidianSurface)
                     .border(1.dp, ObsidianBorder, RadiusXl),
@@ -250,31 +228,10 @@ fun ModernNowPlayingScreen(
                         modifier = Modifier.size(64.dp)
                     )
                 }
-
-                // Subtle mini-waveform overlay at bottom of album artwork card
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .height(44.dp)
-                        .background(ObsidianBg.copy(alpha = 0.5f))
-                        .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    WaveformVisualizer(
-                        progressPercent = progress,
-                        onSeek = { seekPct ->
-                            val targetMs = (seekPct * progressState.durationMs).toLong()
-                            playerViewModel.seekTo(targetMs)
-                        },
-                        height = 28.dp,
-                        barCount = 36
-                    )
-                }
             }
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // 3. Track Info + Heart Favorite Action
         Row(
@@ -322,7 +279,7 @@ fun ModernNowPlayingScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(20.dp)
+                    .height(24.dp)
                     .pointerInput(progressState.durationMs) {
                         detectDragGestures { change, _ ->
                             change.consume()
@@ -358,7 +315,7 @@ fun ModernNowPlayingScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(progress)
-                        .height(20.dp),
+                        .height(24.dp),
                     contentAlignment = Alignment.CenterEnd
                 ) {
                     Box(
@@ -386,7 +343,7 @@ fun ModernNowPlayingScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1.0f)
+                .height(145.dp)
                 .clickable {
                     showWaveformDeck = !showWaveformDeck
                 },
@@ -399,7 +356,7 @@ fun ModernNowPlayingScreen(
                     onVolumeChanged = { newVol ->
                         playerViewModel.setVolume(newVol)
                     },
-                    size = 150.dp
+                    size = 135.dp
                 )
             } else {
                 // Large Waveform Visualizer Deck
@@ -408,6 +365,7 @@ fun ModernNowPlayingScreen(
                         .fillMaxWidth()
                         .clip(RadiusLg)
                         .background(ObsidianSurface)
+                        .border(1.dp, ObsidianBorder, RadiusLg)
                         .padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -418,27 +376,27 @@ fun ModernNowPlayingScreen(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     WaveformVisualizer(
                         progressPercent = progress,
                         onSeek = { seekPct ->
                             val targetMs = (seekPct * progressState.durationMs).toLong()
                             playerViewModel.seekTo(targetMs)
                         },
-                        height = 64.dp,
-                        barCount = 44
+                        height = 54.dp,
+                        barCount = 40
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // 6. Playback Transport Controls Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp),
+                .padding(bottom = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
