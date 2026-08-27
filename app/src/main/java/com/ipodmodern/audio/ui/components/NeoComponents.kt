@@ -1,14 +1,22 @@
 package com.ipodmodern.audio.ui.components
 
 import android.view.HapticFeedbackConstants
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,8 +32,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,11 +43,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
@@ -50,14 +58,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ipodmodern.audio.ui.theme.NeoBgDark
 import com.ipodmodern.audio.ui.theme.NeoBlack
+import com.ipodmodern.audio.ui.theme.NeoBlue
 import com.ipodmodern.audio.ui.theme.NeoBorderThick
 import com.ipodmodern.audio.ui.theme.NeoBorderWidth
 import com.ipodmodern.audio.ui.theme.NeoGreen
 import com.ipodmodern.audio.ui.theme.NeoPink
 import com.ipodmodern.audio.ui.theme.NeoPurple
-import com.ipodmodern.audio.ui.theme.NeoRadiusLg
 import com.ipodmodern.audio.ui.theme.NeoRadiusMd
 import com.ipodmodern.audio.ui.theme.NeoRadiusSm
 import com.ipodmodern.audio.ui.theme.NeoShadowOffset
@@ -90,7 +97,7 @@ fun Modifier.neoShadow(
 }
 
 /**
- * Neo-Brutalist Interactive Card Container.
+ * Neo-Brutalist Interactive Card Container with Emil Kowalski Spring Mechanics.
  */
 @Composable
 fun NeoCard(
@@ -107,14 +114,19 @@ fun NeoCard(
     val view = LocalView.current
     var isPressed by remember { mutableStateOf(false) }
 
+    val currentScale by animateFloatAsState(
+        targetValue = if (isPressed && onClick != null) 0.97f else 1.0f,
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = 1400f),
+        label = "neo_card_scale"
+    )
     val currentOffset by animateDpAsState(
         targetValue = if (isPressed && onClick != null) 2.dp else 0.dp,
-        animationSpec = spring(stiffness = 2000f),
+        animationSpec = spring(stiffness = 2400f),
         label = "neo_card_press"
     )
     val currentShadow by animateDpAsState(
         targetValue = if (isPressed && onClick != null) (shadowOffset - 2.dp).coerceAtLeast(0.dp) else shadowOffset,
-        animationSpec = spring(stiffness = 2000f),
+        animationSpec = spring(stiffness = 2400f),
         label = "neo_card_shadow"
     )
 
@@ -127,6 +139,10 @@ fun NeoCard(
                 cornerRadius = cornerRadius
             )
             .offset(x = currentOffset, y = currentOffset)
+            .graphicsLayer {
+                scaleX = currentScale
+                scaleY = currentScale
+            }
             .clip(shape)
             .background(backgroundColor)
             .border(borderWidth, borderColor, shape)
@@ -151,7 +167,7 @@ fun NeoCard(
 }
 
 /**
- * Neo-Brutalist Push-Down Button.
+ * Neo-Brutalist Push-Down Button with Tactile Springs.
  */
 @Composable
 fun NeoButton(
@@ -168,14 +184,19 @@ fun NeoButton(
     val view = LocalView.current
     var isPressed by remember { mutableStateOf(false) }
 
+    val currentScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1.0f,
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = 1600f),
+        label = "neo_btn_scale"
+    )
     val currentOffset by animateDpAsState(
         targetValue = if (isPressed) NeoShadowOffset else 0.dp,
-        animationSpec = spring(stiffness = 2400f),
+        animationSpec = spring(stiffness = 2600f),
         label = "neo_btn_press"
     )
     val currentShadow by animateDpAsState(
         targetValue = if (isPressed) 0.dp else NeoShadowOffset,
-        animationSpec = spring(stiffness = 2400f),
+        animationSpec = spring(stiffness = 2600f),
         label = "neo_btn_shadow"
     )
 
@@ -188,6 +209,10 @@ fun NeoButton(
                 cornerRadius = cornerRadius
             )
             .offset(x = currentOffset, y = currentOffset)
+            .graphicsLayer {
+                scaleX = currentScale
+                scaleY = currentScale
+            }
             .clip(RoundedCornerShape(cornerRadius))
             .background(backgroundColor)
             .border(borderWidth, borderColor, RoundedCornerShape(cornerRadius))
@@ -229,7 +254,7 @@ fun NeoButton(
 }
 
 /**
- * Neo-Brutalist Square/Circle Icon Button.
+ * Neo-Brutalist Square/Circle Icon Button with Spring Press.
  */
 @Composable
 fun NeoIconButton(
@@ -247,14 +272,19 @@ fun NeoIconButton(
     val view = LocalView.current
     var isPressed by remember { mutableStateOf(false) }
 
+    val currentScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.92f else 1.0f,
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = 1800f),
+        label = "neo_icon_btn_scale"
+    )
     val currentOffset by animateDpAsState(
         targetValue = if (isPressed) NeoShadowOffsetSmall else 0.dp,
-        animationSpec = spring(stiffness = 2400f),
+        animationSpec = spring(stiffness = 2600f),
         label = "neo_icon_btn_press"
     )
     val currentShadow by animateDpAsState(
         targetValue = if (isPressed) 0.dp else NeoShadowOffsetSmall,
-        animationSpec = spring(stiffness = 2400f),
+        animationSpec = spring(stiffness = 2600f),
         label = "neo_icon_btn_shadow"
     )
 
@@ -270,6 +300,10 @@ fun NeoIconButton(
                 cornerRadius = if (isCircle) size / 2 else cornerRadius
             )
             .offset(x = currentOffset, y = currentOffset)
+            .graphicsLayer {
+                scaleX = currentScale
+                scaleY = currentScale
+            }
             .clip(shape)
             .background(backgroundColor)
             .border(NeoBorderWidth, NeoBlack, shape)
@@ -328,5 +362,129 @@ fun NeoBadge(
             fontFamily = FontFamily.Monospace,
             letterSpacing = 0.5.sp
         )
+    }
+}
+
+/**
+ * Rotating Vinyl Disc / CD Groove Micro-Interaction.
+ * Spins smoothly when music is playing, seamlessly settles when paused.
+ */
+@Composable
+fun NeoVinylSpinBadge(
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier,
+    size: Dp = 46.dp
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "vinyl_spin")
+    val angle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "angle"
+    )
+
+    val currentRotation = if (isPlaying) angle else 0f
+
+    Box(
+        modifier = modifier
+            .size(size)
+            .neoShadow(offsetX = 2.dp, offsetY = 2.dp, color = NeoBlack, cornerRadius = size / 2)
+            .rotate(currentRotation)
+            .clip(CircleShape)
+            .background(NeoBlack)
+            .border(2.dp, NeoBlack, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val center = Offset(size.toPx() / 2f, size.toPx() / 2f)
+            val maxR = size.toPx() / 2f
+
+            // Vinyl grooves
+            drawCircle(color = Color(0xFF222222), radius = maxR * 0.85f, center = center, style = Stroke(width = 1.2f))
+            drawCircle(color = Color(0xFF1A1A1A), radius = maxR * 0.70f, center = center, style = Stroke(width = 1.2f))
+            drawCircle(color = Color(0xFF282828), radius = maxR * 0.55f, center = center, style = Stroke(width = 1.2f))
+
+            // Center Label (Electric Yellow)
+            drawCircle(color = NeoYellow, radius = maxR * 0.38f, center = center)
+            drawCircle(color = NeoBlack, radius = maxR * 0.38f, center = center, style = Stroke(width = 2f))
+
+            // Center Hole
+            drawCircle(color = NeoBlack, radius = maxR * 0.12f, center = center)
+        }
+    }
+}
+
+/**
+ * Neo-Brutalist Real-Time Stereo VU-Meter Bars.
+ */
+@Composable
+fun NeoVuMeter(
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val transition = rememberInfiniteTransition(label = "vu_meter")
+
+    val levelL by transition.animateFloat(
+        initialValue = 0.2f, targetValue = 0.95f,
+        animationSpec = infiniteRepeatable(tween(260, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "vu_l"
+    )
+    val levelR by transition.animateFloat(
+        initialValue = 0.35f, targetValue = 0.85f,
+        animationSpec = infiniteRepeatable(tween(320, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "vu_r"
+    )
+
+    Row(
+        modifier = modifier
+            .neoShadow(offsetX = 2.dp, offsetY = 2.dp, color = NeoBlack, cornerRadius = 6.dp)
+            .background(NeoWhite, RoundedCornerShape(6.dp))
+            .border(2.dp, NeoBlack, RoundedCornerShape(6.dp))
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Channel L
+        Text("L", fontSize = 9.sp, fontWeight = FontWeight.Black, color = NeoBlack, fontFamily = FontFamily.Monospace)
+        VuSingleBar(level = if (isPlaying) levelL else 0.05f)
+
+        Spacer(modifier = Modifier.width(2.dp))
+
+        // Channel R
+        Text("R", fontSize = 9.sp, fontWeight = FontWeight.Black, color = NeoBlack, fontFamily = FontFamily.Monospace)
+        VuSingleBar(level = if (isPlaying) levelR else 0.05f)
+    }
+}
+
+@Composable
+private fun VuSingleBar(level: Float) {
+    Row(
+        modifier = Modifier
+            .width(36.dp)
+            .height(8.dp)
+            .clip(RoundedCornerShape(2.dp))
+            .background(Color(0xFFEEEEEE))
+            .border(1.dp, NeoBlack, RoundedCornerShape(2.dp)),
+        horizontalArrangement = Arrangement.spacedBy(1.dp)
+    ) {
+        val totalSegments = 6
+        val activeSegments = (level * totalSegments).toInt().coerceIn(0, totalSegments)
+
+        for (i in 0 until totalSegments) {
+            val color = when {
+                i < 3 -> NeoGreen
+                i < 5 -> NeoYellow
+                else -> NeoPink
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(if (i < activeSegments) color else Color.Transparent)
+            )
+        }
     }
 }

@@ -1,12 +1,10 @@
 package com.ipodmodern.audio.ui.components
 
-import android.graphics.BitmapFactory
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
@@ -34,13 +31,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.ipodmodern.audio.core.model.Track
 import com.ipodmodern.audio.ui.theme.NeoBlack
 import com.ipodmodern.audio.ui.theme.NeoBorderWidth
@@ -48,6 +45,7 @@ import com.ipodmodern.audio.ui.theme.NeoRadiusLg
 import com.ipodmodern.audio.ui.theme.NeoRadiusSm
 import com.ipodmodern.audio.ui.theme.NeoWhite
 import com.ipodmodern.audio.ui.theme.NeoYellow
+import java.io.File
 
 @Composable
 fun MiniPlayerBar(
@@ -65,10 +63,8 @@ fun MiniPlayerBar(
     val view = LocalView.current
     val progress = if (durationMs > 0) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
 
-    val artworkBitmap = remember(track.artworkUri) {
-        track.artworkUri?.let { path ->
-            try { BitmapFactory.decodeFile(path) } catch (e: Exception) { null }
-        }
+    val artworkFile = remember(track.artworkUri) {
+        track.artworkUri?.let { File(it) }
     }
 
     Box(
@@ -96,18 +92,18 @@ fun MiniPlayerBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Album Art Thumbnail
+            // Album Art Thumbnail (120fps AsyncImage)
             Box(
                 modifier = Modifier
-                    .size(38.dp)
+                    .size(40.dp)
                     .clip(NeoRadiusSm)
                     .background(NeoBlack)
                     .border(2.dp, NeoBlack, NeoRadiusSm),
                 contentAlignment = Alignment.Center
             ) {
-                if (artworkBitmap != null) {
-                    Image(
-                        bitmap = artworkBitmap.asImageBitmap(),
+                if (artworkFile != null && artworkFile.exists()) {
+                    AsyncImage(
+                        model = artworkFile,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
@@ -139,68 +135,49 @@ fun MiniPlayerBar(
                     text = track.artist,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = NeoBlack.copy(alpha = 0.7f),
+                    color = NeoBlack.copy(alpha = 0.75f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            // Mini Play/Pause Button
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(NeoYellow)
-                    .border(2.dp, NeoBlack, CircleShape)
-                    .clickable {
-                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                        onPlayPauseClick()
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                AnimatedContent(
-                    targetState = isPlaying,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    label = "mini_play"
-                ) { playing ->
-                    Icon(
-                        imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (playing) "Pause" else "Play",
-                        tint = NeoBlack,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // Next Track Button
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(NeoWhite)
-                    .border(2.dp, NeoBlack, CircleShape)
-                    .clickable {
-                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                        onNextClick()
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.SkipNext,
-                    contentDescription = "Next",
-                    tint = NeoBlack,
-                    modifier = Modifier.size(18.dp)
+            // Real-time mini visualizer if playing
+            if (isPlaying) {
+                AetherAudioVisualizer(
+                    isPlaying = true
                 )
             }
+
+            // Mini Play/Pause Button
+            NeoIconButton(
+                icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = if (isPlaying) "Pause" else "Play",
+                onClick = onPlayPauseClick,
+                backgroundColor = NeoYellow,
+                size = 38.dp,
+                iconSize = 20.dp,
+                isCircle = true
+            )
+
+            // Mini Next Button
+            NeoIconButton(
+                icon = Icons.Default.SkipNext,
+                contentDescription = "Next",
+                onClick = onNextClick,
+                backgroundColor = NeoWhite,
+                size = 38.dp,
+                iconSize = 20.dp,
+                isCircle = true
+            )
         }
 
         // Neo Progress Bar at bottom
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(3.dp)
+                .height(3.5.dp)
                 .align(Alignment.BottomCenter)
-                .background(NeoBlack.copy(alpha = 0.2f))
+                .background(NeoBlack.copy(alpha = 0.15f))
         ) {
             Box(
                 modifier = Modifier

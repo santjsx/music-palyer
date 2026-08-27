@@ -66,10 +66,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import com.ipodmodern.audio.core.model.Track
 import com.ipodmodern.audio.ui.components.NeoBadge
 import com.ipodmodern.audio.ui.components.NeoCard
 import com.ipodmodern.audio.ui.components.NeoIconButton
+import com.ipodmodern.audio.ui.components.NeoVinylSpinBadge
+import com.ipodmodern.audio.ui.components.NeoVuMeter
 import com.ipodmodern.audio.ui.theme.NeoBgDark
 import com.ipodmodern.audio.ui.theme.NeoBlack
 import com.ipodmodern.audio.ui.theme.NeoBlue
@@ -226,17 +234,32 @@ fun ModernNowPlayingScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // Lossless Tag
+        // Lossless Tag + Vinyl Disc Spin + VU Meter Row
         val badgeText = currentTrack?.badgeText ?: "24-BIT • 96kHz LOSSLESS"
-        NeoBadge(
-            text = badgeText,
-            backgroundColor = NeoGreen,
-            textColor = NeoWhite
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            NeoVinylSpinBadge(
+                isPlaying = isPlaying,
+                size = 38.dp
+            )
 
-        Spacer(modifier = Modifier.height(12.dp))
+            NeoBadge(
+                text = badgeText,
+                backgroundColor = NeoGreen,
+                textColor = NeoWhite
+            )
+
+            NeoVuMeter(
+                isPlaying = isPlaying
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
 
         // MARK: - Decoupled Progress Scrubber (Only recomposes itself)
         NeoScrubberContainer(
@@ -244,7 +267,7 @@ fun ModernNowPlayingScreen(
             onSeekTo = onSeekTo
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // MARK: - Neo-Brutalist Transport Deck
         Row(
@@ -272,7 +295,18 @@ fun ModernNowPlayingScreen(
                 iconSize = 26.dp
             )
 
-            // Hero Play/Pause
+            // Hero Play/Pause with Breathing Pulse
+            val infiniteTransition = rememberInfiniteTransition(label = "hero_play_pulse")
+            val playPulse by infiniteTransition.animateFloat(
+                initialValue = 1.0f,
+                targetValue = if (isPlaying) 1.05f else 1.0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 850, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "play_pulse"
+            )
+
             NeoIconButton(
                 icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                 contentDescription = if (isPlaying) "Pause" else "Play",
@@ -280,7 +314,11 @@ fun ModernNowPlayingScreen(
                 backgroundColor = NeoYellow,
                 size = 68.dp,
                 iconSize = 36.dp,
-                isCircle = true
+                isCircle = true,
+                modifier = Modifier.graphicsLayer {
+                    scaleX = playPulse
+                    scaleY = playPulse
+                }
             )
 
             // Next
