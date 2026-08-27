@@ -5,36 +5,6 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Dark Obsidian Background -->
-    <path
-        android:pathData="M0,0h108v108h-108z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:centerX="54"
-                android:centerY="46"
-                android:gradientRadius="72"
-                android:type="radial">
-                <item android:color="#222938" android:offset="0.0"/>
-                <item android:color="#12151E" android:offset="0.6"/>
-                <item android:color="#07080B" android:offset="1.0"/>
-            </gradient>
-        </aapt:attr>
-    </path>
-
-    <!-- Concentric Vinyl / Acoustic Grooves -->
-    <path
-        android:strokeWidth="0.75"
-        android:strokeColor="#18FFFFFF"
-        android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0"/>
-    <path
-        android:strokeWidth="0.6"
-        android:strokeColor="#12FFFFFF"
-        android:pathData="M54,54m-34,0a34,34 0,1 1,68 0a34,34 0,1 1,-68 0"/>
-    <path
-        android:strokeWidth="0.75"
-        android:strokeColor="#1AFFFFFF"
-        android:pathData="M54,54m-26,0a26,26 0,1 1,52 0a26,26 0,1 1,-52 0"/>
-
     <!-- Ambient Glow Disk -->
     <path
         android:pathData="M54,54m-26,0a26,26 0,1 1,52 0a26,26 0,1 1,-52 0">
@@ -74,7 +44,7 @@
         android:strokeColor="#66FFFFFF"
         android:pathData="M54,54m-20,0a20,20 0,1 1,40 0a20,20 0,1 1,-40 0"/>
 
-    <!-- Dynamic Soundwave Frequency Bars -->
+    <!-- Dynamic Soundwave Frequency Bars (Modern Audiophile Emblem) -->
     <!-- Bar 1 (Left) -->
     <path
         android:fillColor="#FFFFFF"
@@ -85,7 +55,7 @@
         android:fillColor="#FFFFFF"
         android:pathData="M48,42h2.8c0.8,0 1.4,0.6 1.4,1.4v21.2c0,0.8 -0.6,1.4 -1.4,1.4h-2.8c-0.8,0 -1.4,-0.6 -1.4,-1.4v-21.2c0,-0.8 0.6,-1.4 1.4,-1.4z"/>
 
-    <!-- Bar 3 (Center Peak) -->
+    <!-- Bar 3 (Center Peak Play Node) -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M54,37h2.8c0.8,0 1.4,0.6 1.4,1.4v31.2c0,0.8 -0.6,1.4 -1.4,1.4h-2.8c-0.8,0 -1.4,-0.6 -1.4,-1.4v-31.2c0,-0.8 0.6,-1.4 1.4,-1.4z"/>

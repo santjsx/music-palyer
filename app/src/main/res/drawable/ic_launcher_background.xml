@@ -1,0 +1,37 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Dark Obsidian Canvas -->
+    <path
+        android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="54"
+                android:centerY="46"
+                android:gradientRadius="72"
+                android:type="radial">
+                <item android:color="#222938" android:offset="0.0"/>
+                <item android:color="#12151E" android:offset="0.6"/>
+                <item android:color="#07080B" android:offset="1.0"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Concentric Vinyl / Acoustic Soundwave Grooves -->
+    <path
+        android:strokeWidth="0.75"
+        android:strokeColor="#18FFFFFF"
+        android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0"/>
+    <path
+        android:strokeWidth="0.6"
+        android:strokeColor="#12FFFFFF"
+        android:pathData="M54,54m-34,0a34,34 0,1 1,68 0a34,34 0,1 1,-68 0"/>
+    <path
+        android:strokeWidth="0.75"
+        android:strokeColor="#1AFFFFFF"
+        android:pathData="M54,54m-26,0a26,26 0,1 1,52 0a26,26 0,1 1,-52 0"/>
+</vector>
