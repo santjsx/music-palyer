@@ -15,15 +15,18 @@ import com.ipodmodern.audio.core.database.entity.TrackEntity
     entities = [
         TrackEntity::class,
         AlbumEntity::class,
-        ArtistEntity::class
+        ArtistEntity::class,
+        com.ipodmodern.audio.core.database.entity.PlaylistEntity::class,
+        com.ipodmodern.audio.core.database.entity.PlaylistTrackCrossRef::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class MusicDatabase : RoomDatabase() {
     abstract fun trackDao(): TrackDao
     abstract fun albumDao(): AlbumDao
     abstract fun artistDao(): ArtistDao
+    abstract fun playlistDao(): com.ipodmodern.audio.core.database.dao.PlaylistDao
 
     companion object {
         @Volatile

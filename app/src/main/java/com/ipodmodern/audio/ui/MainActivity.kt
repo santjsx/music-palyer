@@ -37,6 +37,7 @@ import com.ipodmodern.audio.ui.screens.ModernHomeScreen
 import com.ipodmodern.audio.ui.screens.ModernLibraryScreen
 import com.ipodmodern.audio.ui.screens.ModernNowPlayingScreen
 import com.ipodmodern.audio.ui.screens.PlayingQueueScreen
+import com.ipodmodern.audio.ui.screens.PlaylistDetailScreen
 import com.ipodmodern.audio.ui.screens.PlaylistsScreen
 import com.ipodmodern.audio.ui.screens.ScreenType
 import com.ipodmodern.audio.ui.screens.SettingsScreen
@@ -121,6 +122,7 @@ fun ModernMusicAppContent(
     val syncServerState by syncViewModel.serverState.collectAsState()
 
     var activeScreen by remember { mutableStateOf(ScreenType.MENU_MAIN) }
+    var selectedPlaylistId by remember { mutableStateOf<Long?>(null) }
 
     fun handleBack() {
         playerViewModel.hapticEngine.performClick()
@@ -128,6 +130,7 @@ fun ModernMusicAppContent(
             ScreenType.NOW_PLAYING -> activeScreen = ScreenType.MENU_MAIN
             ScreenType.EQUALIZER, ScreenType.EFFECTS, ScreenType.PLAYING_QUEUE -> activeScreen = ScreenType.NOW_PLAYING
             ScreenType.LYRICS -> activeScreen = ScreenType.NOW_PLAYING
+            ScreenType.PLAYLIST_DETAIL -> activeScreen = ScreenType.PLAYLISTS
             ScreenType.SYNC_SERVER -> activeScreen = ScreenType.SETTINGS
             else -> activeScreen = ScreenType.MENU_MAIN
         }
@@ -141,7 +144,8 @@ fun ModernMusicAppContent(
             activeScreen == ScreenType.LYRICS ||
             activeScreen == ScreenType.EQUALIZER ||
             activeScreen == ScreenType.EFFECTS ||
-            activeScreen == ScreenType.PLAYING_QUEUE
+            activeScreen == ScreenType.PLAYING_QUEUE ||
+            activeScreen == ScreenType.PLAYLIST_DETAIL
 
     Box(
         modifier = Modifier
@@ -195,7 +199,18 @@ fun ModernMusicAppContent(
             }
             ScreenType.PLAYLISTS -> {
                 PlaylistsScreen(
-                    playerViewModel = playerViewModel
+                    playerViewModel = playerViewModel,
+                    onPlaylistClick = { pId ->
+                        selectedPlaylistId = pId
+                        activeScreen = ScreenType.PLAYLIST_DETAIL
+                    }
+                )
+            }
+            ScreenType.PLAYLIST_DETAIL -> {
+                PlaylistDetailScreen(
+                    playlistId = selectedPlaylistId ?: 0L,
+                    playerViewModel = playerViewModel,
+                    onBackClick = { activeScreen = ScreenType.PLAYLISTS }
                 )
             }
             ScreenType.SETTINGS -> {

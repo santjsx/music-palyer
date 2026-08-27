@@ -104,3 +104,48 @@ data class ArtistEntity(
     val albumCount: Int,
     val trackCount: Int
 )
+
+@Entity(
+    tableName = "playlists",
+    indices = [
+        Index("name")
+    ]
+)
+data class PlaylistEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val description: String = "",
+    val colorHex: Long = 0xFF256BFE,
+    val isAiGenerated: Boolean = false,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+@Entity(
+    tableName = "playlist_track_cross_ref",
+    primaryKeys = ["playlistId", "trackId"],
+    indices = [
+        Index("playlistId"),
+        Index("trackId")
+    ]
+)
+data class PlaylistTrackCrossRef(
+    val playlistId: Long,
+    val trackId: Long,
+    val orderIndex: Int = 0
+)
+
+data class PlaylistWithTracks(
+    @androidx.room.Embedded val playlist: PlaylistEntity,
+    @androidx.room.Relation(
+        parentColumn = "id",
+        entityColumn = "id",
+        associateBy = androidx.room.Junction(
+            value = PlaylistTrackCrossRef::class,
+            parentColumn = "playlistId",
+            entityColumn = "trackId"
+        )
+    )
+    val tracks: List<TrackEntity>
+) {
+    fun toDomainTracks(): List<Track> = tracks.map { it.toDomain() }
+}

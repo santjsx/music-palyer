@@ -20,8 +20,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -90,6 +92,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _playbackProgress = MutableStateFlow(PlaybackProgress())
     val playbackProgress: StateFlow<PlaybackProgress> = _playbackProgress.asStateFlow()
+
+    val playlists: StateFlow<List<com.ipodmodern.audio.core.database.entity.PlaylistWithTracks>> = db.playlistDao()
+        .getAllPlaylistsWithTracks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private var originalQueue: List<Track> = emptyList()
     private var playbackQueue: List<Track> = emptyList()
@@ -456,8 +462,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         updateForegroundNotification(track, true)
     }
 
-    fun playTrack(track: Track) {
+    fun playTrack(track: Track, customQueue: List<Track>? = null) {
         hapticEngine.performClick()
+        if (customQueue != null && customQueue.isNotEmpty()) {
+            val startIdx = customQueue.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
+            setQueue(customQueue, startIdx, autoPlay = true)
+            return
+        }
         val index = playbackQueue.indexOfFirst { it.id == track.id }
         if (index >= 0) {
             queueIndex = index
@@ -589,6 +600,73 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 eqGains = updated,
                 currentPresetName = "Custom"
             )
+        }
+    }
+
+    fun createPlaylist(name: String, colorHex: Long = 0xFF256BFE, trackIds: List<Long> = emptyList()) {
+        viewModelScope.launch(Dispatchers.IO) {
+            db.playlistDao().createPlaylistWithTracks(
+                com.ipodmodern.audio.core.database.entity.PlaylistEntity(
+                    name = name,
+                    colorHex = colorHex,
+                    isAiGenerated = false,
+                    createdAt = System.currentTimeMillis()
+                ),
+                trackIds = trackIds
+            )
+        }
+    }
+
+    fun generateAiPlaylists(onComplete: (Int) -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val tracks = _uiState.value.allTracks
+            val aiPlaylists = com.ipodmodern.audio.core.ai.AiPlaylistClassifier.classifyLibrary(tracks)
+            var count = 0
+            for (res in aiPlaylists) {
+                db.playlistDao().createPlaylistWithTracks(res.entity, res.trackIds)
+                count++
+            }
+            withContext(Dispatchers.Main) {
+                onComplete(count)
+            }
+        }
+    }
+
+    fun addTrackToPlaylist(playlistId: Long, trackId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            db.playlistDao().insertCrossRef(
+                com.ipodmodern.audio.core.database.entity.PlaylistTrackCrossRef(
+                    playlistId = playlistId,
+                    trackId = trackId
+                )
+            )
+        }
+    }
+
+    fun removeTrackFromPlaylist(playlistId: Long, trackId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            db.playlistDao().removeTrackFromPlaylist(playlistId, trackId)
+        }
+    }
+
+    fun deletePlaylist(playlistId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            db.playlistDao().clearPlaylistTracks(playlistId)
+            db.playlistDao().deletePlaylist(playlistId)
+        }
+    }
+
+    fun renamePlaylist(playlistId: Long, newName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            db.playlistDao().renamePlaylist(playlistId, newName)
+        }
+    }
+
+    fun playPlaylist(playlistWithTracks: com.ipodmodern.audio.core.database.entity.PlaylistWithTracks, startTrack: Track? = null) {
+        val domainTracks = playlistWithTracks.toDomainTracks()
+        if (domainTracks.isNotEmpty()) {
+            val first = startTrack ?: domainTracks.first()
+            playTrack(first, domainTracks)
         }
     }
 

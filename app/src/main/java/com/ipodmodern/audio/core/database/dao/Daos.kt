@@ -80,3 +80,52 @@ interface ArtistDao {
     @Query("SELECT COUNT(*) FROM artists")
     fun getArtistCount(): Flow<Int>
 }
+
+@Dao
+interface PlaylistDao {
+    @Transaction
+    @Query("SELECT * FROM playlists ORDER BY isAiGenerated DESC, createdAt DESC")
+    fun getAllPlaylistsWithTracks(): Flow<List<com.ipodmodern.audio.core.database.entity.PlaylistWithTracks>>
+
+    @Transaction
+    @Query("SELECT * FROM playlists WHERE id = :playlistId")
+    fun getPlaylistWithTracks(playlistId: Long): Flow<com.ipodmodern.audio.core.database.entity.PlaylistWithTracks?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPlaylist(playlist: com.ipodmodern.audio.core.database.entity.PlaylistEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCrossRef(crossRef: com.ipodmodern.audio.core.database.entity.PlaylistTrackCrossRef)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCrossRefs(crossRefs: List<com.ipodmodern.audio.core.database.entity.PlaylistTrackCrossRef>)
+
+    @Query("DELETE FROM playlist_track_cross_ref WHERE playlistId = :playlistId AND trackId = :trackId")
+    suspend fun removeTrackFromPlaylist(playlistId: Long, trackId: Long)
+
+    @Query("DELETE FROM playlist_track_cross_ref WHERE playlistId = :playlistId")
+    suspend fun clearPlaylistTracks(playlistId: Long)
+
+    @Query("DELETE FROM playlists WHERE id = :playlistId")
+    suspend fun deletePlaylist(playlistId: Long)
+
+    @Query("UPDATE playlists SET name = :newName WHERE id = :playlistId")
+    suspend fun renamePlaylist(playlistId: Long, newName: String)
+
+    @Transaction
+    suspend fun createPlaylistWithTracks(
+        playlist: com.ipodmodern.audio.core.database.entity.PlaylistEntity,
+        trackIds: List<Long>
+    ): Long {
+        val playlistId = insertPlaylist(playlist)
+        val crossRefs = trackIds.mapIndexed { idx, tId ->
+            com.ipodmodern.audio.core.database.entity.PlaylistTrackCrossRef(
+                playlistId = playlistId,
+                trackId = tId,
+                orderIndex = idx
+            )
+        }
+        insertCrossRefs(crossRefs)
+        return playlistId
+    }
+}

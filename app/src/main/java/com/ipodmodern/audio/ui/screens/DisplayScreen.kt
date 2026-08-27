@@ -49,6 +49,7 @@ enum class ScreenType {
     EFFECTS,
     PLAYING_QUEUE,
     PLAYLISTS,
+    PLAYLIST_DETAIL,
     LYRICS,
     SYNC_SERVER,
     SETTINGS
