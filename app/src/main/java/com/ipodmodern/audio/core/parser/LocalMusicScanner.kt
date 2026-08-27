@@ -216,7 +216,29 @@ class LocalMusicScanner(private val context: Context) {
             if (picture != null && picture.isNotEmpty()) {
                 val artFile = File(artDir, "art_${file.nameWithoutExtension.hashCode()}.jpg")
                 if (!artFile.exists() || artFile.length() == 0L) {
-                    artFile.writeBytes(picture)
+                    try {
+                        val boundsOpt = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        android.graphics.BitmapFactory.decodeByteArray(picture, 0, picture.size, boundsOpt)
+                        var sampleSize = 1
+                        while (boundsOpt.outWidth / sampleSize > 512 || boundsOpt.outHeight / sampleSize > 512) {
+                            sampleSize *= 2
+                        }
+                        val decodeOpt = android.graphics.BitmapFactory.Options().apply {
+                            inSampleSize = sampleSize
+                            inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
+                        }
+                        val bmp = android.graphics.BitmapFactory.decodeByteArray(picture, 0, picture.size, decodeOpt)
+                        if (bmp != null) {
+                            artFile.outputStream().use { out ->
+                                bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, out)
+                            }
+                            bmp.recycle()
+                        } else {
+                            artFile.writeBytes(picture)
+                        }
+                    } catch (_: Exception) {
+                        artFile.writeBytes(picture)
+                    }
                 }
                 artworkPath = artFile.absolutePath
             }

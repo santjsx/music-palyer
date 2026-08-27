@@ -1,23 +1,121 @@
 package com.ipodmodern.audio.core.audio
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.MediaPlayer
-import android.media.audiofx.Equalizer
 import android.net.Uri
+import android.os.Build
 import android.os.PowerManager
+import android.util.Log
 import java.io.File
 
 class UnifiedAudioEngine(private val context: Context) {
 
     private var mediaPlayer: MediaPlayer? = null
-    private var equalizer: Equalizer? = null
+    val effectManager = AudioEffectManager()
+
     private var currentFilePath: String? = null
     private var currentVolume: Float = 1.0f
+    private var isDucked: Boolean = false
+
     var onPlaybackCompleted: (() -> Unit)? = null
+    var onPlaybackError: ((String) -> Unit)? = null
+
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+    private var audioFocusRequest: AudioFocusRequest? = null
+
+    private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_LOSS -> {
+                pause()
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                pause()
+            }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                isDucked = true
+                applyVolumeInternal(currentVolume * 0.25f)
+            }
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                if (isDucked) {
+                    isDucked = false
+                    applyVolumeInternal(currentVolume)
+                }
+            }
+        }
+    }
+
+    private var isNoisyReceiverRegistered = false
+    private val noisyReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
+                pause()
+            }
+        }
+    }
 
     init {
         initMediaPlayer()
+        registerNoisyReceiver()
+    }
+
+    private fun registerNoisyReceiver() {
+        try {
+            if (!isNoisyReceiverRegistered) {
+                val filter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+                context.registerReceiver(noisyReceiver, filter)
+                isNoisyReceiverRegistered = true
+            }
+        } catch (e: Exception) {
+            Log.e("UnifiedAudioEngine", "Failed to register becoming noisy receiver", e)
+        }
+    }
+
+    private fun requestAudioFocus(): Boolean {
+        val am = audioManager ?: return true
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val playbackAttributes = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+                val focusReq = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                    .setAudioAttributes(playbackAttributes)
+                    .setAcceptsDelayedFocusGain(true)
+                    .setOnAudioFocusChangeListener(audioFocusChangeListener)
+                    .build()
+                audioFocusRequest = focusReq
+                am.requestAudioFocus(focusReq) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+            } else {
+                @Suppress("DEPRECATION")
+                am.requestAudioFocus(
+                    audioFocusChangeListener,
+                    AudioManager.STREAM_MUSIC,
+                    AudioManager.AUDIOFOCUS_GAIN
+                ) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+            }
+        } catch (e: Exception) {
+            true
+        }
+    }
+
+    private fun abandonAudioFocus() {
+        val am = audioManager ?: return
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                audioFocusRequest?.let { am.abandonAudioFocusRequest(it) }
+            } else {
+                @Suppress("DEPRECATION")
+                am.abandonAudioFocus(audioFocusChangeListener)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun initMediaPlayer() {
@@ -31,22 +129,14 @@ class UnifiedAudioEngine(private val context: Context) {
                         .setUsage(AudioAttributes.USAGE_MEDIA)
                         .build()
                 )
-                setVolume(currentVolume, currentVolume)
+                applyVolumeInternal(currentVolume)
                 setOnCompletionListener {
                     onPlaybackCompleted?.invoke()
                 }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    private fun setupEqualizer(audioSessionId: Int) {
-        try {
-            equalizer?.release()
-            if (audioSessionId != 0) {
-                equalizer = Equalizer(0, audioSessionId).apply {
-                    enabled = true
+                setOnErrorListener { _, what, extra ->
+                    Log.e("UnifiedAudioEngine", "MediaPlayer error: what=$what, extra=$extra")
+                    onPlaybackError?.invoke("Error $what ($extra)")
+                    true // error handled
                 }
             }
         } catch (e: Exception) {
@@ -70,28 +160,32 @@ class UnifiedAudioEngine(private val context: Context) {
                     try {
                         player.setDataSource(context, Uri.parse(filePath))
                     } catch (e: Exception) {
+                        onPlaybackError?.invoke("File not found: $filePath")
                         return
                     }
                 }
             }
 
             player.prepare()
-            setupEqualizer(player.audioSessionId)
-            player.setVolume(currentVolume, currentVolume)
+            effectManager.initAudioEffects(player.audioSessionId)
+            applyVolumeInternal(currentVolume)
 
             if (autoPlay) {
-                player.start()
+                play()
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("UnifiedAudioEngine", "Error loading file: $filePath", e)
+            onPlaybackError?.invoke(e.message ?: "Failed to load audio")
         }
     }
 
     fun play() {
         try {
-            mediaPlayer?.let {
-                if (!it.isPlaying) {
-                    it.start()
+            if (requestAudioFocus()) {
+                mediaPlayer?.let {
+                    if (!it.isPlaying) {
+                        it.start()
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -114,6 +208,7 @@ class UnifiedAudioEngine(private val context: Context) {
     fun stop() {
         try {
             mediaPlayer?.stop()
+            abandonAudioFocus()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -127,12 +222,19 @@ class UnifiedAudioEngine(private val context: Context) {
         }
     }
 
-    fun setVolume(volume: Float) {
-        currentVolume = volume.coerceIn(0.0f, 1.0f)
+    private fun applyVolumeInternal(vol: Float) {
+        val clamped = vol.coerceIn(0.0f, 1.0f)
         try {
-            mediaPlayer?.setVolume(currentVolume, currentVolume)
+            mediaPlayer?.setVolume(clamped, clamped)
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    fun setVolume(volume: Float) {
+        currentVolume = volume.coerceIn(0.0f, 1.0f)
+        if (!isDucked) {
+            applyVolumeInternal(currentVolume)
         }
     }
 
@@ -164,24 +266,31 @@ class UnifiedAudioEngine(private val context: Context) {
     }
 
     fun setEqBandGain(bandIndex: Int, gainDb: Float) {
-        try {
-            val eq = equalizer ?: return
-            val numBands = eq.numberOfBands.toInt()
-            if (bandIndex in 0 until numBands) {
-                val minLevel = eq.bandLevelRange[0].toInt()
-                val maxLevel = eq.bandLevelRange[1].toInt()
-                val mB = (gainDb * 100).toInt().coerceIn(minLevel, maxLevel).toShort()
-                eq.setBandLevel(bandIndex.toShort(), mB)
-            }
+        effectManager.setBandLevel(bandIndex.toShort(), gainDb)
+    }
+
+    fun getAudioSessionId(): Int {
+        return try {
+            mediaPlayer?.audioSessionId ?: 0
         } catch (e: Exception) {
-            e.printStackTrace()
+            0
         }
     }
 
     fun release() {
         try {
-            equalizer?.release()
-            equalizer = null
+            if (isNoisyReceiverRegistered) {
+                context.unregisterReceiver(noisyReceiver)
+                isNoisyReceiverRegistered = false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        abandonAudioFocus()
+        effectManager.release()
+
+        try {
             mediaPlayer?.release()
             mediaPlayer = null
         } catch (e: Exception) {

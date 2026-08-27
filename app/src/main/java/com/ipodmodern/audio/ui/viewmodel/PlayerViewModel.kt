@@ -1,6 +1,7 @@
 package com.ipodmodern.audio.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ipodmodern.audio.core.audio.AudioPlaybackService
@@ -52,7 +53,11 @@ data class PlayerUiState(
     val selectedEqBandIndex: Int = 0,
     val dynamicPrecutDb: Float = 0.0f,
     val currentPresetName: String = "Neo Flat",
-    val isScanning: Boolean = false
+    val isScanning: Boolean = false,
+    val themeBase: String = "Obsidian Dark",
+    val accentColor: String = "Mint Green",
+    val lastPlayedTrack: Track? = null,
+    val lastSavedPositionMs: Long = 0L
 )
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
@@ -63,7 +68,23 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val localMusicScanner = LocalMusicScanner(application)
     val audioEngine = UnifiedAudioEngine(application)
 
-    private val _uiState = MutableStateFlow(PlayerUiState())
+    private val prefs = application.getSharedPreferences("aether_player_preferences", Context.MODE_PRIVATE)
+
+    companion object {
+        private const val KEY_THEME_BASE = "pref_theme_base"
+        private const val KEY_ACCENT_COLOR = "pref_accent_color"
+        private const val KEY_LAST_TRACK_ID = "pref_last_track_id"
+        private const val KEY_LAST_POSITION_MS = "pref_last_pos_ms"
+        private const val KEY_FAVORITES = "pref_favorites_set"
+    }
+
+    private val _uiState = MutableStateFlow(
+        PlayerUiState(
+            themeBase = prefs.getString(KEY_THEME_BASE, "Obsidian Dark") ?: "Obsidian Dark",
+            accentColor = prefs.getString(KEY_ACCENT_COLOR, "Mint Green") ?: "Mint Green",
+            favoriteTrackIds = prefs.getStringSet(KEY_FAVORITES, emptySet())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
+        )
+    )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     private val _playbackProgress = MutableStateFlow(PlaybackProgress())
@@ -92,8 +113,33 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         audioEngine.onPlaybackCompleted = {
             onSongCompleted()
         }
+        audioEngine.onPlaybackError = { errorMsg ->
+            android.util.Log.w("PlayerViewModel", "Auto-recovering from playback error: $errorMsg")
+            viewModelScope.launch(Dispatchers.Main) {
+                if (playbackQueue.isNotEmpty()) {
+                    nextTrack()
+                }
+            }
+        }
         scanAndLoadLocalMusic()
         startPositionTicker()
+    }
+
+    fun setThemeBase(base: String) {
+        prefs.edit().putString(KEY_THEME_BASE, base).apply()
+        _uiState.value = _uiState.value.copy(themeBase = base)
+    }
+
+    fun setAccentColor(accent: String) {
+        prefs.edit().putString(KEY_ACCENT_COLOR, accent).apply()
+        _uiState.value = _uiState.value.copy(accentColor = accent)
+    }
+
+    private fun persistLastPlayback(trackId: Long, positionMs: Long) {
+        prefs.edit()
+            .putLong(KEY_LAST_TRACK_ID, trackId)
+            .putLong(KEY_LAST_POSITION_MS, positionMs)
+            .apply()
     }
 
     private fun updateForegroundNotification(track: Track?, isPlaying: Boolean) {
@@ -161,14 +207,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _uiState.value = _uiState.value.copy(repeatMode = nextMode)
     }
 
-    fun toggleFavorite(trackId: Long) {
+    fun toggleFavorite(trackId: Long? = null) {
         hapticEngine.performClick()
+        val targetId = trackId ?: _uiState.value.currentTrack?.id ?: return
         val favs = _uiState.value.favoriteTrackIds.toMutableSet()
-        if (favs.contains(trackId)) {
-            favs.remove(trackId)
+        if (favs.contains(targetId)) {
+            favs.remove(targetId)
         } else {
-            favs.add(trackId)
+            favs.add(targetId)
         }
+        prefs.edit().putStringSet(KEY_FAVORITES, favs.map { it.toString() }.toSet()).apply()
         _uiState.value = _uiState.value.copy(favoriteTrackIds = favs)
     }
 
@@ -188,7 +236,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         hapticEngine.performClick()
         originalQueue = tracks
         playbackQueue = tracks
-        queueIndex = startIndex.coerceIn(0, tracks.size - 1)
+        queueIndex = startIndex.coerceIn(0, (tracks.size - 1).coerceAtLeast(0))
         _uiState.value = _uiState.value.copy(isShuffle = false)
         loadAndPlayCurrent(true)
     }
@@ -241,21 +289,32 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                         playbackQueue = scannedTracks
                     }
 
+                    val savedTrackId = prefs.getLong(KEY_LAST_TRACK_ID, -1L)
+                    val savedPosMs = prefs.getLong(KEY_LAST_POSITION_MS, 0L)
+                    val candidate = scannedTracks.firstOrNull { it.id == savedTrackId } ?: scannedTracks.firstOrNull()
+
                     _uiState.value = _uiState.value.copy(
                         isScanning = false,
                         allTracks = scannedTracks,
-                        totalTracksInQueue = if (playbackQueue.isNotEmpty()) playbackQueue.size else scannedTracks.size
+                        totalTracksInQueue = if (playbackQueue.isNotEmpty()) playbackQueue.size else scannedTracks.size,
+                        lastPlayedTrack = candidate,
+                        lastSavedPositionMs = savedPosMs
                     )
 
-                    if (activeTrack == null && !isPlaying) {
-                        setQueue(scannedTracks, 0, autoPlay = false)
+                    if (activeTrack == null && !isPlaying && candidate != null) {
+                        val initIndex = scannedTracks.indexOf(candidate).coerceAtLeast(0)
+                        setQueue(scannedTracks, initIndex, autoPlay = false)
+                        if (savedPosMs > 0) {
+                            _playbackProgress.value = _playbackProgress.value.copy(
+                                positionMs = savedPosMs,
+                                durationMs = candidate.durationMs
+                            )
+                        }
                     }
                 }
             } else {
                 withContext(Dispatchers.Main) {
-                    _uiState.value = _uiState.value.copy(
-                        isScanning = false
-                    )
+                    _uiState.value = _uiState.value.copy(isScanning = false)
                 }
             }
         }
@@ -264,6 +323,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private fun startPositionTicker() {
         tickerJob?.cancel()
         tickerJob = viewModelScope.launch {
+            var tickCount = 0
             while (isActive) {
                 if (_uiState.value.isPlaying) {
                     val pos = audioEngine.getCurrentPosition()
@@ -273,13 +333,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     val activeIdx = if (lyrics.isNotEmpty()) lyricsParser.findActiveLyricIndex(lyrics, pos) else -1
                     val lyricText = if (activeIdx >= 0 && activeIdx < lyrics.size) lyrics[activeIdx].text else null
 
-                    // Emit to dedicated high-frequency flow
                     _playbackProgress.value = PlaybackProgress(
                         positionMs = pos,
                         durationMs = dur,
                         activeLyricIndex = activeIdx,
                         currentLyricText = lyricText
                     )
+
+                    // Persist timestamp every 2.5 seconds during playback
+                    tickCount++
+                    if (tickCount % 20 == 0) {
+                        _uiState.value.currentTrack?.let {
+                            persistLastPlayback(it.id, pos)
+                        }
+                    }
                 }
                 delay(120)
             }
@@ -313,7 +380,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             s
         } else tracks
 
-        queueIndex = if (_uiState.value.isShuffle) 0 else startIndex.coerceIn(0, tracks.size - 1)
+        queueIndex = if (_uiState.value.isShuffle) 0 else startIndex.coerceIn(0, (tracks.size - 1).coerceAtLeast(0))
         loadAndPlayCurrent(autoPlay)
     }
 
@@ -329,7 +396,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             isPlaying = startPlaying,
             currentTrackIndex = queueIndex + 1,
             totalTracksInQueue = playbackQueue.size,
-            lyrics = realLyrics
+            lyrics = realLyrics,
+            lastPlayedTrack = track
         )
 
         _playbackProgress.value = PlaybackProgress(
@@ -339,7 +407,52 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             currentLyricText = realLyrics.firstOrNull()?.text
         )
 
+        persistLastPlayback(track.id, 0L)
         updateForegroundNotification(track, startPlaying)
+    }
+
+    fun resumeContinueListening() {
+        hapticEngine.performClick()
+        val track = _uiState.value.lastPlayedTrack ?: _uiState.value.currentTrack ?: return
+        val isCurrentlyActive = _uiState.value.currentTrack?.id == track.id
+
+        if (isCurrentlyActive && _uiState.value.isPlaying) {
+            togglePlayPause()
+            return
+        }
+
+        if (isCurrentlyActive && !_uiState.value.isPlaying) {
+            val savedPos = _playbackProgress.value.positionMs
+            audioEngine.play()
+            if (savedPos > 0) {
+                audioEngine.seekTo(savedPos)
+            }
+            _uiState.value = _uiState.value.copy(isPlaying = true)
+            updateForegroundNotification(track, true)
+            return
+        }
+
+        // Switch to the continue listening track
+        val index = playbackQueue.indexOfFirst { it.id == track.id }
+        if (index >= 0) {
+            queueIndex = index
+        }
+        val targetPos = _uiState.value.lastSavedPositionMs.coerceAtLeast(0L)
+        audioEngine.loadAndPlay(track.filePath, autoPlay = true)
+        if (targetPos > 0) {
+            audioEngine.seekTo(targetPos)
+        }
+        _uiState.value = _uiState.value.copy(
+            currentTrack = track,
+            isPlaying = true,
+            currentTrackIndex = queueIndex + 1,
+            lastPlayedTrack = track
+        )
+        _playbackProgress.value = PlaybackProgress(
+            positionMs = targetPos,
+            durationMs = track.durationMs
+        )
+        updateForegroundNotification(track, true)
     }
 
     fun playTrack(track: Track) {
@@ -349,69 +462,70 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             queueIndex = index
             loadAndPlayCurrent(true)
         } else {
-            setQueue(listOf(track) + playbackQueue, 0, autoPlay = true)
-        }
-    }
-
-    fun setVolume(vol: Float) {
-        setVolumeDirect(vol)
-    }
-
-    fun toggleFavorite() {
-        _uiState.value.currentTrack?.let { toggleFavorite(it.id) }
-    }
-
-    fun playTrackAtIndex(index: Int) {
-        hapticEngine.performClick()
-        if (playbackQueue.isNotEmpty() && index in playbackQueue.indices) {
-            queueIndex = index
+            playbackQueue = listOf(track) + playbackQueue
+            queueIndex = 0
             loadAndPlayCurrent(true)
-        }
-    }
-
-    fun togglePlayPause() {
-        hapticEngine.performClick()
-        if (_uiState.value.isPlaying) {
-            audioEngine.pause()
-            _uiState.value = _uiState.value.copy(isPlaying = false)
-            updateForegroundNotification(_uiState.value.currentTrack, false)
-        } else {
-            audioEngine.play()
-            _uiState.value = _uiState.value.copy(isPlaying = true)
-            updateForegroundNotification(_uiState.value.currentTrack, true)
         }
     }
 
     fun nextTrack() {
+        if (playbackQueue.isEmpty()) return
         hapticEngine.performClick()
-        if (playbackQueue.isNotEmpty()) {
-            queueIndex = (queueIndex + 1) % playbackQueue.size
-            loadAndPlayCurrent(true)
-        }
+        queueIndex = (queueIndex + 1) % playbackQueue.size
+        loadAndPlayCurrent(true)
     }
 
     fun prevTrack() {
+        if (playbackQueue.isEmpty()) return
         hapticEngine.performClick()
         val currentPos = _playbackProgress.value.positionMs
         if (currentPos > 3000L) {
-            audioEngine.seekTo(0)
-            _playbackProgress.value = _playbackProgress.value.copy(positionMs = 0L)
-        } else if (playbackQueue.isNotEmpty()) {
-            queueIndex = if (queueIndex - 1 < 0) playbackQueue.size - 1 else queueIndex - 1
-            loadAndPlayCurrent(true)
+            seekTo(0L)
+            return
+        }
+        queueIndex = if (queueIndex - 1 < 0) playbackQueue.size - 1 else queueIndex - 1
+        loadAndPlayCurrent(true)
+    }
+
+    fun togglePlayPause() {
+        hapticEngine.performClick()
+        val state = _uiState.value
+        val track = state.currentTrack ?: playbackQueue.getOrNull(queueIndex) ?: return
+
+        if (state.isPlaying) {
+            audioEngine.pause()
+            _uiState.value = state.copy(isPlaying = false)
+            val currentPos = _playbackProgress.value.positionMs
+            persistLastPlayback(track.id, currentPos)
+            updateForegroundNotification(track, false)
+        } else {
+            if (state.currentTrack == null) {
+                loadAndPlayCurrent(true)
+            } else {
+                audioEngine.play()
+                _uiState.value = state.copy(isPlaying = true)
+                updateForegroundNotification(track, true)
+            }
         }
     }
 
-    fun seekTo(positionMs: Long) {
-        audioEngine.seekTo(positionMs)
-        _playbackProgress.value = _playbackProgress.value.copy(positionMs = positionMs)
+    fun seekTo(targetMs: Long) {
+        val maxDuration = _playbackProgress.value.durationMs.coerceAtLeast(_uiState.value.currentTrack?.durationMs ?: 0L)
+        val safePos = targetMs.coerceIn(0L, maxDuration.coerceAtLeast(0L))
+        audioEngine.seekTo(safePos)
+        _playbackProgress.value = _playbackProgress.value.copy(positionMs = safePos)
+        _uiState.value.currentTrack?.let {
+            persistLastPlayback(it.id, safePos)
+        }
     }
 
-    fun adjustVolume(deltaTicks: Int) {
-        val newVol = (_uiState.value.volume + deltaTicks * 0.04f).coerceIn(0.0f, 1.0f)
-        audioEngine.setVolume(newVol)
-        _uiState.value = _uiState.value.copy(volume = newVol, showVolumeOverlay = true)
-
+    fun setVolume(volume: Float) {
+        val safeVolume = volume.coerceIn(0.0f, 1.0f)
+        audioEngine.setVolume(safeVolume)
+        _uiState.value = _uiState.value.copy(
+            volume = safeVolume,
+            showVolumeOverlay = true
+        )
         volumeDismissJob?.cancel()
         volumeDismissJob = viewModelScope.launch {
             delay(1500)
@@ -419,54 +533,48 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun setVolumeDirect(vol: Float) {
-        val newVol = vol.coerceIn(0.0f, 1.0f)
-        audioEngine.setVolume(newVol)
-        _uiState.value = _uiState.value.copy(volume = newVol)
+    fun selectEqBand(bandIndex: Int) {
+        _uiState.value = _uiState.value.copy(selectedEqBandIndex = bandIndex.coerceIn(0, 9))
     }
 
-    fun seekByTicks(deltaTicks: Int) {
-        val deltaMs = deltaTicks * 3000L
-        val currentPos = _playbackProgress.value.positionMs
-        val dur = _playbackProgress.value.durationMs
-        val newPos = (currentPos + deltaMs).coerceIn(0L, dur)
-        audioEngine.seekTo(newPos)
-        _playbackProgress.value = _playbackProgress.value.copy(positionMs = newPos)
-    }
-
-    // EQ Adjustments
-    fun selectEqBand(index: Int) {
-        _uiState.value = _uiState.value.copy(selectedEqBandIndex = index.coerceIn(0, 9))
-    }
-
-    fun adjustSelectedEqBand(deltaTicks: Int) {
-        val bandIdx = _uiState.value.selectedEqBandIndex
-        val currentGains = _uiState.value.eqGains.copyOf()
-        val currentGain = currentGains[bandIdx]
-        val newGain = (currentGain + deltaTicks * 0.5f).coerceIn(-12.0f, 12.0f)
-        currentGains[bandIdx] = newGain
-
-        audioEngine.setEqBandGain(bandIdx, newGain)
-
-        _uiState.value = _uiState.value.copy(
-            eqGains = currentGains,
-            currentPresetName = "Custom EQ"
-        )
+    fun adjustSelectedEqBand(step: Int) {
+        val band = _uiState.value.selectedEqBandIndex
+        val current = _uiState.value.eqGains.getOrNull(band) ?: 0f
+        val newGain = (current + step * 0.5f).coerceIn(-12f, 12f)
+        setEqBandGain(band, newGain)
     }
 
     fun applyEqPreset(preset: EqualizerPreset) {
-        for (i in 0 until 10) {
-            audioEngine.setEqBandGain(i, preset.bandGains[i])
+        hapticEngine.performClick()
+        val gains = preset.bandGains.copyOf()
+        for (i in gains.indices) {
+            audioEngine.setEqBandGain(i, gains[i])
         }
         _uiState.value = _uiState.value.copy(
-            eqGains = preset.bandGains.copyOf(),
+            eqGains = gains,
             currentPresetName = preset.name
         )
     }
 
+    fun setPreampGain(gainDb: Float) {
+        _uiState.value = _uiState.value.copy(dynamicPrecutDb = gainDb)
+    }
+
+    fun setEqBandGain(bandIndex: Int, gainDb: Float) {
+        if (bandIndex in _uiState.value.eqGains.indices) {
+            val updated = _uiState.value.eqGains.copyOf()
+            updated[bandIndex] = gainDb.coerceIn(-12.0f, 12.0f)
+            audioEngine.setEqBandGain(bandIndex, updated[bandIndex])
+            _uiState.value = _uiState.value.copy(
+                eqGains = updated,
+                currentPresetName = "Custom"
+            )
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
-        AudioPlaybackService.stopService(getApplication())
-        audioEngine.release()
+        tickerJob?.cancel()
+        volumeDismissJob?.cancel()
     }
 }

@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
@@ -212,8 +213,8 @@ fun ModernHomeScreen(
         }
 
         // 4. Continue Listening (Hero Track Card)
-        val currentTrack = uiState.currentTrack
-        if (currentTrack != null) {
+        val continueTrack = uiState.lastPlayedTrack ?: uiState.currentTrack ?: uiState.allTracks.firstOrNull()
+        if (continueTrack != null) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
@@ -223,25 +224,39 @@ fun ModernHomeScreen(
                         fontWeight = FontWeight.Bold
                     )
 
-                    val artworkFile = remember(currentTrack.artworkUri) {
-                        currentTrack.artworkUri?.let { File(it) }
+                    val artworkFile = remember(continueTrack.artworkUri) {
+                        continueTrack.artworkUri?.let { File(it) }
                     }
 
-                    val progress = if (progressState.durationMs > 0) {
-                        (progressState.positionMs.toFloat() / progressState.durationMs.toFloat()).coerceIn(0f, 1f)
+                    val currentPos = if (uiState.currentTrack?.id == continueTrack.id && (uiState.isPlaying || progressState.positionMs > 0)) {
+                        progressState.positionMs
+                    } else {
+                        uiState.lastSavedPositionMs
+                    }
+                    val currentDur = if (progressState.durationMs > 0) progressState.durationMs else continueTrack.durationMs
+
+                    val progress = if (currentDur > 0) {
+                        (currentPos.toFloat() / currentDur.toFloat()).coerceIn(0f, 1f)
                     } else 0f
 
-                    val posMin = (progressState.positionMs / 1000) / 60
-                    val posSec = (progressState.positionMs / 1000) % 60
-                    val durMin = (progressState.durationMs / 1000) / 60
-                    val durSec = (progressState.durationMs / 1000) % 60
+                    val posMin = (currentPos / 1000) / 60
+                    val posSec = (currentPos / 1000) % 60
+                    val durMin = (currentDur / 1000) / 60
+                    val durSec = (currentDur / 1000) % 60
                     val timeFormatted = String.format("%d:%02d / %d:%02d", posMin, posSec, durMin, durSec)
+
+                    val isTrackActive = uiState.currentTrack?.id == continueTrack.id && uiState.isPlaying
 
                     SleekCard(
                         modifier = Modifier.fillMaxWidth(),
                         backgroundColor = ObsidianSurface,
                         shape = RadiusLg,
-                        onClick = { onNavigateToNowPlaying() }
+                        onClick = {
+                            if (!uiState.isPlaying) {
+                                playerViewModel.resumeContinueListening()
+                            }
+                            onNavigateToNowPlaying()
+                        }
                     ) {
                         Row(
                             modifier = Modifier
@@ -253,7 +268,7 @@ fun ModernHomeScreen(
                             // Artwork
                             Box(
                                 modifier = Modifier
-                                    .size(52.dp)
+                                    .size(54.dp)
                                     .clip(RadiusMd)
                                     .background(ObsidianElevated),
                                 contentAlignment = Alignment.Center
@@ -278,7 +293,7 @@ fun ModernHomeScreen(
                             // Metadata & Progress Line
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = currentTrack.title,
+                                    text = continueTrack.title,
                                     color = TextPrimary,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
@@ -286,7 +301,7 @@ fun ModernHomeScreen(
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
-                                    text = currentTrack.artist,
+                                    text = continueTrack.artist,
                                     color = TextSecondary,
                                     fontSize = 12.sp,
                                     maxLines = 1,
@@ -317,7 +332,8 @@ fun ModernHomeScreen(
                                     Text(
                                         text = timeFormatted,
                                         color = TextMuted,
-                                        fontSize = 10.sp
+                                        fontSize = 10.sp,
+                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
                                     )
                                 }
                             }
@@ -325,20 +341,20 @@ fun ModernHomeScreen(
                             // Play/Pause Trigger
                             Box(
                                 modifier = Modifier
-                                    .size(38.dp)
+                                    .size(40.dp)
                                     .clip(CircleShape)
-                                    .background(ObsidianElevated)
+                                    .background(if (isTrackActive) MintAccent else ObsidianElevated)
                                     .clickable {
                                         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                        playerViewModel.togglePlayPause()
+                                        playerViewModel.resumeContinueListening()
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = if (uiState.isPlaying) Icons.Default.MusicNote else Icons.Default.PlayArrow,
-                                    contentDescription = "Play",
-                                    tint = MintAccent,
-                                    modifier = Modifier.size(20.dp)
+                                    imageVector = if (isTrackActive) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (isTrackActive) "Pause" else "Play",
+                                    tint = if (isTrackActive) ObsidianBg else MintAccent,
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }

@@ -43,6 +43,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -88,6 +89,7 @@ enum class SettingsSheetType {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    playerViewModel: com.ipodmodern.audio.ui.viewmodel.PlayerViewModel? = null,
     onOpenEqualizer: () -> Unit,
     onOpenEffects: () -> Unit,
     onOpenSyncHub: () -> Unit,
@@ -98,15 +100,15 @@ fun SettingsScreen(
     var activeSheet by remember { mutableStateOf<SettingsSheetType?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    val playerUiState = playerViewModel?.uiState?.collectAsState()?.value
+    val selectedTheme = playerUiState?.themeBase ?: "Obsidian Dark"
+    val selectedAccentColor = playerUiState?.accentColor ?: "Mint Green"
+
     // Playback Settings State
     var gaplessEnabled by remember { mutableStateOf(true) }
     var crossfadeSeconds by remember { mutableFloatStateOf(2f) }
     var replayGainEnabled by remember { mutableStateOf(true) }
     var autoResumeHeadphones by remember { mutableStateOf(true) }
-
-    // Appearance State
-    var selectedTheme by remember { mutableStateOf("Obsidian Dark") }
-    var selectedAccentColor by remember { mutableStateOf("Mint Green") }
 
     // Notification Settings State
     var lockscreenControlsEnabled by remember { mutableStateOf(true) }
@@ -319,13 +321,17 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             accents.forEach { accent ->
-                                val isSelected = selectedAccentColor == accent
+                                val isSelected = selectedAccentColor.equals(accent, ignoreCase = true) || selectedAccentColor.startsWith(accent.split(" ")[0], ignoreCase = true)
+                                val accentClr = com.ipodmodern.audio.ui.theme.getAccentColor(accent)
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
                                         .clip(RadiusMd)
-                                        .background(if (isSelected) MintAccent else ObsidianElevated)
-                                        .clickable { selectedAccentColor = accent }
+                                        .background(if (isSelected) accentClr else ObsidianElevated)
+                                        .clickable {
+                                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                            playerViewModel?.setAccentColor(accent)
+                                        }
                                         .padding(vertical = 10.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -345,7 +351,7 @@ fun SettingsScreen(
 
                         val themes = listOf("Obsidian Dark", "Pure OLED Black", "Studio Slate")
                         themes.forEach { theme ->
-                            val isSelected = selectedTheme == theme
+                            val isSelected = selectedTheme.equals(theme, ignoreCase = true)
                             SleekCard(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -353,7 +359,10 @@ fun SettingsScreen(
                                 backgroundColor = if (isSelected) ObsidianElevated else ObsidianBg,
                                 borderColor = if (isSelected) MintAccent else ObsidianBorder,
                                 shape = RadiusLg,
-                                onClick = { selectedTheme = theme }
+                                onClick = {
+                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                    playerViewModel?.setThemeBase(theme)
+                                }
                             ) {
                                 Row(
                                     modifier = Modifier

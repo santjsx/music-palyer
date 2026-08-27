@@ -41,7 +41,6 @@ import com.ipodmodern.audio.ui.screens.PlaylistsScreen
 import com.ipodmodern.audio.ui.screens.ScreenType
 import com.ipodmodern.audio.ui.screens.SettingsScreen
 import com.ipodmodern.audio.ui.screens.SyncServerScreen
-import com.ipodmodern.audio.ui.theme.ModernAppTheme
 import com.ipodmodern.audio.ui.theme.ObsidianBg
 import com.ipodmodern.audio.ui.viewmodel.CoverFlowViewModel
 import com.ipodmodern.audio.ui.viewmodel.MenuViewModel
@@ -89,7 +88,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            ModernAppTheme {
+            val playerState by playerViewModel.uiState.collectAsState()
+
+            com.ipodmodern.audio.ui.theme.AppTheme(
+                baseTheme = playerState.themeBase,
+                accentColor = playerState.accentColor
+            ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = ObsidianBg
@@ -196,6 +200,7 @@ fun ModernMusicAppContent(
             }
             ScreenType.SETTINGS -> {
                 SettingsScreen(
+                    playerViewModel = playerViewModel,
                     onOpenEqualizer = { activeScreen = ScreenType.EQUALIZER },
                     onOpenEffects = { activeScreen = ScreenType.EFFECTS },
                     onOpenSyncHub = { activeScreen = ScreenType.SYNC_SERVER }

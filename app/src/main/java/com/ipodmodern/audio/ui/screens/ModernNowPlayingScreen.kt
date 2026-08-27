@@ -2,6 +2,7 @@ package com.ipodmodern.audio.ui.screens
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -10,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +37,7 @@ import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MusicNote
@@ -45,6 +48,7 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -71,19 +75,22 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ipodmodern.audio.core.model.Track
 import com.ipodmodern.audio.ui.components.RotaryLoudnessKnob
+import com.ipodmodern.audio.ui.components.SkeuomorphicVolumeKnob
+import com.ipodmodern.audio.ui.components.SleekCard
 import com.ipodmodern.audio.ui.components.SleekIconButton
-import com.ipodmodern.audio.ui.components.SleekPlayButton
 import com.ipodmodern.audio.ui.components.WaveformVisualizer
 import com.ipodmodern.audio.ui.theme.MintAccent
 import com.ipodmodern.audio.ui.theme.MintGlow
 import com.ipodmodern.audio.ui.theme.ObsidianBg
 import com.ipodmodern.audio.ui.theme.ObsidianBorder
 import com.ipodmodern.audio.ui.theme.ObsidianElevated
+import com.ipodmodern.audio.ui.theme.ObsidianPill
 import com.ipodmodern.audio.ui.theme.ObsidianSurface
 import com.ipodmodern.audio.ui.theme.ObsidianTrackBg
 import com.ipodmodern.audio.ui.theme.RadiusFull
 import com.ipodmodern.audio.ui.theme.RadiusLg
 import com.ipodmodern.audio.ui.theme.RadiusMd
+import com.ipodmodern.audio.ui.theme.RadiusSm
 import com.ipodmodern.audio.ui.theme.RadiusXl
 import com.ipodmodern.audio.ui.theme.TextMuted
 import com.ipodmodern.audio.ui.theme.TextPrimary
@@ -108,8 +115,8 @@ fun ModernNowPlayingScreen(
     val currentTrack = uiState.currentTrack
     val queue = uiState.allTracks.ifEmpty { listOfNotNull(currentTrack) }
 
-    // Toggle between Rotary Knob mode and Waveform Mode
-    var showWaveformDeck by remember { mutableStateOf(false) }
+    // Center Console Display Mode: 0 = Rotary Knob, 1 = Live Waveform Spectrum
+    var centerModeIndex by remember { mutableStateOf(0) }
 
     val initialIndex = remember(currentTrack, queue) {
         val found = queue.indexOfFirst { it.id == currentTrack?.id }
@@ -141,18 +148,32 @@ fun ModernNowPlayingScreen(
         }
     }
 
-    val progress = if (progressState.durationMs > 0) {
-        (progressState.positionMs.toFloat() / progressState.durationMs.toFloat()).coerceIn(0f, 1f)
+    val durationMs = if (progressState.durationMs > 0) progressState.durationMs else (currentTrack?.durationMs ?: 0L)
+    val positionMs = progressState.positionMs.coerceIn(0L, durationMs.coerceAtLeast(0L))
+
+    val progress = if (durationMs > 0) {
+        (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
     } else 0f
 
-    val posMin = (progressState.positionMs / 1000) / 60
-    val posSec = (progressState.positionMs / 1000) % 60
-    val durMin = (progressState.durationMs / 1000) / 60
-    val durSec = (progressState.durationMs / 1000) % 60
-    val elapsedText = String.format("%d:%02d", posMin, posSec)
-    val totalText = String.format("%d:%02d", durMin, durSec)
+    val posMin = (positionMs / 1000) / 60
+    val posSec = (positionMs / 1000) % 60
+    val elapsedText = String.format("%02d:%02d", posMin, posSec)
+
+    val remainingMs = (durationMs - positionMs).coerceAtLeast(0L)
+    val remMin = (remainingMs / 1000) / 60
+    val remSec = (remainingMs / 1000) % 60
+    val remainingText = String.format("-%02d:%02d", remMin, remSec)
 
     val isCurrentFav = currentTrack?.let { uiState.favoriteTrackIds.contains(it.id) } == true
+
+    // Audio format spec info
+    val formatTag = remember(currentTrack) {
+        when {
+            (currentTrack?.sampleRate ?: 0) > 48000 -> "HI-RES LOSSLESS • 24-BIT"
+            (currentTrack?.sampleRate ?: 0) > 44100 -> "96 kHz • 24-BIT FLAC"
+            else -> "320 KBPS • AETHER CORE"
+        }
+    }
 
     Box(
         modifier = modifier
@@ -160,8 +181,8 @@ fun ModernNowPlayingScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        MintGlow.copy(alpha = 0.08f),
-                        ObsidianBg,
+                        MintGlow.copy(alpha = 0.12f),
+                        ObsidianBg.copy(alpha = 0.95f),
                         ObsidianBg
                     )
                 )
@@ -173,7 +194,7 @@ fun ModernNowPlayingScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp),
+                .padding(bottom = 36.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 1. Top Navigation Bar
@@ -192,13 +213,24 @@ fun ModernNowPlayingScreen(
                     contentDescription = "Collapse"
                 )
 
-                Text(
-                    text = "NOW PLAYING",
-                    color = TextSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "PLAYING FROM LIBRARY",
+                        color = TextMuted,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.8.sp
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = currentTrack?.album?.takeIf { it.isNotBlank() } ?: "Audiophile Deck",
+                        color = TextPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
                 SleekIconButton(
                     icon = Icons.Default.MoreVert,
@@ -209,14 +241,14 @@ fun ModernNowPlayingScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // 2. Crisp 1:1 Aspect Ratio Artwork Pager Deck
+            // 2. Luxury Floating 3D Artwork Card with Format Badge
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 6.dp),
                 pageSpacing = 24.dp,
                 contentPadding = PaddingValues(horizontal = 0.dp)
             ) { page ->
@@ -242,19 +274,61 @@ fun ModernNowPlayingScreen(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        Icon(
-                            imageVector = Icons.Default.MusicNote,
-                            contentDescription = null,
-                            tint = MintAccent,
-                            modifier = Modifier.size(72.dp)
-                        )
+                        // Procedural Audiophile Gradient Background
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(MintGlow.copy(alpha = 0.3f), ObsidianSurface)
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.GraphicEq,
+                                contentDescription = null,
+                                tint = MintAccent,
+                                modifier = Modifier.size(80.dp)
+                            )
+                        }
+                    }
+
+                    // Top-Left Floating Hi-Res Lossless Badge
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(12.dp)
+                            .clip(RadiusFull)
+                            .background(ObsidianBg.copy(alpha = 0.75f))
+                            .border(1.dp, MintGlow, RadiusFull)
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(MintAccent)
+                            )
+                            Text(
+                                text = formatTag,
+                                color = TextPrimary,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            // 3. Track Info + Heart Favorite Action
+            // 3. Track Title, Artist & Heart Favorite Toggle
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -262,7 +336,7 @@ fun ModernNowPlayingScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     AnimatedContent(
-                        targetState = currentTrack?.title ?: "No Track Playing",
+                        targetState = currentTrack?.title ?: "Select Track to Play",
                         transitionSpec = { fadeIn() togetherWith fadeOut() },
                         label = "track_title_anim"
                     ) { title ->
@@ -275,7 +349,7 @@ fun ModernNowPlayingScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
                     Text(
                         text = currentTrack?.artist ?: "Aether Lossless Engine",
                         color = TextSecondary,
@@ -285,13 +359,13 @@ fun ModernNowPlayingScreen(
                     )
                 }
 
-                // Favorite Button
+                // Favorite Heart Action
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(44.dp)
                         .clip(CircleShape)
                         .background(if (isCurrentFav) MintAccent.copy(alpha = 0.15f) else ObsidianElevated)
-                        .border(1.dp, if (isCurrentFav) MintAccent.copy(alpha = 0.3f) else ObsidianBorder, CircleShape)
+                        .border(1.dp, if (isCurrentFav) MintAccent.copy(alpha = 0.35f) else ObsidianBorder, CircleShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             playerViewModel.toggleFavorite()
@@ -307,28 +381,39 @@ fun ModernNowPlayingScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // 4. Audiophile Progress Seek Scrubber
+            // 4. Capacitive Glowing Rail Seekbar with Dual-Ring Thumb
             Column(modifier = Modifier.fillMaxWidth()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(28.dp)
-                        .pointerInput(progressState.durationMs) {
+                        .height(30.dp)
+                        .pointerInput(durationMs) {
                             detectDragGestures { change, _ ->
                                 change.consume()
                                 val widthPx = size.width.toFloat()
                                 if (widthPx > 0) {
                                     val pct = (change.position.x / widthPx).coerceIn(0f, 1f)
-                                    val targetMs = (pct * progressState.durationMs).toLong()
+                                    val targetMs = (pct * durationMs).toLong()
+                                    playerViewModel.seekTo(targetMs)
+                                }
+                            }
+                        }
+                        .pointerInput(durationMs) {
+                            detectTapGestures { offset ->
+                                val widthPx = size.width.toFloat()
+                                if (widthPx > 0) {
+                                    val pct = (offset.x / widthPx).coerceIn(0f, 1f)
+                                    val targetMs = (pct * durationMs).toLong()
+                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                     playerViewModel.seekTo(targetMs)
                                 }
                             }
                         },
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    // Inactive Track
+                    // Inactive Track Base
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -337,7 +422,7 @@ fun ModernNowPlayingScreen(
                             .background(ObsidianTrackBg)
                     )
 
-                    // Active Mint Glow Track
+                    // Active Glowing Mint Track
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(progress)
@@ -346,16 +431,16 @@ fun ModernNowPlayingScreen(
                             .background(MintAccent)
                     )
 
-                    // Audiophile Precision Thumb (Outer Mint Ring + Inner White Center)
+                    // Precision Capacitive Thumb Dot (Outer Mint Ring + Inner White Center)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(progress)
-                            .height(28.dp),
+                            .height(30.dp),
                         contentAlignment = Alignment.CenterEnd
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(16.dp)
+                                .size(18.dp)
                                 .clip(CircleShape)
                                 .background(MintAccent)
                                 .border(2.dp, Color.White, CircleShape)
@@ -363,7 +448,7 @@ fun ModernNowPlayingScreen(
                     }
                 }
 
-                // Time Readouts
+                // Elapsed & Remaining Monospaced Time Readouts
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -372,14 +457,14 @@ fun ModernNowPlayingScreen(
                         text = elapsedText,
                         color = TextMuted,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.SemiBold,
                         fontFamily = FontFamily.Monospace
                     )
                     Text(
-                        text = totalText,
+                        text = remainingText,
                         color = TextMuted,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.SemiBold,
                         fontFamily = FontFamily.Monospace
                     )
                 }
@@ -387,27 +472,75 @@ fun ModernNowPlayingScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 5. Center Feature: Swiss Rotary Loudness Knob or Full-Bleed Waveform Deck
+            // 5. Dual-Mode Centerpiece Console: Mode Switcher Chip + [Swiss Knob / Live Spectrum]
+            Row(
+                modifier = Modifier
+                    .clip(RadiusFull)
+                    .background(ObsidianPill)
+                    .border(1.dp, ObsidianBorder, RadiusFull)
+                    .padding(3.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RadiusFull)
+                        .background(if (centerModeIndex == 0) MintAccent else Color.Transparent)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            centerModeIndex = 0
+                        }
+                        .padding(horizontal = 14.dp, vertical = 5.dp)
+                ) {
+                    Text(
+                        text = "LOUDNESS DIAL",
+                        color = if (centerModeIndex == 0) ObsidianBg else TextMuted,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RadiusFull)
+                        .background(if (centerModeIndex == 1) MintAccent else Color.Transparent)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            centerModeIndex = 1
+                        }
+                        .padding(horizontal = 14.dp, vertical = 5.dp)
+                ) {
+                    Text(
+                        text = "LIVE SPECTRUM",
+                        color = if (centerModeIndex == 1) ObsidianBg else TextMuted,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Console Container (155dp)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
-                    .clickable {
-                        showWaveformDeck = !showWaveformDeck
-                    },
+                    .height(155.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (!showWaveformDeck) {
-                    // Precision Rotary Loudness Dial with live percentage
-                    RotaryLoudnessKnob(
+                if (centerModeIndex == 0) {
+                    // Swiss Hi-Fi Master 300° Skeuomorphic Loudness Knob
+                    SkeuomorphicVolumeKnob(
                         volumePercent = uiState.volume,
                         onVolumeChanged = { newVol ->
                             playerViewModel.setVolume(newVol)
                         },
-                        size = 140.dp
+                        size = 145.dp,
+                        accentColor = MintAccent
                     )
                 } else {
-                    // Large Waveform Visualizer Deck
+                    // Dynamic FFT Spectrum Analyzer & Interactive Scrubber
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -417,22 +550,34 @@ fun ModernNowPlayingScreen(
                             .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = "DYNAMIC WAVEFORM • TAP TO SCRUB",
-                            color = MintAccent,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.2.sp
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "REAL-TIME PEAK METERS",
+                                color = MintAccent,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.2.sp
+                            )
+                            Text(
+                                text = "${(progress * 100).toInt()}% PLAYED",
+                                color = TextMuted,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
                         Spacer(modifier = Modifier.height(12.dp))
                         WaveformVisualizer(
                             progressPercent = progress,
                             onSeek = { seekPct ->
-                                val targetMs = (seekPct * progressState.durationMs).toLong()
+                                val targetMs = (seekPct * durationMs).toLong()
                                 playerViewModel.seekTo(targetMs)
                             },
                             height = 54.dp,
-                            barCount = 42
+                            barCount = 44
                         )
                     }
                 }
@@ -440,7 +585,7 @@ fun ModernNowPlayingScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 6. Playback Transport Controls Row
+            // 6. Master Reactor Playback Transport Deck
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -448,7 +593,7 @@ fun ModernNowPlayingScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Equalizer Button
+                // Parametric Equalizer Shortcut
                 SleekIconButton(
                     icon = Icons.Default.Equalizer,
                     onClick = onOpenEqualizer,
@@ -457,51 +602,60 @@ fun ModernNowPlayingScreen(
                     contentDescription = "Equalizer"
                 )
 
-                // Previous Button
+                // Previous Track Button
                 SleekIconButton(
                     icon = Icons.Default.SkipPrevious,
                     onClick = {
                         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         playerViewModel.prevTrack()
                     },
-                    size = 48.dp,
-                    iconSize = 26.dp,
+                    size = 50.dp,
+                    iconSize = 28.dp,
                     contentDescription = "Previous"
                 )
 
-                // Hero Mint Play / Pause Button with Glow
+                // Master Reactor Play / Pause Button (70dp with Outer Pulsating Ring)
                 Box(
                     modifier = Modifier
-                        .size(66.dp)
+                        .size(72.dp)
                         .clip(CircleShape)
-                        .background(MintAccent)
-                        .clickable {
-                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            playerViewModel.togglePlayPause()
-                        },
+                        .background(MintGlow)
+                        .padding(4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (uiState.isPlaying) "Pause" else "Play",
-                        tint = ObsidianBg,
-                        modifier = Modifier.size(28.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(MintAccent)
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                playerViewModel.togglePlayPause()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (uiState.isPlaying) "Pause" else "Play",
+                            tint = ObsidianBg,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
                 }
 
-                // Next Button
+                // Next Track Button
                 SleekIconButton(
                     icon = Icons.Default.SkipNext,
                     onClick = {
                         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         playerViewModel.nextTrack()
                     },
-                    size = 48.dp,
-                    iconSize = 26.dp,
+                    size = 50.dp,
+                    iconSize = 28.dp,
                     contentDescription = "Next"
                 )
 
-                // Repeat / Shuffle Action
+                // Shuffle / Repeat Mode Switcher
                 SleekIconButton(
                     icon = if (uiState.isShuffle) Icons.Default.Shuffle else when (uiState.repeatMode) {
                         2 -> Icons.Default.RepeatOne
@@ -516,6 +670,67 @@ fun ModernNowPlayingScreen(
                     iconSize = 22.dp,
                     contentDescription = "Repeat"
                 )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 7. Bottom Audiophile Utility Bar: Queue • Lyrics • DSP Quick Actions
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RadiusFull)
+                    .background(ObsidianSurface)
+                    .border(1.dp, ObsidianBorder, RadiusFull)
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Queue Shortcut with Track Count
+                Row(
+                    modifier = Modifier.clickable { onOpenQueue() },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                        contentDescription = "Queue",
+                        tint = MintAccent,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Queue (${uiState.currentTrackIndex}/${queue.size})",
+                        color = TextPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(16.dp)
+                        .background(ObsidianBorder)
+                )
+
+                // Synchronized Lyrics Shortcut
+                Row(
+                    modifier = Modifier.clickable { onOpenLyrics() },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.GraphicEq,
+                        contentDescription = "Lyrics",
+                        tint = MintAccent,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Lyrics",
+                        color = TextPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }

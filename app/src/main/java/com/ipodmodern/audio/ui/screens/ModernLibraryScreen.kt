@@ -610,7 +610,7 @@ fun CategorySubScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
-                    items(tracks) { track ->
+                    items(items = tracks, key = { it.id }) { track ->
                         ModernTrackRow(
                             track = track,
                             isCurrent = track.id == activeTrack?.id,
@@ -627,7 +627,7 @@ fun CategorySubScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
-                    items(albums) { album ->
+                    items(items = albums, key = { it.id }) { album ->
                         val albumArt = remember(album.artworkUri) {
                             album.artworkUri?.let { File(it) }
                         }
@@ -689,7 +689,7 @@ fun CategorySubScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
-                    items(artists) { artist ->
+                    items(items = artists, key = { it.name }) { artist ->
                         SleekCard(
                             modifier = Modifier.fillMaxWidth(),
                             backgroundColor = ObsidianSurface,
@@ -752,7 +752,7 @@ fun CategorySubScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
-                    items(folderGroups.entries.toList()) { (folderName, folderTracks) ->
+                    items(items = folderGroups.entries.toList(), key = { it.key }) { (folderName, folderTracks) ->
                         SleekCard(
                             modifier = Modifier.fillMaxWidth(),
                             backgroundColor = ObsidianSurface,
@@ -815,7 +815,7 @@ fun CategorySubScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
-                    items(genreGroups.entries.toList()) { (genreName, genreTracks) ->
+                    items(items = genreGroups.entries.toList(), key = { it.key }) { (genreName, genreTracks) ->
                         SleekCard(
                             modifier = Modifier.fillMaxWidth(),
                             backgroundColor = ObsidianSurface,
@@ -930,7 +930,7 @@ fun GenericTrackListScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(bottom = 120.dp)
         ) {
-            items(tracks) { track ->
+            items(items = tracks, key = { it.id }) { track ->
                 ModernTrackRow(
                     track = track,
                     isCurrent = track.id == activeTrack?.id,
@@ -1095,7 +1095,7 @@ fun AlbumDetailScreen(
                 }
             }
 
-            items(tracks) { track ->
+            items(items = tracks, key = { it.id }) { track ->
                 ModernTrackRow(
                     track = track,
                     isCurrent = track.id == activeTrack?.id,
@@ -1234,7 +1234,7 @@ fun ArtistDetailScreen(
                 }
             }
 
-            items(tracks) { track ->
+            items(items = tracks, key = { it.id }) { track ->
                 ModernTrackRow(
                     track = track,
                     isCurrent = track.id == activeTrack?.id,

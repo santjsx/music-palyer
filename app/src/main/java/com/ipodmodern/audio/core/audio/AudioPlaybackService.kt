@@ -108,21 +108,32 @@ class AudioPlaybackService : Service() {
                 MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
                         MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
             )
+            var lastActionTime = 0L
+            val debounceThresholdMs = 500L
+
+            fun sendDebouncedAction(action: String) {
+                val now = System.currentTimeMillis()
+                if (now - lastActionTime >= debounceThresholdMs) {
+                    lastActionTime = now
+                    playbackActionListener?.invoke(action)
+                }
+            }
+
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
-                    playbackActionListener?.invoke(ACTION_PLAY)
+                    sendDebouncedAction(ACTION_PLAY)
                 }
 
                 override fun onPause() {
-                    playbackActionListener?.invoke(ACTION_PAUSE)
+                    sendDebouncedAction(ACTION_PAUSE)
                 }
 
                 override fun onSkipToNext() {
-                    playbackActionListener?.invoke(ACTION_NEXT)
+                    sendDebouncedAction(ACTION_NEXT)
                 }
 
                 override fun onSkipToPrevious() {
-                    playbackActionListener?.invoke(ACTION_PREV)
+                    sendDebouncedAction(ACTION_PREV)
                 }
 
                 override fun onSeekTo(pos: Long) {
@@ -130,7 +141,7 @@ class AudioPlaybackService : Service() {
                 }
 
                 override fun onStop() {
-                    playbackActionListener?.invoke(ACTION_STOP)
+                    sendDebouncedAction(ACTION_STOP)
                 }
             })
             isActive = true
