@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "name": "Android-Clang",
+      "includePath": [
+        "${workspaceFolder}/app/src/main/cpp/**",
+        "C:/Users/heysa/AppData/Local/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/**",
+        "C:/Users/heysa/AppData/Local/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/c++/v1/**"
+      ],
+      "defines": [
+        "ANDROID",
+        "ipod_audio_engine_EXPORTS"
+      ],
+      "compilerPath": "C:/Users/heysa/AppData/Local/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/windows-x86_64/bin/clang++.exe",
+      "cStandard": "c17",
+      "cppStandard": "c++20",
+      "intelliSenseMode": "clang-arm64",
+      "compileCommands": "${workspaceFolder}/app/.cxx/Debug/5i666xu5/arm64-v8a/compile_commands.json"
+    }
+  ],
+  "version": 4
+}

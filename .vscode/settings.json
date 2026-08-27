@@ -1,0 +1,7 @@
+{
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/app/.cxx/Debug/5i666xu5/arm64-v8a/compile_commands.json",
+  "clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}/app/.cxx/Debug/5i666xu5/arm64-v8a"
+  ],
+  "java.configuration.updateBuildConfiguration": "interactive"
+}

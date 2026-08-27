@@ -56,15 +56,16 @@ class UnifiedAudioEngine(private val context: Context) {
 
             if (filePath.startsWith("content://") || filePath.startsWith("file://")) {
                 player.setDataSource(context, Uri.parse(filePath))
-            } else if (filePath.startsWith("sample://")) {
-                // If mock sample path, skip or return
-                return
             } else {
                 val file = File(filePath)
                 if (file.exists()) {
                     player.setDataSource(file.absolutePath)
                 } else {
-                    return
+                    try {
+                        player.setDataSource(context, Uri.parse(filePath))
+                    } catch (e: Exception) {
+                        return
+                    }
                 }
             }
 

@@ -13,6 +13,7 @@ import com.ipodmodern.audio.core.haptics.HapticEngine
 import com.ipodmodern.audio.core.model.EqualizerPreset
 import com.ipodmodern.audio.core.model.LyricLine
 import com.ipodmodern.audio.core.model.Track
+import com.ipodmodern.audio.core.parser.LocalMusicScanner
 import com.ipodmodern.audio.core.parser.LyricsParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,7 +24,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 data class PlayerUiState(
     val currentTrack: Track? = null,
@@ -34,14 +34,15 @@ data class PlayerUiState(
     val volume: Float = 1.0f,
     val showVolumeOverlay: Boolean = false,
     val currentTrackIndex: Int = 1,
-    val totalTracksInQueue: Int = 1,
+    val totalTracksInQueue: Int = 0,
     val lyrics: List<LyricLine> = emptyList(),
     val activeLyricIndex: Int = -1,
     val currentLyricText: String? = null,
     val eqGains: FloatArray = FloatArray(10) { 0.0f },
     val selectedEqBandIndex: Int = 0,
     val dynamicPrecutDb: Float = 0.0f,
-    val currentPresetName: String = "Audiophile Flat"
+    val currentPresetName: String = "Audiophile Flat",
+    val isScanning: Boolean = false
 )
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
@@ -49,6 +50,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val db = MusicDatabase.getInstance(application)
     val hapticEngine = HapticEngine(application)
     private val lyricsParser = LyricsParser()
+    private val localMusicScanner = LocalMusicScanner(application)
     val audioEngine = UnifiedAudioEngine(application)
 
     private val _uiState = MutableStateFlow(PlayerUiState())
@@ -64,96 +66,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         startPositionTicker()
     }
 
+    fun rescanLibrary() {
+        scanAndLoadLocalMusic()
+    }
+
     private fun scanAndLoadLocalMusic() {
         viewModelScope.launch(Dispatchers.IO) {
-            val scannedTracks = mutableListOf<Track>()
-            val artDir = File(getApplication<Application>().cacheDir, "artworks").apply { mkdirs() }
-
-            val musicDirs = listOf(
-                File("/sdcard/Music"),
-                File("/storage/emulated/0/Music"),
-                File(getApplication<Application>().getExternalFilesDir(null), "Music")
-            )
-
-            for (dir in musicDirs) {
-                if (dir.exists() && dir.isDirectory) {
-                    val files = dir.listFiles { f ->
-                        f.isFile && (f.extension.equals("mp3", true) ||
-                                f.extension.equals("flac", true) ||
-                                f.extension.equals("wav", true) ||
-                                f.extension.equals("m4a", true) ||
-                                f.extension.equals("dsf", true))
-                    } ?: emptyArray()
-
-                    for (file in files) {
-                        val mmr = MediaMetadataRetriever()
-                        var artworkPath: String? = null
-                        try {
-                            mmr.setDataSource(file.absolutePath)
-                            val title = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
-                                ?: file.nameWithoutExtension.replace("-", " ").replace("_", " ")
-                                    .split(" ").joinToString(" ") { it.replaceFirstChar(Char::titlecase) }
-                            val artist = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: "Unknown Artist"
-                            val album = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM) ?: "Local Music"
-                            val durationStr = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                            val duration = durationStr?.toLongOrNull() ?: 240_000L
-
-                            val picture = mmr.embeddedPicture
-                            if (picture != null && picture.isNotEmpty()) {
-                                val artFile = File(artDir, "art_${file.nameWithoutExtension.hashCode()}.jpg")
-                                artFile.writeBytes(picture)
-                                artworkPath = artFile.absolutePath
-                            }
-
-                            val ext = file.extension.uppercase()
-                            val isLossless = ext == "FLAC" || ext == "WAV" || ext == "DSF"
-                            val badge = if (isLossless) "LOSSLESS 24-BIT / 96.0kHz" else "MP3 320 KBPS"
-
-                            if (scannedTracks.none { it.filePath == file.absolutePath }) {
-                                scannedTracks.add(
-                                    Track(
-                                        title = title,
-                                        artist = artist,
-                                        album = album,
-                                        durationMs = duration,
-                                        filePath = file.absolutePath,
-                                        artworkUri = artworkPath,
-                                        trackNumber = 1,
-                                        year = 2026,
-                                        formatName = ext,
-                                        sampleRate = if (isLossless) 96000 else 44100,
-                                        bitDepth = if (isLossless) 24 else 16,
-                                        badgeText = badge
-                                    )
-                                )
-                            }
-                        } catch (e: Exception) {
-                            val name = file.nameWithoutExtension.replace("-", " ").replace("_", " ")
-                                .split(" ").joinToString(" ") { it.replaceFirstChar(Char::titlecase) }
-                            if (scannedTracks.none { it.filePath == file.absolutePath }) {
-                                scannedTracks.add(
-                                    Track(
-                                        title = name,
-                                        artist = "Local Artist",
-                                        album = "Downloads",
-                                        durationMs = 210_000L,
-                                        filePath = file.absolutePath,
-                                        artworkUri = null,
-                                        trackNumber = 1,
-                                        year = 2026,
-                                        formatName = file.extension.uppercase(),
-                                        sampleRate = 44100,
-                                        bitDepth = 16,
-                                        badgeText = "AUDIO 320 KBPS"
-                                    )
-                                )
-                            }
-                        } finally {
-                            try { mmr.release() } catch (_: Exception) {}
-                        }
-                    }
-                }
-            }
+            _uiState.value = _uiState.value.copy(isScanning = true)
+            val scannedTracks = localMusicScanner.scanDeviceAudio()
 
             if (scannedTracks.isNotEmpty()) {
                 db.trackDao().clearAll()
@@ -186,7 +106,22 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 db.artistDao().insertArtists(artists)
 
                 withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(isScanning = false)
                     setQueue(scannedTracks, 0, autoPlay = false)
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    _uiState.value = _uiState.value.copy(
+                        isScanning = false,
+                        currentTrack = null,
+                        allTracks = emptyList(),
+                        totalTracksInQueue = 0,
+                        isPlaying = false,
+                        positionMs = 0L,
+                        durationMs = 0L,
+                        lyrics = emptyList(),
+                        currentLyricText = null
+                    )
                 }
             }
         }
@@ -201,7 +136,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     val dur = audioEngine.getDuration().coerceAtLeast(_uiState.value.currentTrack?.durationMs ?: 0L)
 
                     val lyrics = _uiState.value.lyrics
-                    val activeIdx = lyricsParser.findActiveLyricIndex(lyrics, pos)
+                    val activeIdx = if (lyrics.isNotEmpty()) lyricsParser.findActiveLyricIndex(lyrics, pos) else -1
                     val lyricText = if (activeIdx >= 0 && activeIdx < lyrics.size) lyrics[activeIdx].text else null
 
                     _uiState.value = _uiState.value.copy(
@@ -217,7 +152,19 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun setQueue(tracks: List<Track>, startIndex: Int = 0, autoPlay: Boolean = true) {
-        if (tracks.isEmpty()) return
+        if (tracks.isEmpty()) {
+            playbackQueue = emptyList()
+            queueIndex = 0
+            _uiState.value = _uiState.value.copy(
+                currentTrack = null,
+                allTracks = emptyList(),
+                totalTracksInQueue = 0,
+                isPlaying = false,
+                lyrics = emptyList(),
+                currentLyricText = null
+            )
+            return
+        }
         playbackQueue = tracks
         queueIndex = startIndex.coerceIn(0, tracks.size - 1)
         loadAndPlayCurrent(autoPlay)
@@ -227,14 +174,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val track = playbackQueue.getOrNull(queueIndex) ?: return
         audioEngine.loadAndPlay(track.filePath, autoPlay = startPlaying)
 
-        val sampleLrc = """
-            [00:00.00]${track.title} • ${track.artist}
-            [00:04.50]Audiophile Bit-Perfect Direct Stream
-            [00:10.00]Zero-Phase Distortion Cascaded Biquad EQ
-            [00:18.00]Direct Hardware HAL Low-Latency Bypass
-            [00:30.00]Lossless Audio Processing Active
-        """.trimIndent()
-        val parsedLyrics = lyricsParser.parseLrc(sampleLrc)
+        // Load real lyrics from local .lrc file if present (no mock strings)
+        val realLyrics = localMusicScanner.loadLyricsForTrack(track)
 
         _uiState.value = _uiState.value.copy(
             currentTrack = track,
@@ -244,9 +185,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             durationMs = track.durationMs,
             currentTrackIndex = queueIndex + 1,
             totalTracksInQueue = playbackQueue.size,
-            lyrics = parsedLyrics,
-            activeLyricIndex = 0,
-            currentLyricText = parsedLyrics.firstOrNull()?.text
+            lyrics = realLyrics,
+            activeLyricIndex = if (realLyrics.isNotEmpty()) 0 else -1,
+            currentLyricText = realLyrics.firstOrNull()?.text
         )
     }
 

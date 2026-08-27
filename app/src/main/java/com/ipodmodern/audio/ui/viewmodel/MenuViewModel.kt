@@ -47,21 +47,53 @@ class MenuViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             db.trackDao().getAllTracks().collect { list ->
                 cachedTracks = list.map { it.toDomain() }
+                refreshCurrentSubmenu()
             }
         }
         viewModelScope.launch {
             db.albumDao().getAllAlbums().collect { list ->
                 cachedAlbums = list.map { Album(it.id, it.title, it.artist, it.trackCount, it.year, it.artworkUri, it.isHiRes) }
+                refreshCurrentSubmenu()
             }
         }
         viewModelScope.launch {
             db.artistDao().getAllArtists().collect { list ->
                 cachedArtists = list.map { Artist(it.id, it.name, it.albumCount, it.trackCount) }
+                refreshCurrentSubmenu()
             }
         }
     }
 
+    private fun refreshCurrentSubmenu() {
+        when (_navState.value.currentScreen) {
+            ScreenType.MENU_SONGS -> {
+                val tracks = if (currentFilterAlbum != null) {
+                    cachedTracks.filter { it.album.equals(currentFilterAlbum, ignoreCase = true) }
+                } else cachedTracks
+                _navState.value = _navState.value.copy(
+                    items = tracks.map { MenuItem(it.id.toString(), it.title, "${it.artist} • ${it.badgeText}", hasSubMenu = false) }
+                )
+            }
+            ScreenType.MENU_ALBUMS -> {
+                val albums = if (currentFilterArtist != null) {
+                    cachedAlbums.filter { it.artist.equals(currentFilterArtist, ignoreCase = true) }
+                } else cachedAlbums
+                _navState.value = _navState.value.copy(
+                    items = albums.map { MenuItem(it.title, it.title, it.artist, badge = if (it.isHiRes) "HI-RES" else null) }
+                )
+            }
+            ScreenType.MENU_ARTISTS -> {
+                _navState.value = _navState.value.copy(
+                    items = cachedArtists.map { MenuItem(it.name, it.name, "${it.albumCount} Albums • ${it.trackCount} Tracks") }
+                )
+            }
+            else -> {}
+        }
+    }
+
     fun loadMainMenu() {
+        currentFilterArtist = null
+        currentFilterAlbum = null
         _navState.value = MenuNavigationState(
             currentScreen = ScreenType.MENU_MAIN,
             screenTitle = "iPod",
@@ -97,7 +129,8 @@ class MenuViewModel(application: Application) : AndroidViewModel(application) {
     fun onCenterAction(
         explicitIndex: Int? = null,
         onPlayTrack: (List<Track>, Int) -> Unit,
-        onNavigateScreen: (ScreenType) -> Unit
+        onNavigateScreen: (ScreenType) -> Unit,
+        onRescan: (() -> Unit)? = null
     ) {
         val items = _navState.value.items
         val sel = explicitIndex ?: _navState.value.selectedIndex
@@ -128,6 +161,9 @@ class MenuViewModel(application: Application) : AndroidViewModel(application) {
                     "songs" -> navigateTo(ScreenType.MENU_SONGS, "Songs", cachedTracks.mapIndexed { idx, t ->
                         MenuItem(t.id.toString(), t.title, "${t.artist} • ${t.badgeText}", hasSubMenu = false)
                     })
+                    "rescan" -> {
+                        onRescan?.invoke()
+                    }
                 }
             }
             ScreenType.MENU_ARTISTS -> {
@@ -149,8 +185,10 @@ class MenuViewModel(application: Application) : AndroidViewModel(application) {
                     cachedTracks.filter { it.album.equals(currentFilterAlbum, ignoreCase = true) }
                 } else cachedTracks
 
-                onPlayTrack(tracks, sel)
-                onNavigateScreen(ScreenType.NOW_PLAYING)
+                if (tracks.isNotEmpty()) {
+                    onPlayTrack(tracks, sel)
+                    onNavigateScreen(ScreenType.NOW_PLAYING)
+                }
             }
             else -> {}
         }
@@ -164,10 +202,17 @@ class MenuViewModel(application: Application) : AndroidViewModel(application) {
             val newStack = stack.dropLast(1)
             when (prevScreen) {
                 ScreenType.MENU_MAIN -> loadMainMenu()
-                ScreenType.MENU_MUSIC -> navigateTo(ScreenType.MENU_MUSIC, "Music", getMusicMenuItems(), backStack = newStack)
-                ScreenType.MENU_ARTISTS -> navigateTo(ScreenType.MENU_ARTISTS, "Artists", cachedArtists.map {
-                    MenuItem(it.name, it.name, "${it.albumCount} Albums")
-                }, backStack = newStack)
+                ScreenType.MENU_MUSIC -> {
+                    currentFilterArtist = null
+                    currentFilterAlbum = null
+                    navigateTo(ScreenType.MENU_MUSIC, "Music", getMusicMenuItems(), backStack = newStack)
+                }
+                ScreenType.MENU_ARTISTS -> {
+                    currentFilterAlbum = null
+                    navigateTo(ScreenType.MENU_ARTISTS, "Artists", cachedArtists.map {
+                        MenuItem(it.name, it.name, "${it.albumCount} Albums")
+                    }, backStack = newStack)
+                }
                 ScreenType.MENU_ALBUMS -> navigateTo(ScreenType.MENU_ALBUMS, "Albums", cachedAlbums.map {
                     MenuItem(it.title, it.title, it.artist)
                 }, backStack = newStack)
@@ -192,7 +237,8 @@ class MenuViewModel(application: Application) : AndroidViewModel(application) {
     private fun getMusicMenuItems() = listOf(
         MenuItem("artists", "Artists", "By Performer"),
         MenuItem("albums", "Albums", "By Title"),
-        MenuItem("songs", "Songs", "All Local Tracks")
+        MenuItem("songs", "Songs", "All Local Tracks"),
+        MenuItem("rescan", "Rescan Music", "Scan Device for Audio", hasSubMenu = false)
     )
 
     private fun getSettingsMenuItems() = listOf(

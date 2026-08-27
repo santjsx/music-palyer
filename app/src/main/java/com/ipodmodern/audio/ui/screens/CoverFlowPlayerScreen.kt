@@ -213,7 +213,18 @@ fun CoverFlowPlayerScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("No Music In Library", color = Color.Gray, fontSize = 15.sp)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("No Music Found On Device", color = Color.Gray, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Grant storage permission or sync music via Wi-Fi", color = Color.Gray.copy(alpha = 0.7f), fontSize = 12.sp)
+                        }
                     }
                 } else {
                     val currentIndex = animatedOffset.value.roundToInt().coerceIn(0, displayTracks.size - 1)
@@ -359,7 +370,7 @@ fun CoverFlowPlayerScreen(
             ) {
                 // Song Title
                 Text(
-                    text = activeTrack?.title ?: "Select a track",
+                    text = activeTrack?.title ?: "No Track Playing",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White,
@@ -380,27 +391,29 @@ fun CoverFlowPlayerScreen(
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                if (activeTrack != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                // Audiophile Quality Pill with pulsating Equalizer bars
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFF141720))
-                        .border(1.dp, Color(0xFF00C7BE).copy(alpha = 0.35f), RoundedCornerShape(20.dp))
-                        .padding(horizontal = 12.dp, vertical = 5.dp)
-                ) {
-                    MiniEqualizerVisualizer(isPlaying = isPlaying)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = activeTrack?.badgeText ?: "LOSSLESS 24-BIT / 96.0kHz",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF30D158),
-                        letterSpacing = 0.6.sp
-                    )
+                    // Audiophile Quality Pill with pulsating Equalizer bars
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(0xFF141720))
+                            .border(1.dp, Color(0xFF00C7BE).copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+                            .padding(horizontal = 12.dp, vertical = 5.dp)
+                    ) {
+                        MiniEqualizerVisualizer(isPlaying = isPlaying)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = activeTrack.badgeText,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF30D158),
+                            letterSpacing = 0.6.sp
+                        )
+                    }
                 }
 
                 // Live Lyrics Snippet chip

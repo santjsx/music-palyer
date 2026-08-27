@@ -21,11 +21,7 @@ bool AudioDecoder::loadFile(const std::string& filePath) {
         return true;
     }
 
-    // Fallback: generate high-fidelity test signal if file unreadable
-    generateSyntheticTone();
-    fileLoaded.store(true);
-    currentFramePosition.store(0);
-    return true;
+    return false;
 }
 
 void AudioDecoder::close() {

@@ -1,13 +1,19 @@
 package com.ipodmodern.audio.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -15,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.core.content.ContextCompat
 import com.ipodmodern.audio.ui.components.MiniPlayerBar
 import com.ipodmodern.audio.ui.screens.CoverFlowPlayerScreen
 import com.ipodmodern.audio.ui.screens.DisplayScreen
@@ -43,6 +50,39 @@ class MainActivity : ComponentActivity() {
         setContent {
             val chassisTheme by remember { mutableStateOf(ChassisMaterial.SPACE_TITANIUM) }
 
+            // Automatic runtime permission requester for storage & audio library access
+            val permissionLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestMultiplePermissions()
+            ) { permissions ->
+                val audioGranted = permissions[Manifest.permission.READ_MEDIA_AUDIO] == true ||
+                        permissions[Manifest.permission.READ_EXTERNAL_STORAGE] == true
+                if (audioGranted) {
+                    playerViewModel.rescanLibrary()
+                }
+            }
+
+            LaunchedEffect(Unit) {
+                val permissionsToRequest = mutableListOf<String>()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                        permissionsToRequest.add(Manifest.permission.READ_MEDIA_AUDIO)
+                    }
+                    if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                } else {
+                    if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                        permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+                    }
+                }
+
+                if (permissionsToRequest.isNotEmpty()) {
+                    permissionLauncher.launch(permissionsToRequest.toTypedArray())
+                } else {
+                    playerViewModel.rescanLibrary()
+                }
+            }
+
             IPodModernTheme(chassis = chassisTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -56,6 +96,18 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val isGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
+        } else {
+            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+        if (isGranted) {
+            playerViewModel.rescanLibrary()
         }
     }
 }
@@ -189,6 +241,9 @@ fun IPodAppModernContent(
                             },
                             onNavigateScreen = { targetScreen ->
                                 activeScreen = targetScreen
+                            },
+                            onRescan = {
+                                playerViewModel.rescanLibrary()
                             }
                         )
                     }
