@@ -35,6 +35,9 @@ data class PlayerUiState(
     val showVolumeOverlay: Boolean = false,
     val currentTrackIndex: Int = 1,
     val totalTracksInQueue: Int = 0,
+    val isShuffle: Boolean = false,
+    val repeatMode: Int = 0, // 0 = OFF, 1 = ALL, 2 = ONE
+    val favoriteTrackIds: Set<Long> = emptySet(),
     val lyrics: List<LyricLine> = emptyList(),
     val activeLyricIndex: Int = -1,
     val currentLyricText: String? = null,
@@ -56,14 +59,110 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
+    private var originalQueue: List<Track> = emptyList()
     private var playbackQueue: List<Track> = emptyList()
     private var queueIndex: Int = 0
     private var tickerJob: Job? = null
     private var volumeDismissJob: Job? = null
 
     init {
+        audioEngine.onPlaybackCompleted = {
+            onSongCompleted()
+        }
         scanAndLoadLocalMusic()
         startPositionTicker()
+    }
+
+    private fun onSongCompleted() {
+        val state = _uiState.value
+        when (state.repeatMode) {
+            2 -> {
+                // Repeat One
+                seekTo(0)
+                audioEngine.play()
+                _uiState.value = _uiState.value.copy(isPlaying = true)
+            }
+            1 -> {
+                // Repeat All
+                nextTrack()
+            }
+            else -> {
+                // Repeat Off: if not at the end of queue, advance, else stop
+                if (queueIndex < playbackQueue.size - 1) {
+                    nextTrack()
+                } else {
+                    seekTo(0)
+                    audioEngine.pause()
+                    _uiState.value = _uiState.value.copy(isPlaying = false)
+                }
+            }
+        }
+    }
+
+    fun toggleShuffle() {
+        hapticEngine.performClick()
+        val newShuffle = !_uiState.value.isShuffle
+        _uiState.value = _uiState.value.copy(isShuffle = newShuffle)
+
+        if (playbackQueue.isEmpty()) return
+        val current = playbackQueue.getOrNull(queueIndex)
+
+        if (newShuffle) {
+            val shuffled = originalQueue.shuffled().toMutableList()
+            if (current != null) {
+                shuffled.remove(current)
+                shuffled.add(0, current)
+            }
+            playbackQueue = shuffled
+            queueIndex = 0
+        } else {
+            playbackQueue = originalQueue
+            queueIndex = if (current != null) originalQueue.indexOf(current).coerceAtLeast(0) else 0
+        }
+
+        _uiState.value = _uiState.value.copy(
+            allTracks = playbackQueue,
+            currentTrackIndex = queueIndex + 1,
+            totalTracksInQueue = playbackQueue.size
+        )
+    }
+
+    fun toggleRepeat() {
+        hapticEngine.performClick()
+        val nextMode = (_uiState.value.repeatMode + 1) % 3
+        _uiState.value = _uiState.value.copy(repeatMode = nextMode)
+    }
+
+    fun toggleFavorite(trackId: Long) {
+        hapticEngine.performClick()
+        val favs = _uiState.value.favoriteTrackIds.toMutableSet()
+        if (favs.contains(trackId)) {
+            favs.remove(trackId)
+        } else {
+            favs.add(trackId)
+        }
+        _uiState.value = _uiState.value.copy(favoriteTrackIds = favs)
+    }
+
+    fun shuffleAll(tracks: List<Track>) {
+        if (tracks.isEmpty()) return
+        hapticEngine.performClick()
+        originalQueue = tracks
+        val shuffled = tracks.shuffled()
+        playbackQueue = shuffled
+        queueIndex = 0
+        _uiState.value = _uiState.value.copy(isShuffle = true)
+        loadAndPlayCurrent(true)
+    }
+
+    fun playAll(tracks: List<Track>, startIndex: Int = 0) {
+        if (tracks.isEmpty()) return
+        hapticEngine.performClick()
+        originalQueue = tracks
+        playbackQueue = tracks
+        queueIndex = startIndex.coerceIn(0, tracks.size - 1)
+        _uiState.value = _uiState.value.copy(isShuffle = false)
+        loadAndPlayCurrent(true)
     }
 
     fun rescanLibrary() {
@@ -107,6 +206,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
                 withContext(Dispatchers.Main) {
                     _uiState.value = _uiState.value.copy(isScanning = false)
+                    originalQueue = scannedTracks
+                    playbackQueue = scannedTracks
                     setQueue(scannedTracks, 0, autoPlay = false)
                 }
             } else {
@@ -153,6 +254,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setQueue(tracks: List<Track>, startIndex: Int = 0, autoPlay: Boolean = true) {
         if (tracks.isEmpty()) {
+            originalQueue = emptyList()
             playbackQueue = emptyList()
             queueIndex = 0
             _uiState.value = _uiState.value.copy(
@@ -165,8 +267,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             )
             return
         }
-        playbackQueue = tracks
-        queueIndex = startIndex.coerceIn(0, tracks.size - 1)
+        originalQueue = tracks
+        playbackQueue = if (_uiState.value.isShuffle) {
+            val s = tracks.shuffled().toMutableList()
+            val initial = tracks.getOrNull(startIndex)
+            if (initial != null) {
+                s.remove(initial)
+                s.add(0, initial)
+            }
+            s
+        } else tracks
+
+        queueIndex = if (_uiState.value.isShuffle) 0 else startIndex.coerceIn(0, tracks.size - 1)
         loadAndPlayCurrent(autoPlay)
     }
 

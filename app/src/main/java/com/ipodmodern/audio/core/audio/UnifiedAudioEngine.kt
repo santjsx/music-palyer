@@ -13,6 +13,7 @@ class UnifiedAudioEngine(private val context: Context) {
     private var equalizer: Equalizer? = null
     private var currentFilePath: String? = null
     private var currentVolume: Float = 1.0f
+    var onPlaybackCompleted: (() -> Unit)? = null
 
     init {
         initMediaPlayer()
@@ -29,6 +30,9 @@ class UnifiedAudioEngine(private val context: Context) {
                         .build()
                 )
                 setVolume(currentVolume, currentVolume)
+                setOnCompletionListener {
+                    onPlaybackCompleted?.invoke()
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()

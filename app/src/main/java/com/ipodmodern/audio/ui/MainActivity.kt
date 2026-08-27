@@ -10,7 +10,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,19 +27,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import com.ipodmodern.audio.ui.components.MiniPlayerBar
-import com.ipodmodern.audio.ui.screens.CoverFlowPlayerScreen
-import com.ipodmodern.audio.ui.screens.DisplayScreen
+import com.ipodmodern.audio.ui.components.ModernBottomNavIsland
+import com.ipodmodern.audio.ui.components.ModernTab
 import com.ipodmodern.audio.ui.screens.EqualizerScreen
 import com.ipodmodern.audio.ui.screens.LyricsScreen
-import com.ipodmodern.audio.ui.screens.MenuListScreen
+import com.ipodmodern.audio.ui.screens.ModernLibraryScreen
+import com.ipodmodern.audio.ui.screens.ModernNowPlayingScreen
 import com.ipodmodern.audio.ui.screens.ScreenType
 import com.ipodmodern.audio.ui.screens.SyncServerScreen
-import com.ipodmodern.audio.ui.theme.ChassisMaterial
-import com.ipodmodern.audio.ui.theme.IPodModernTheme
+import com.ipodmodern.audio.ui.theme.ModernAppTheme
+import com.ipodmodern.audio.ui.theme.ModernBgDark
 import com.ipodmodern.audio.ui.viewmodel.CoverFlowViewModel
 import com.ipodmodern.audio.ui.viewmodel.MenuViewModel
 import com.ipodmodern.audio.ui.viewmodel.PlayerViewModel
@@ -48,8 +58,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            val chassisTheme by remember { mutableStateOf(ChassisMaterial.SPACE_TITANIUM) }
-
             // Automatic runtime permission requester for storage & audio library access
             val permissionLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -83,12 +91,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            IPodModernTheme(chassis = chassisTheme) {
+            ModernAppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color.Black
+                    color = ModernBgDark
                 ) {
-                    IPodAppModernContent(
+                    ModernMusicAppContent(
                         playerViewModel = playerViewModel,
                         menuViewModel = menuViewModel,
                         coverFlowViewModel = coverFlowViewModel,
@@ -113,7 +121,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun IPodAppModernContent(
+fun ModernMusicAppContent(
     playerViewModel: PlayerViewModel,
     menuViewModel: MenuViewModel,
     coverFlowViewModel: CoverFlowViewModel,
@@ -128,13 +136,14 @@ fun IPodAppModernContent(
     fun handleBack() {
         playerViewModel.hapticEngine.performClick()
         when (activeScreen) {
+            ScreenType.LYRICS -> {
+                activeScreen = ScreenType.NOW_PLAYING
+            }
             ScreenType.NOW_PLAYING,
             ScreenType.COVER_FLOW,
             ScreenType.EQUALIZER,
-            ScreenType.LYRICS,
             ScreenType.SYNC_SERVER -> {
                 activeScreen = ScreenType.MENU_MAIN
-                menuViewModel.loadMainMenu()
             }
             else -> {
                 if (!menuViewModel.onMenuBack()) {
@@ -144,65 +153,58 @@ fun IPodAppModernContent(
         }
     }
 
-    // Android hardware / gesture back handling
-    BackHandler(enabled = activeScreen != ScreenType.MENU_MAIN || navState.backStack.isNotEmpty()) {
+    // Hardware and gesture back handling
+    BackHandler(enabled = activeScreen != ScreenType.MENU_MAIN) {
         handleBack()
     }
 
-    val screenTitle = when (activeScreen) {
-        ScreenType.NOW_PLAYING -> "Cover Flow Player"
-        ScreenType.COVER_FLOW -> "Cover Flow"
-        ScreenType.EQUALIZER -> "10-Band EQ"
-        ScreenType.LYRICS -> "Lyrics"
-        ScreenType.SYNC_SERVER -> "Wi-Fi Sync"
-        else -> navState.screenTitle
-    }
+    val isFullScreenModal = activeScreen == ScreenType.NOW_PLAYING || activeScreen == ScreenType.LYRICS
 
-    val isPlayerScreen = activeScreen == ScreenType.NOW_PLAYING || activeScreen == ScreenType.COVER_FLOW
-
-    DisplayScreen(
-        currentScreen = activeScreen,
-        screenTitle = screenTitle,
-        isPlaying = playerState.isPlaying,
-        onBackClick = if (activeScreen != ScreenType.MENU_MAIN || navState.backStack.isNotEmpty()) {
-            { handleBack() }
-        } else null,
-        bottomBar = if (!isPlayerScreen && activeScreen != ScreenType.LYRICS && playerState.currentTrack != null) {
-            {
-                MiniPlayerBar(
-                    track = playerState.currentTrack,
-                    isPlaying = playerState.isPlaying,
-                    positionMs = playerState.positionMs,
-                    durationMs = playerState.durationMs,
-                    onBarClick = { activeScreen = ScreenType.NOW_PLAYING },
-                    onPlayPauseClick = { playerViewModel.togglePlayPause() },
-                    onNextClick = { playerViewModel.nextTrack() }
-                )
-            }
-        } else null
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(ModernBgDark)
     ) {
+        // MARK: - Main Screen Switcher
         when (activeScreen) {
             ScreenType.NOW_PLAYING,
             ScreenType.COVER_FLOW -> {
-                CoverFlowPlayerScreen(
+                ModernNowPlayingScreen(
                     currentTrack = playerState.currentTrack,
                     allTracks = playerState.allTracks,
-                    currentTrackIndex = (playerState.currentTrackIndex - 1).coerceAtLeast(0),
+                    currentTrackIndex = playerState.currentTrackIndex,
                     positionMs = playerState.positionMs,
                     durationMs = playerState.durationMs,
                     isPlaying = playerState.isPlaying,
                     volumeLevel = playerState.volume,
+                    isShuffle = playerState.isShuffle,
+                    repeatMode = playerState.repeatMode,
+                    isFavorite = playerState.currentTrack?.let { playerState.favoriteTrackIds.contains(it.id) } == true,
                     currentLyricText = playerState.currentLyricText,
-                    onTrackSelect = { index ->
-                        playerViewModel.playTrackAtIndex(index)
-                    },
                     onPlayPauseClick = { playerViewModel.togglePlayPause() },
                     onNextClick = { playerViewModel.nextTrack() },
                     onPrevClick = { playerViewModel.prevTrack() },
                     onSeekTo = { targetMs -> playerViewModel.seekTo(targetMs) },
                     onVolumeChange = { vol -> playerViewModel.setVolumeDirect(vol) },
+                    onToggleShuffle = { playerViewModel.toggleShuffle() },
+                    onToggleRepeat = { playerViewModel.toggleRepeat() },
+                    onToggleFavorite = {
+                        playerState.currentTrack?.let { playerViewModel.toggleFavorite(it.id) }
+                    },
                     onLyricsClick = { activeScreen = ScreenType.LYRICS },
-                    onEqClick = { activeScreen = ScreenType.EQUALIZER }
+                    onEqClick = { activeScreen = ScreenType.EQUALIZER },
+                    onCollapseClick = { activeScreen = ScreenType.MENU_MAIN }
+                )
+            }
+            ScreenType.LYRICS -> {
+                LyricsScreen(
+                    lyrics = playerState.lyrics,
+                    activeLyricIndex = playerState.activeLyricIndex,
+                    songTitle = playerState.currentTrack?.title ?: "Now Playing",
+                    onSeekTo = { timestampMs ->
+                        playerViewModel.seekTo(timestampMs)
+                    },
+                    onBackClick = { activeScreen = ScreenType.NOW_PLAYING }
                 )
             }
             ScreenType.EQUALIZER -> {
@@ -218,34 +220,75 @@ fun IPodAppModernContent(
                     presetName = playerState.currentPresetName
                 )
             }
-            ScreenType.LYRICS -> {
-                LyricsScreen(
-                    lyrics = playerState.lyrics,
-                    activeLyricIndex = playerState.activeLyricIndex,
-                    songTitle = playerState.currentTrack?.title ?: ""
+            ScreenType.SYNC_SERVER -> {
+                SyncServerScreen(
+                    serverState = syncServerState,
+                    onRescanClick = { playerViewModel.rescanLibrary() }
                 )
             }
-            ScreenType.SYNC_SERVER -> {
-                SyncServerScreen(serverState = syncServerState)
-            }
             else -> {
-                MenuListScreen(
-                    items = navState.items,
-                    selectedIndex = navState.selectedIndex,
-                    onItemClick = { index ->
-                        menuViewModel.onCenterAction(
-                            explicitIndex = index,
-                            onPlayTrack = { tracks, startIndex ->
-                                playerViewModel.setQueue(tracks, startIndex, autoPlay = true)
-                                activeScreen = ScreenType.NOW_PLAYING
-                            },
-                            onNavigateScreen = { targetScreen ->
-                                activeScreen = targetScreen
-                            },
-                            onRescan = {
-                                playerViewModel.rescanLibrary()
-                            }
-                        )
+                ModernLibraryScreen(
+                    tracks = playerState.allTracks,
+                    albums = menuViewModel.cachedAlbums,
+                    artists = menuViewModel.cachedArtists,
+                    activeTrack = playerState.currentTrack,
+                    isPlaying = playerState.isPlaying,
+                    isScanning = playerState.isScanning,
+                    favoriteTrackIds = playerState.favoriteTrackIds,
+                    onTrackSelect = { trackList, index ->
+                        playerViewModel.setQueue(trackList, index, autoPlay = true)
+                        activeScreen = ScreenType.NOW_PLAYING
+                    },
+                    onShuffleAll = { trackList ->
+                        playerViewModel.shuffleAll(trackList)
+                        activeScreen = ScreenType.NOW_PLAYING
+                    },
+                    onPlayAll = { trackList ->
+                        playerViewModel.playAll(trackList, 0)
+                        activeScreen = ScreenType.NOW_PLAYING
+                    },
+                    onToggleFavorite = { trackId ->
+                        playerViewModel.toggleFavorite(trackId)
+                    },
+                    onRescanClick = {
+                        playerViewModel.rescanLibrary()
+                    }
+                )
+            }
+        }
+
+        // MARK: - Floating Bottom Elements (Mini Player & Nav Island)
+        if (!isFullScreenModal) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+            ) {
+                // Floating Mini Player (if track is loaded)
+                if (playerState.currentTrack != null) {
+                    MiniPlayerBar(
+                        track = playerState.currentTrack,
+                        isPlaying = playerState.isPlaying,
+                        positionMs = playerState.positionMs,
+                        durationMs = playerState.durationMs,
+                        onBarClick = { activeScreen = ScreenType.NOW_PLAYING },
+                        onPlayPauseClick = { playerViewModel.togglePlayPause() },
+                        onNextClick = { playerViewModel.nextTrack() }
+                    )
+                }
+
+                // Floating Bottom Navigation Island
+                ModernBottomNavIsland(
+                    currentScreen = activeScreen,
+                    onTabSelected = { tab ->
+                        playerViewModel.hapticEngine.performClick()
+                        activeScreen = when (tab) {
+                            ModernTab.LIBRARY -> ScreenType.MENU_MAIN
+                            ModernTab.NOW_PLAYING -> ScreenType.NOW_PLAYING
+                            ModernTab.EQUALIZER -> ScreenType.EQUALIZER
+                            ModernTab.SYNC -> ScreenType.SYNC_SERVER
+                        }
                     }
                 )
             }

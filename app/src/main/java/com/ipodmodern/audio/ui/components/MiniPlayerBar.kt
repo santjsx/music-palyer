@@ -1,5 +1,10 @@
 package com.ipodmodern.audio.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,19 +17,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -40,10 +43,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.ipodmodern.audio.core.model.AudioQuality
 import com.ipodmodern.audio.core.model.Track
+import com.ipodmodern.audio.ui.theme.ModernAccentBlue
+import com.ipodmodern.audio.ui.theme.ModernAccentCyan
+import com.ipodmodern.audio.ui.theme.ModernAccentPurple
+import com.ipodmodern.audio.ui.theme.ModernTextMuted
+import com.ipodmodern.audio.ui.theme.ModernTextPrimary
+import com.ipodmodern.audio.ui.theme.ModernTextSecondary
 import java.io.File
 
+/**
+ * Floating glassmorphic mini-player pill docked above bottom navigation.
+ */
 @Composable
 fun MiniPlayerBar(
     track: Track?,
@@ -61,143 +72,132 @@ fun MiniPlayerBar(
         (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
     } else 0f
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 14.dp, vertical = 6.dp)
-            .shadow(24.dp, RoundedCornerShape(18.dp), spotColor = Color(0xFF0A84FF))
-            .clip(RoundedCornerShape(18.dp))
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .shadow(
+                elevation = 20.dp,
+                shape = RoundedCornerShape(22.dp),
+                ambientColor = Color.Black.copy(alpha = 0.7f),
+                spotColor = ModernAccentBlue.copy(alpha = 0.35f)
+            )
+            .clip(RoundedCornerShape(22.dp))
             .background(
-                Brush.verticalGradient(
+                Brush.linearGradient(
                     listOf(
-                        Color(0xFF181B24).copy(alpha = 0.96f),
-                        Color(0xFF0F1117).copy(alpha = 0.98f)
+                        Color(0xFF161A24).copy(alpha = 0.95f),
+                        Color(0xFF0F1118).copy(alpha = 0.98f)
                     )
                 )
             )
-            .border(1.2.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(18.dp))
+            .border(1.dp, Color(0x2EFFFFFF), RoundedCornerShape(22.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { onBarClick() }
-    ) {
-        // Glowing Slim Progress Bar at Top of Mini-Player
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(3.dp)
-                .background(Color(0xFF222632))
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(fraction = progress)
-                    .height(3.dp)
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(Color(0xFF0A84FF), Color(0xFF00C7BE))
-                        )
-                    )
+                indication = null,
+                onClick = onBarClick
             )
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp)
-        ) {
-            // Album Art Thumbnail
-            Box(
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF15181F))
-                    .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(10.dp)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                if (!track.artworkUri.isNullOrEmpty()) {
-                    val model = if (track.artworkUri.startsWith("/")) File(track.artworkUri) else track.artworkUri
-                    AsyncImage(
-                        model = model,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = Color.Gray,
-                        modifier = Modifier.size(24.dp)
-                    )
+                // Album Art Squircle
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF1E222D))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (!track.artworkUri.isNullOrEmpty()) {
+                        val model = if (track.artworkUri.startsWith("/")) File(track.artworkUri) else track.artworkUri
+                        AsyncImage(
+                            model = model,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = ModernAccentBlue,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-            // Metadata Column
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = track.title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Song Title & Artist
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
                     Text(
-                        text = track.artist,
-                        fontSize = 12.sp,
-                        color = Color(0xFFA1A5B4),
+                        text = track.title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ModernTextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    AudioQualityBadge(
-                        quality = when {
-                            track.sampleRate > 48000 || track.bitDepth > 16 -> AudioQuality.HI_RES_LOSSLESS
-                            track.formatName == "MP3" || track.formatName == "AAC" -> AudioQuality.LOSSY
-                            else -> AudioQuality.LOSSLESS
-                        },
-                        badgeText = if (track.sampleRate > 48000) "HI-RES" else "LOSSLESS"
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = track.artist,
+                        fontSize = 12.sp,
+                        color = ModernTextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-            }
 
-            // Transport Actions (Play/Pause, Next)
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF0A84FF))
-                    .clickable { onPlayPauseClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Play/Pause Tactile Circle
+                TactileIconButton(
+                    icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
+                    isActive = isPlaying,
+                    activeColor = ModernAccentBlue,
+                    onClick = onPlayPauseClick,
+                    size = 40.dp,
+                    iconSize = 22.dp
+                )
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                // Next Track Button
+                TactileIconButton(
+                    icon = Icons.Default.SkipNext,
+                    contentDescription = "Next Track",
+                    onClick = onNextClick,
+                    size = 40.dp,
+                    iconSize = 22.dp
                 )
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(
-                onClick = onNextClick,
-                modifier = Modifier.size(38.dp)
+            // Hairline Progress Indicator at bottom of pill
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(Color(0xFF222836))
             ) {
-                Icon(
-                    imageVector = Icons.Default.FastForward,
-                    contentDescription = "Next",
-                    tint = Color(0xFFC7CAD6),
-                    modifier = Modifier.size(24.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(fraction = progress)
+                        .height(2.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(ModernAccentCyan, ModernAccentBlue)
+                            )
+                        )
                 )
             }
         }

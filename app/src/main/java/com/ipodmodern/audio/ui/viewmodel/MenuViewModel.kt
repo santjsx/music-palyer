@@ -32,9 +32,12 @@ class MenuViewModel(application: Application) : AndroidViewModel(application) {
     private val _navState = MutableStateFlow(MenuNavigationState())
     val navState: StateFlow<MenuNavigationState> = _navState.asStateFlow()
 
-    private var cachedTracks: List<Track> = emptyList()
-    private var cachedAlbums: List<Album> = emptyList()
-    private var cachedArtists: List<Artist> = emptyList()
+    var cachedTracks: List<Track> = emptyList()
+        private set
+    var cachedAlbums: List<Album> = emptyList()
+        private set
+    var cachedArtists: List<Artist> = emptyList()
+        private set
     private var currentFilterArtist: String? = null
     private var currentFilterAlbum: String? = null
 
