@@ -1,21 +1,13 @@
 package com.ipodmodern.audio.ui.screens
 
-import android.graphics.BitmapFactory
 import android.view.HapticFeedbackConstants
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,15 +45,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
@@ -70,11 +65,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import coil.compose.AsyncImage
 import com.ipodmodern.audio.core.model.Track
 import com.ipodmodern.audio.ui.components.NeoBadge
 import com.ipodmodern.audio.ui.components.NeoCard
 import com.ipodmodern.audio.ui.components.NeoIconButton
-import com.ipodmodern.audio.ui.components.neoShadow
 import com.ipodmodern.audio.ui.theme.NeoBgDark
 import com.ipodmodern.audio.ui.theme.NeoBlack
 import com.ipodmodern.audio.ui.theme.NeoBlue
@@ -83,19 +78,16 @@ import com.ipodmodern.audio.ui.theme.NeoBorderWidth
 import com.ipodmodern.audio.ui.theme.NeoGreen
 import com.ipodmodern.audio.ui.theme.NeoPink
 import com.ipodmodern.audio.ui.theme.NeoPurple
-import com.ipodmodern.audio.ui.theme.NeoRadiusLg
-import com.ipodmodern.audio.ui.theme.NeoRadiusMd
-import com.ipodmodern.audio.ui.theme.NeoRadiusSm
 import com.ipodmodern.audio.ui.theme.NeoWhite
 import com.ipodmodern.audio.ui.theme.NeoYellow
 import com.ipodmodern.audio.ui.viewmodel.PlaybackProgress
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.roundToInt
-import kotlin.math.sign
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun ModernNowPlayingScreen(
     currentTrack: Track?,
@@ -127,14 +119,25 @@ fun ModernNowPlayingScreen(
     val queue = if (allTracks.isNotEmpty()) allTracks else listOfNotNull(currentTrack)
     val activeIndex = if (currentTrackIndex > 0) (currentTrackIndex - 1).coerceIn(0, queue.size - 1) else 0
 
-    val carouselOffset = remember { Animatable(activeIndex.toFloat()) }
+    val pagerState = rememberPagerState(
+        initialPage = activeIndex,
+        pageCount = { queue.size.coerceAtLeast(1) }
+    )
 
+    // Synchronize pager with external track changes (e.g. next/prev)
     LaunchedEffect(activeIndex) {
-        if (abs(carouselOffset.value - activeIndex.toFloat()) > 0.01f) {
-            carouselOffset.animateTo(
-                targetValue = activeIndex.toFloat(),
-                animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-            )
+        if (pagerState.currentPage != activeIndex && activeIndex < pagerState.pageCount) {
+            pagerState.animateScrollToPage(activeIndex)
+        }
+    }
+
+    // Trigger track select when user settles on a new page via swipe
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.collect { settledPage ->
+            if (settledPage != activeIndex && settledPage in queue.indices) {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onTrackSelect(settledPage)
+            }
         }
     }
 
@@ -144,11 +147,11 @@ fun ModernNowPlayingScreen(
             .statusBarsPadding()
             .background(NeoBgDark)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // MARK: - Neo-Brutalist Header
+        // MARK: - Header Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -165,7 +168,7 @@ fun ModernNowPlayingScreen(
             )
 
             NeoBadge(
-                text = "${activeIndex + 1} / ${queue.size.coerceAtLeast(1)}",
+                text = "${(pagerState.currentPage + 1).coerceAtMost(queue.size)} / ${queue.size.coerceAtLeast(1)}",
                 backgroundColor = NeoWhite
             )
 
@@ -179,84 +182,51 @@ fun ModernNowPlayingScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        // MARK: - Neo-Brutalist 3D Cover Flow Carousel
-        BoxWithConstraints(
+        // MARK: - 120fps Hardware-Accelerated 3D Cover Flow Pager
+        HorizontalPager(
+            state = pagerState,
+            contentPadding = PaddingValues(horizontal = 70.dp),
+            pageSpacing = 16.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(310.dp)
-                .draggable(
-                    orientation = Orientation.Horizontal,
-                    state = rememberDraggableState { delta ->
-                        coroutineScope.launch {
-                            val newTarget = (carouselOffset.value - delta / 220f).coerceIn(0f, (queue.size - 1).toFloat().coerceAtLeast(0f))
-                            carouselOffset.snapTo(newTarget)
-                        }
-                    },
-                    onDragStopped = { velocity ->
-                        coroutineScope.launch {
-                            val current = carouselOffset.value
-                            val target = if (abs(velocity) > 300f) {
-                                (current - sign(velocity) * 0.6f).roundToInt()
-                            } else {
-                                current.roundToInt()
-                            }.coerceIn(0, queue.size - 1)
+        ) { page ->
+            val trackItem = queue.getOrNull(page) ?: return@HorizontalPager
 
-                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            carouselOffset.animateTo(
-                                target.toFloat(),
-                                spring(dampingRatio = 0.75f, stiffness = 500f)
-                            )
-                            if (target != activeIndex) {
-                                onTrackSelect(target)
+            val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+            val absOffset = abs(pageOffset)
+            val isCurrentPage = page == pagerState.currentPage
+
+            val scale = (1.0f - absOffset * 0.12f).coerceIn(0.78f, 1.0f)
+            val rotationY = (pageOffset * -24f).coerceIn(-48f, 48f)
+            val zIndexVal = 100f - absOffset * 10f
+
+            NeoCoverCard(
+                track = trackItem,
+                isCenter = isCurrentPage,
+                modifier = Modifier
+                    .zIndex(zIndexVal)
+                    .graphicsLayer {
+                        this.scaleX = scale
+                        this.scaleY = scale
+                        this.rotationY = rotationY
+                        this.cameraDistance = 14f * density
+                        this.transformOrigin = TransformOrigin(0.5f, 0.5f)
+                    }
+                    .clickable {
+                        if (page != pagerState.currentPage) {
+                            coroutineScope.launch {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                pagerState.animateScrollToPage(page)
                             }
                         }
                     }
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            val centerIndex = carouselOffset.value
-            val minVisible = (centerIndex - 2.5f).toInt().coerceAtLeast(0)
-            val maxVisible = (centerIndex + 2.5f).toInt().coerceAtMost(queue.size - 1)
-
-            for (i in minVisible..maxVisible) {
-                val trackItem = queue[i]
-                val offsetFromCenter = i - centerIndex
-                val absOffset = abs(offsetFromCenter)
-
-                val translationX = offsetFromCenter * 140f
-                val rotationY = (offsetFromCenter * -24f).coerceIn(-48f, 48f)
-                val scale = (1.0f - absOffset * 0.12f).coerceIn(0.75f, 1.0f)
-                val zIndexVal = 100f - absOffset * 10f
-
-                NeoCoverCard(
-                    track = trackItem,
-                    isCenter = absOffset < 0.3f,
-                    modifier = Modifier
-                        .zIndex(zIndexVal)
-                        .graphicsLayer {
-                            this.translationX = translationX
-                            this.rotationY = rotationY
-                            this.scaleX = scale
-                            this.scaleY = scale
-                            this.cameraDistance = 14f * density
-                            this.transformOrigin = TransformOrigin(0.5f, 0.5f)
-                        }
-                        .clickable {
-                            if (i != activeIndex) {
-                                coroutineScope.launch {
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    carouselOffset.animateTo(i.toFloat(), spring(dampingRatio = 0.75f, stiffness = 500f))
-                                    onTrackSelect(i)
-                                }
-                            }
-                        }
-                )
-            }
+            )
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Lossless Tag
         val badgeText = currentTrack?.badgeText ?: "24-BIT • 96kHz LOSSLESS"
@@ -266,17 +236,17 @@ fun ModernNowPlayingScreen(
             textColor = NeoWhite
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // MARK: - Decoupled Timeline Scrubber
+        // MARK: - Decoupled Progress Scrubber (Only recomposes itself)
         NeoScrubberContainer(
             playbackProgressFlow = playbackProgressFlow,
             onSeekTo = onSeekTo
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // MARK: - Neo-Brutalist Transport Controls
+        // MARK: - Neo-Brutalist Transport Deck
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
@@ -334,7 +304,7 @@ fun ModernNowPlayingScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         // MARK: - Volume Bar
         Row(
@@ -370,9 +340,9 @@ fun ModernNowPlayingScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // MARK: - Bottom Action Buttons (Lyrics & 10-EQ)
+        // MARK: - Bottom Actions
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -435,7 +405,7 @@ fun ModernNowPlayingScreen(
 }
 
 /**
- * Neo-Brutalist 3D Cover Flow Card.
+ * 120fps Async-Image Neo-Brutalist 3D Cover Card.
  */
 @Composable
 fun NeoCoverCard(
@@ -443,10 +413,8 @@ fun NeoCoverCard(
     isCenter: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val artworkBitmap = remember(track.artworkUri) {
-        track.artworkUri?.let { path ->
-            try { BitmapFactory.decodeFile(path) } catch (e: Exception) { null }
-        }
+    val artworkFile = remember(track.artworkUri) {
+        track.artworkUri?.let { File(it) }
     }
 
     NeoCard(
@@ -460,7 +428,7 @@ fun NeoCoverCard(
             .height(290.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Artwork
+            // Async Artwork Loader with Coil (Background Thread Decoding)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -468,9 +436,9 @@ fun NeoCoverCard(
                     .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
                     .background(NeoBlack)
             ) {
-                if (artworkBitmap != null) {
-                    Image(
-                        bitmap = artworkBitmap.asImageBitmap(),
+                if (artworkFile != null && artworkFile.exists()) {
+                    AsyncImage(
+                        model = artworkFile,
                         contentDescription = track.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()

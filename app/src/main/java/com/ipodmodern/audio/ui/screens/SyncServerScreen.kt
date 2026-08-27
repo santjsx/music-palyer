@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Refresh
@@ -28,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -36,21 +37,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ipodmodern.audio.core.sync.SyncServerState
-import com.ipodmodern.audio.ui.components.RaycastCard
-import com.ipodmodern.audio.ui.components.RaycastKeycapBadge
-import com.ipodmodern.audio.ui.theme.RaycastAccentGreen
-import com.ipodmodern.audio.ui.theme.RaycastAsh
-import com.ipodmodern.audio.ui.theme.RaycastBody
-import com.ipodmodern.audio.ui.theme.RaycastCanvas
-import com.ipodmodern.audio.ui.theme.RaycastHairline
-import com.ipodmodern.audio.ui.theme.RaycastHairlineStrong
-import com.ipodmodern.audio.ui.theme.RaycastInk
-import com.ipodmodern.audio.ui.theme.RaycastMute
-import com.ipodmodern.audio.ui.theme.RaycastPrimaryWhite
-import com.ipodmodern.audio.ui.theme.RaycastRadiusLg
-import com.ipodmodern.audio.ui.theme.RaycastRadiusMd
-import com.ipodmodern.audio.ui.theme.RaycastSurface
-import com.ipodmodern.audio.ui.theme.RaycastSurfaceElevated
+import com.ipodmodern.audio.ui.components.NeoBadge
+import com.ipodmodern.audio.ui.components.NeoCard
+import com.ipodmodern.audio.ui.components.NeoIconButton
+import com.ipodmodern.audio.ui.components.neoShadow
+import com.ipodmodern.audio.ui.theme.NeoBgDark
+import com.ipodmodern.audio.ui.theme.NeoBlack
+import com.ipodmodern.audio.ui.theme.NeoBlue
+import com.ipodmodern.audio.ui.theme.NeoBorderThick
+import com.ipodmodern.audio.ui.theme.NeoBorderWidth
+import com.ipodmodern.audio.ui.theme.NeoGreen
+import com.ipodmodern.audio.ui.theme.NeoMuted
+import com.ipodmodern.audio.ui.theme.NeoPink
+import com.ipodmodern.audio.ui.theme.NeoPurple
+import com.ipodmodern.audio.ui.theme.NeoRadiusLg
+import com.ipodmodern.audio.ui.theme.NeoRadiusMd
+import com.ipodmodern.audio.ui.theme.NeoRadiusSm
+import com.ipodmodern.audio.ui.theme.NeoWhite
+import com.ipodmodern.audio.ui.theme.NeoYellow
 
 @Composable
 fun SyncServerScreen(
@@ -64,12 +68,14 @@ fun SyncServerScreen(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(RaycastCanvas)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .background(NeoBgDark)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(bottom = 140.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // MARK: - Header
+        // Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -82,174 +88,188 @@ fun SyncServerScreen(
                     text = "WI-FI SYNC & INGESTION",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = RaycastMute,
+                    fontFamily = FontFamily.Monospace,
+                    color = NeoWhite,
                     letterSpacing = 1.0.sp
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Sync Hub",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = RaycastInk,
-                    letterSpacing = 0.2.sp
+                    text = "SYNC HUB",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black,
+                    color = NeoYellow,
+                    letterSpacing = 1.sp
                 )
             }
 
-            // Server Status Keycap Badge
-            RaycastKeycapBadge(
+            NeoBadge(
                 text = if (serverState.isRunning) "SERVER ONLINE" else "SERVER OFFLINE",
-                textColor = if (serverState.isRunning) RaycastAccentGreen else RaycastAsh,
-                accentColor = if (serverState.isRunning) RaycastAccentGreen else RaycastAsh
+                backgroundColor = if (serverState.isRunning) NeoGreen else NeoPink,
+                textColor = NeoWhite
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // MARK: - Connection Card (Raycast Command-Palette Frame)
-        RaycastCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RaycastRadiusLg,
-            backgroundColor = RaycastSurface
+        // Main Wi-Fi Instructions Card
+        NeoCard(
+            backgroundColor = NeoWhite,
+            borderColor = NeoBlack,
+            borderWidth = NeoBorderThick,
+            shadowOffset = 5.dp,
+            cornerRadius = 16.dp,
+            modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp)
+                    .padding(20.dp)
             ) {
+                // Wi-Fi Icon Badge
                 Box(
                     modifier = Modifier
-                        .size(54.dp)
+                        .size(58.dp)
                         .clip(CircleShape)
-                        .background(RaycastSurfaceElevated)
-                        .border(1.dp, RaycastHairline, CircleShape),
+                        .background(if (serverState.isRunning) NeoYellow else NeoWhite)
+                        .border(NeoBorderWidth, NeoBlack, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Wifi,
                         contentDescription = null,
-                        tint = if (serverState.isRunning) RaycastPrimaryWhite else RaycastMute,
-                        modifier = Modifier.size(26.dp)
+                        tint = NeoBlack,
+                        modifier = Modifier.size(28.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
-                    text = "Wireless Audio Transfer",
+                    text = "WIRELESS AUDIO TRANSFER",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = RaycastInk,
-                    letterSpacing = 0.2.sp
+                    fontWeight = FontWeight.Black,
+                    color = NeoBlack,
+                    letterSpacing = 0.5.sp
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Open this address in any browser on your computer connected to the same Wi-Fi network:",
+                    text = "Open this address in any browser on your computer connected to the same Wi-Fi network to transfer audio files directly:",
                     fontSize = 13.sp,
-                    color = RaycastBody,
+                    fontWeight = FontWeight.Bold,
+                    color = NeoBlack.copy(alpha = 0.8f),
                     textAlign = TextAlign.Center,
                     lineHeight = 18.sp
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Highlighted IP Pill Box
+                // Highlighted IP Container (High-Contrast Bold Black Text)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RaycastRadiusMd)
-                        .background(RaycastSurfaceElevated)
-                        .border(1.dp, RaycastHairlineStrong, RaycastRadiusMd)
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .clip(NeoRadiusMd)
+                        .background(NeoYellow)
+                        .border(NeoBorderWidth, NeoBlack, NeoRadiusMd)
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (serverState.isRunning) "http://${serverState.hostAddress}:${serverState.port}" else "Connecting to Wi-Fi...",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = RaycastPrimaryWhite,
-                        fontFamily = FontFamily.Monospace
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                        color = NeoBlack,
+                        fontFamily = FontFamily.Monospace,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // MARK: - Session Statistics Card
+        // Stats & Actions Grid
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            RaycastCard(
-                modifier = Modifier.weight(1f),
-                shape = RaycastRadiusMd
+            // Uploaded Files Card
+            NeoCard(
+                backgroundColor = NeoWhite,
+                cornerRadius = 14.dp,
+                modifier = Modifier.weight(1f)
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Icon(
                         imageVector = Icons.Default.CloudUpload,
                         contentDescription = null,
-                        tint = RaycastBody,
-                        modifier = Modifier.size(18.dp)
+                        tint = NeoBlack,
+                        modifier = Modifier.size(22.dp)
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "${serverState.totalUploadedFiles}",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = RaycastInk
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Black,
+                        color = NeoBlack
                     )
                     Text(
-                        text = "Files Synced",
+                        text = "FILES SYNCED",
                         fontSize = 11.sp,
-                        color = RaycastMute
+                        fontWeight = FontWeight.Bold,
+                        color = NeoMuted
                     )
                 }
             }
 
-            RaycastCard(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable {
-                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                        onRescanClick()
-                    },
-                shape = RaycastRadiusMd,
-                backgroundColor = RaycastSurfaceElevated
+            // Rescan Button Card
+            NeoCard(
+                backgroundColor = NeoYellow,
+                cornerRadius = 14.dp,
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    onRescanClick()
+                }
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = null,
-                        tint = RaycastPrimaryWhite,
-                        modifier = Modifier.size(18.dp)
+                        tint = NeoBlack,
+                        modifier = Modifier.size(22.dp)
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Rescan",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = RaycastPrimaryWhite
+                        text = "RESCAN",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        color = NeoBlack
                     )
                     Text(
                         text = "Refresh Library",
                         fontSize = 11.sp,
-                        color = RaycastBody
+                        fontWeight = FontWeight.Bold,
+                        color = NeoBlack.copy(alpha = 0.7f)
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
-
-        Text(
-            text = "Supports bit-perfect FLAC, DSD (.dsf/.dff), WAV, ALAC, and .CUE sheets",
-            fontSize = 11.sp,
-            color = RaycastAsh,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 120.dp)
-        )
+        // Supported Codecs Footer
+        NeoCard(
+            backgroundColor = NeoPurple,
+            cornerRadius = 12.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Supports bit-perfect FLAC, DSD (.dsf/.dff), WAV, ALAC, and .CUE sheets",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Black,
+                color = NeoBlack,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp)
+            )
+        }
     }
 }
