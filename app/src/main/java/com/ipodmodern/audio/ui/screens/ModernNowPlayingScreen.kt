@@ -74,10 +74,12 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Modern High-End Audiophile Player Screen inspired by luxury digital-analog players:
+ * Pixel-Perfect High-End Audiophile Player Screen matching the reference design:
  * - Perfectly balanced Top Bar with Back button, Auto-fit Playlist Pill, and Menu Icon
- * - 285dp Circular Chronograph Vinyl Audio Wheel (Progress Arc, Speed Chips, +-10s Jumps, Spinning Artwork Core, Timestamp)
- * - Lower Vibrant Glassmorphic Audio Deck with non-duplicating 3-Line Synchronized Lyrics & High-Contrast Transport Controls
+ * - Glowing Ambient Backdrop with 280dp Chronograph Vinyl Audio Wheel
+ * - Solid White Progress Arc with flat precision ends
+ * - Inside-Wheel Speed Selector [x0.5 x1 x2] and Centered Jump Buttons (10)
+ * - Lower Vibrant Glassmorphic Audio Deck with non-duplicating Lyrics Showcase & High-Contrast Transport Controls
  */
 @Composable
 fun ModernNowPlayingScreen(
@@ -150,9 +152,9 @@ fun ModernNowPlayingScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF141F36),
-                        Color(0xFF0A0E18),
-                        Color(0xFF05070B)
+                        Color(0xFF14244A),
+                        Color(0xFF0C1324),
+                        Color(0xFF060910)
                     )
                 )
             )
@@ -163,7 +165,7 @@ fun ModernNowPlayingScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 18.dp)
-                .padding(bottom = 20.dp),
+                .padding(bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 1. TOP NAVIGATION HEADER (Guaranteed 3-Item Balance)
@@ -241,16 +243,31 @@ fun ModernNowPlayingScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // 2. CIRCULAR CHRONOGRAPH VINYL WHEEL (280dp)
+            // 2. CIRCULAR CHRONOGRAPH VINYL WHEEL WITH AMBIENT GLOW BACKDROP
             Box(
                 modifier = Modifier
                     .size(280.dp)
                     .align(Alignment.CenterHorizontally),
                 contentAlignment = Alignment.Center
             ) {
-                // Background Canvas with Tick Marks & White Progress Arc
+                // Layer 0: Ambient Radial Glow
+                Box(
+                    modifier = Modifier
+                        .size(280.dp)
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    Color(0xFF2870FF).copy(alpha = 0.40f),
+                                    Color(0xFF1440C0).copy(alpha = 0.18f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+
+                // Layer 1: Background Canvas (Ticks, Vinyl Body, Concentric Grooves & White Progress Arc)
                 Canvas(
                     modifier = Modifier
                         .fillMaxSize()
@@ -282,18 +299,19 @@ fun ModernNowPlayingScreen(
                         }
                 ) {
                     val canvasCenter = Offset(size.width / 2f, size.height / 2f)
-                    val outerRadius = size.minDimension / 2f - 10.dp.toPx()
-                    val vinylRadius = outerRadius - 15.dp.toPx()
+                    val arcStrokeWidth = 7.dp.toPx()
+                    val outerRadius = size.minDimension / 2f - (arcStrokeWidth / 2f)
+                    val vinylRadius = outerRadius - 3.dp.toPx()
 
-                    // Draw 72 Perimeter Ticks
+                    // Draw 72 Perimeter Ticks (Radiating from outer rim)
                     val tickCount = 72
                     for (i in 0 until tickCount) {
                         val tickAngleDeg = (i.toFloat() / tickCount) * 360f - 90f
                         val tickAngleRad = Math.toRadians(tickAngleDeg.toDouble())
                         val isMajor = i % 6 == 0
 
-                        val tickInnerR = outerRadius - (if (isMajor) 10.dp.toPx() else 5.dp.toPx())
-                        val tickOuterR = outerRadius
+                        val tickInnerR = outerRadius - (if (isMajor) 11.dp.toPx() else 6.dp.toPx())
+                        val tickOuterR = outerRadius + 2.dp.toPx()
 
                         val startX = canvasCenter.x + (tickInnerR * cos(tickAngleRad)).toFloat()
                         val startY = canvasCenter.y + (tickInnerR * sin(tickAngleRad)).toFloat()
@@ -301,20 +319,20 @@ fun ModernNowPlayingScreen(
                         val endY = canvasCenter.y + (tickOuterR * sin(tickAngleRad)).toFloat()
 
                         drawLine(
-                            color = Color.White.copy(alpha = if (isMajor) 0.38f else 0.12f),
+                            color = Color.White.copy(alpha = if (isMajor) 0.40f else 0.15f),
                             start = Offset(startX, startY),
                             end = Offset(endX, endY),
-                            strokeWidth = if (isMajor) 2.dp.toPx() else 1.dp.toPx()
+                            strokeWidth = if (isMajor) 1.8.dp.toPx() else 1.dp.toPx()
                         )
                     }
 
-                    // Draw Deep Machined Vinyl Disc Body
+                    // Draw Solid Dark Machined Vinyl Disc Body (Filling the entire inner circumference)
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                Color(0xFF262933),
-                                Color(0xFF14161C),
-                                Color(0xFF090A0E)
+                                Color(0xFF1E2128),
+                                Color(0xFF121419),
+                                Color(0xFF0A0B0E)
                             ),
                             center = canvasCenter,
                             radius = vinylRadius
@@ -323,78 +341,87 @@ fun ModernNowPlayingScreen(
                         center = canvasCenter
                     )
 
-                    // Concentric Grooves on Vinyl
+                    // Concentric Grooves on Vinyl Body
                     drawCircle(
                         color = Color.White.copy(alpha = 0.05f),
-                        radius = vinylRadius * 0.78f,
+                        radius = vinylRadius * 0.76f,
                         center = canvasCenter,
                         style = Stroke(width = 1.dp.toPx())
                     )
                     drawCircle(
                         color = Color.White.copy(alpha = 0.05f),
-                        radius = vinylRadius * 0.58f,
+                        radius = vinylRadius * 0.56f,
                         center = canvasCenter,
                         style = Stroke(width = 1.dp.toPx())
                     )
 
-                    // Draw Sweeping Solid White Progress Arc along the perimeter
-                    val arcSweepAngle = 360f * progress
-                    drawArc(
-                        color = Color.White,
-                        startAngle = -90f,
-                        sweepAngle = arcSweepAngle,
-                        useCenter = false,
-                        topLeft = Offset(canvasCenter.x - outerRadius, canvasCenter.y - outerRadius),
-                        size = Size(outerRadius * 2, outerRadius * 2),
-                        style = Stroke(width = 4.5.dp.toPx(), cap = StrokeCap.Round)
-                    )
-                }
-
-                // Inner Speed Chips (x0.5, x1, x2) at top
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 30.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.10f))
-                        .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
-                        .padding(horizontal = 10.dp, vertical = 3.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val currentSpeed = uiState.playbackSpeed
-                    listOf(0.5f to "x0.5", 1.0f to "x1", 2.0f to "x2").forEach { (spd, label) ->
-                        Text(
-                            text = label,
-                            color = if (currentSpeed == spd) Color.White else Color.White.copy(alpha = 0.45f),
-                            fontSize = 11.sp,
-                            fontWeight = if (currentSpeed == spd) FontWeight.Bold else FontWeight.Medium,
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    playerViewModel.setPlaybackSpeed(spd)
-                                }
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                    // Draw Sweeping Solid White Progress Arc with flat precision ends
+                    if (progress > 0.005f) {
+                        val arcSweepAngle = 360f * progress
+                        drawArc(
+                            color = Color.White,
+                            startAngle = -90f,
+                            sweepAngle = arcSweepAngle,
+                            useCenter = false,
+                            topLeft = Offset(canvasCenter.x - outerRadius, canvasCenter.y - outerRadius),
+                            size = Size(outerRadius * 2, outerRadius * 2),
+                            style = Stroke(width = arcStrokeWidth, cap = StrokeCap.Butt)
                         )
                     }
                 }
 
-                // Center Row: [-10s Jump] • [Center Album Art Core] • [+10s Jump]
+                // Layer 2: Inner Speed Chips (x0.5, x1, x2) placed neatly inside the upper vinyl
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
+                        .align(Alignment.TopCenter)
+                        .padding(top = 40.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.10f))
+                        .border(0.8.dp, Color.White.copy(alpha = 0.12f), CircleShape)
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val currentSpeed = uiState.playbackSpeed
+                    listOf(0.5f to "x0.5", 1.0f to "x1", 2.0f to "x2").forEach { (spd, label) ->
+                        val isSelected = currentSpeed == spd
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(if (isSelected) Color.White.copy(alpha = 0.20f) else Color.Transparent)
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                    playerViewModel.setPlaybackSpeed(spd)
+                                }
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.50f),
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                // Layer 3: Center Row: [-10s Jump] • [Center Album Art Core] • [+10s Jump]
+                // Centered with explicit 170dp width so jump buttons remain fully inside the vinyl body!
+                Row(
+                    modifier = Modifier
+                        .width(174.dp)
+                        .align(Alignment.Center),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // -10s Rewind Button
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(30.dp)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.08f))
-                            .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
+                            .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
                             .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                 playerViewModel.seekBackward10s()
@@ -404,18 +431,18 @@ fun ModernNowPlayingScreen(
                         Text(
                             text = "⟲10",
                             color = Color.White.copy(alpha = 0.85f),
-                            fontSize = 10.sp,
+                            fontSize = 9.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    // Center Circular Album Artwork Core (~84dp)
+                    // Center Circular Album Artwork Core (~72dp)
                     Box(
                         modifier = Modifier
-                            .size(84.dp)
+                            .size(72.dp)
                             .clip(CircleShape)
                             .background(Color.Black)
-                            .border(2.dp, Color.White.copy(alpha = 0.35f), CircleShape),
+                            .border(1.5.dp, Color.White.copy(alpha = 0.30f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         if (artworkFile != null && artworkFile.exists()) {
@@ -430,7 +457,7 @@ fun ModernNowPlayingScreen(
                                 imageVector = Icons.Default.MusicNote,
                                 contentDescription = null,
                                 tint = palette.accent,
-                                modifier = Modifier.size(40.dp)
+                                modifier = Modifier.size(36.dp)
                             )
                         }
                     }
@@ -438,10 +465,10 @@ fun ModernNowPlayingScreen(
                     // +10s Fast Forward Button
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(30.dp)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.08f))
-                            .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
+                            .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
                             .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                 playerViewModel.seekForward10s()
@@ -451,37 +478,37 @@ fun ModernNowPlayingScreen(
                         Text(
                             text = "10⟳",
                             color = Color.White.copy(alpha = 0.85f),
-                            fontSize = 10.sp,
+                            fontSize = 9.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                // Timestamp readout (01:12) & triple dots at bottom
+                // Layer 4: Timestamp readout (01:12) & triple dots positioned inside bottom of the vinyl
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 28.dp),
+                        .padding(bottom = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = elapsedText,
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
+                        color = Color.White.copy(alpha = 0.90f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
                         fontFamily = FontFamily.Monospace
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "•••",
-                        color = Color.White.copy(alpha = 0.40f),
-                        fontSize = 9.sp,
+                        color = Color.White.copy(alpha = 0.35f),
+                        fontSize = 8.sp,
                         letterSpacing = 2.sp
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // 3. THE VIBRANT GLASSMORPHIС AUDIO DECK (Bottom Floating Card)
             Box(
