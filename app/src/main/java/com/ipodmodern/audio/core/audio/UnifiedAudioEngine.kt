@@ -222,6 +222,20 @@ class UnifiedAudioEngine(private val context: Context) {
         }
     }
 
+    fun setPlaybackSpeed(speed: Float) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                mediaPlayer?.let { player ->
+                    val params = player.playbackParams
+                    params.speed = speed.coerceIn(0.25f, 3.0f)
+                    player.playbackParams = params
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("UnifiedAudioEngine", "Playback speed not supported: ${e.message}")
+        }
+    }
+
     private fun applyVolumeInternal(vol: Float) {
         val clamped = vol.coerceIn(0.0f, 1.0f)
         try {

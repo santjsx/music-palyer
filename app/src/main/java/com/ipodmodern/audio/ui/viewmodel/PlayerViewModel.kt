@@ -56,6 +56,7 @@ data class PlayerUiState(
     val isScanning: Boolean = false,
     val themeBase: String = "Obsidian Dark",
     val accentColor: String = "Mint Green",
+    val playbackSpeed: Float = 1.0f,
     val lastPlayedTrack: Track? = null,
     val lastSavedPositionMs: Long = 0L
 )
@@ -517,6 +518,25 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         _uiState.value.currentTrack?.let {
             persistLastPlayback(it.id, safePos)
         }
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        hapticEngine.performClick()
+        audioEngine.setPlaybackSpeed(speed)
+        _uiState.value = _uiState.value.copy(playbackSpeed = speed)
+    }
+
+    fun seekForward10s() {
+        hapticEngine.performClick()
+        val currentPos = _playbackProgress.value.positionMs
+        val maxDuration = _playbackProgress.value.durationMs.coerceAtLeast(_uiState.value.currentTrack?.durationMs ?: 0L)
+        seekTo((currentPos + 10000L).coerceAtMost(maxDuration))
+    }
+
+    fun seekBackward10s() {
+        hapticEngine.performClick()
+        val currentPos = _playbackProgress.value.positionMs
+        seekTo((currentPos - 10000L).coerceAtLeast(0L))
     }
 
     fun setVolume(volume: Float) {
