@@ -2,6 +2,12 @@ package com.ipodmodern.audio.ui.screens
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -16,6 +22,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -49,6 +57,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -73,11 +83,11 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Pixel-Perfect Luxury Audiophile Player Screen matching the reference design:
- * - Dynamic Blurred Album Art Backdrop with Deep Atmospheric Lighting
- * - Balanced Top Navigation Bar with Back Button, Auto-Fit Pill Badge, and Menu
- * - Upper Stage: Centered 280dp Circular Chronograph Wheel with ambient glow, precision ticks, flat progress arc, speed chips, and inside jump controls
- * - Lower Stage: Full-Span Vibrant Glassmorphic Audio Deck anchored to the bottom (No empty void at bottom of screen!)
+ * Flagship Luxury Audiophile Player Screen:
+ * - Perfectly integrated with the app's dynamic theme palette & dynamic blurred album art
+ * - Grand 320dp Circular Chronograph Vinyl Wheel with laser-etched perimeter ticks, flat progress arc, speed chips, and inside jump controls
+ * - Slowly spinning central vinyl disc with embedded album artwork
+ * - Anchored Full-Bleed Glassmorphic Audio Deck with 3-line synchronized lyrics & high-end transport controls
  */
 @Composable
 fun ModernNowPlayingScreen(
@@ -113,6 +123,18 @@ fun ModernNowPlayingScreen(
         currentTrack?.artworkUri?.let { File(it) }
     }
 
+    // Vinyl Rotation Animation (when playing)
+    val infiniteTransition = rememberInfiniteTransition(label = "vinyl_rotation")
+    val vinylRotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 20000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "vinyl_angle"
+    )
+
     // Dynamic Lyrics Extraction (Previous, Active, Next)
     val lyrics = uiState.lyrics
     val activeIdx = progressState.activeLyricIndex
@@ -144,10 +166,19 @@ fun ModernNowPlayingScreen(
         }
     }
 
+    // Harmonized Theme Colors for the Screen & Deck
+    val deckGradient = remember(palette.accent) {
+        listOf(
+            Color(0xFF256BFE),
+            Color(0xFF144DC8),
+            Color(0xFF0A2E8A)
+        )
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF070B14))
+            .background(palette.bg)
     ) {
         // LAYER 0: Ambient Blurred Album Art Backdrop
         if (artworkFile != null && artworkFile.exists()) {
@@ -157,26 +188,26 @@ fun ModernNowPlayingScreen(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .blur(45.dp)
+                    .blur(50.dp)
             )
         }
 
-        // LAYER 1: Deep Atmospheric Gradient Overlay
+        // LAYER 1: Atmospheric Gradient & Dark Vignette Overlay
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF0F1B38).copy(alpha = 0.82f),
-                            Color(0xFF070D1E).copy(alpha = 0.88f),
-                            Color(0xFF03050A).copy(alpha = 0.94f)
+                            palette.bg.copy(alpha = 0.78f),
+                            palette.bg.copy(alpha = 0.88f),
+                            Color(0xFF030509).copy(alpha = 0.95f)
                         )
                     )
                 )
         )
 
-        // LAYER 2: Foreground Structure (Header + Upper Wheel Stage + Anchored Bottom Deck)
+        // LAYER 2: Main Layout (Top Navigation Header + Grand Chronograph Stage + Anchored Audio Deck)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -190,10 +221,10 @@ fun ModernNowPlayingScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Sleek Back Arrow
+                // Sleek Glass Back Arrow
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(42.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.08f))
                         .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
@@ -213,15 +244,15 @@ fun ModernNowPlayingScreen(
                     )
                 }
 
-                // Center Floating Pill (Auto-fit weighted)
+                // Center Floating Pill
                 Box(
                     modifier = Modifier
                         .weight(1f, fill = false)
                         .padding(horizontal = 10.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.12f))
-                        .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape)
-                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                        .background(Color.White.copy(alpha = 0.10f))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
+                        .padding(horizontal = 16.dp, vertical = 7.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -238,7 +269,7 @@ fun ModernNowPlayingScreen(
                 // Right Options Menu (Equalizer / Queue)
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(42.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.08f))
                         .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
@@ -257,27 +288,29 @@ fun ModernNowPlayingScreen(
                 }
             }
 
-            // 2. UPPER STAGE: Centered Circular Chronograph Vinyl Wheel (Weight = 1.15f)
+            // 2. GRAND CHRONOGRAPH VINYL WHEEL STAGE (Weight = 1.2f)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1.15f)
-                    .padding(horizontal = 16.dp),
+                    .weight(1.2f)
+                    .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .size(280.dp),
+                        .fillMaxWidth(0.92f)
+                        .widthIn(max = 330.dp)
+                        .aspectRatio(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Ambient Radial Glow Backdrop
+                    // 2.1 Ambient Radial Glow Backdrop
                     Box(
                         modifier = Modifier
-                            .size(280.dp)
+                            .fillMaxSize()
                             .background(
                                 Brush.radialGradient(
                                     colors = listOf(
-                                        Color(0xFF2870FF).copy(alpha = 0.40f),
+                                        Color(0xFF2870FF).copy(alpha = 0.42f),
                                         Color(0xFF1440C0).copy(alpha = 0.18f),
                                         Color.Transparent
                                     )
@@ -285,7 +318,7 @@ fun ModernNowPlayingScreen(
                             )
                     )
 
-                    // Canvas: Perimeter Ticks, Machined Vinyl Body, Concentric Grooves & White Progress Arc
+                    // 2.2 Background Canvas (Outer Precision Ticks, Dark Vinyl Body, Grooves & Progress Arc)
                     Canvas(
                         modifier = Modifier
                             .fillMaxSize()
@@ -317,18 +350,18 @@ fun ModernNowPlayingScreen(
                             }
                     ) {
                         val canvasCenter = Offset(size.width / 2f, size.height / 2f)
-                        val arcStrokeWidth = 7.dp.toPx()
+                        val arcStrokeWidth = 7.5.dp.toPx()
                         val outerRadius = size.minDimension / 2f - (arcStrokeWidth / 2f)
-                        val vinylRadius = outerRadius - 3.dp.toPx()
+                        val vinylRadius = outerRadius - 2.5.dp.toPx()
 
-                        // Draw 72 Perimeter Ticks
+                        // Draw 72 Perimeter Laser Ticks
                         val tickCount = 72
                         for (i in 0 until tickCount) {
                             val tickAngleDeg = (i.toFloat() / tickCount) * 360f - 90f
                             val tickAngleRad = Math.toRadians(tickAngleDeg.toDouble())
                             val isMajor = i % 6 == 0
 
-                            val tickInnerR = outerRadius - (if (isMajor) 11.dp.toPx() else 6.dp.toPx())
+                            val tickInnerR = outerRadius - (if (isMajor) 12.dp.toPx() else 6.5.dp.toPx())
                             val tickOuterR = outerRadius + 2.dp.toPx()
 
                             val startX = canvasCenter.x + (tickInnerR * cos(tickAngleRad)).toFloat()
@@ -337,20 +370,20 @@ fun ModernNowPlayingScreen(
                             val endY = canvasCenter.y + (tickOuterR * sin(tickAngleRad)).toFloat()
 
                             drawLine(
-                                color = Color.White.copy(alpha = if (isMajor) 0.40f else 0.15f),
+                                color = Color.White.copy(alpha = if (isMajor) 0.45f else 0.16f),
                                 start = Offset(startX, startY),
                                 end = Offset(endX, endY),
-                                strokeWidth = if (isMajor) 1.8.dp.toPx() else 1.dp.toPx()
+                                strokeWidth = if (isMajor) 2.dp.toPx() else 1.dp.toPx()
                             )
                         }
 
-                        // Draw Solid Dark Machined Vinyl Disc Body
+                        // Draw Dark Machined Vinyl Body
                         drawCircle(
                             brush = Brush.radialGradient(
                                 colors = listOf(
                                     Color(0xFF1E2128),
-                                    Color(0xFF121419),
-                                    Color(0xFF0A0B0E)
+                                    Color(0xFF13151A),
+                                    Color(0xFF090A0E)
                                 ),
                                 center = canvasCenter,
                                 radius = vinylRadius
@@ -359,16 +392,22 @@ fun ModernNowPlayingScreen(
                             center = canvasCenter
                         )
 
-                        // Concentric Grooves
+                        // 3 Concentric Physical Grooves
                         drawCircle(
-                            color = Color.White.copy(alpha = 0.05f),
-                            radius = vinylRadius * 0.76f,
+                            color = Color.White.copy(alpha = 0.06f),
+                            radius = vinylRadius * 0.78f,
                             center = canvasCenter,
                             style = Stroke(width = 1.dp.toPx())
                         )
                         drawCircle(
                             color = Color.White.copy(alpha = 0.05f),
-                            radius = vinylRadius * 0.56f,
+                            radius = vinylRadius * 0.60f,
+                            center = canvasCenter,
+                            style = Stroke(width = 1.dp.toPx())
+                        )
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.04f),
+                            radius = vinylRadius * 0.44f,
                             center = canvasCenter,
                             style = Stroke(width = 1.dp.toPx())
                         )
@@ -388,14 +427,14 @@ fun ModernNowPlayingScreen(
                         }
                     }
 
-                    // Speed Selector Chips [x0.5, x1, x2]
+                    // 2.3 Inside Speed Chips [x0.5, x1, x2]
                     Row(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .padding(top = 40.dp)
+                            .padding(top = 42.dp)
                             .clip(CircleShape)
                             .background(Color.White.copy(alpha = 0.10f))
-                            .border(0.8.dp, Color.White.copy(alpha = 0.12f), CircleShape)
+                            .border(0.8.dp, Color.White.copy(alpha = 0.14f), CircleShape)
                             .padding(horizontal = 4.dp, vertical = 2.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -406,28 +445,28 @@ fun ModernNowPlayingScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(CircleShape)
-                                    .background(if (isSelected) Color.White.copy(alpha = 0.20f) else Color.Transparent)
+                                    .background(if (isSelected) Color.White.copy(alpha = 0.22f) else Color.Transparent)
                                     .clickable {
                                         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                         playerViewModel.setPlaybackSpeed(spd)
                                     }
-                                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                                    .padding(horizontal = 10.dp, vertical = 4.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = label,
                                     color = if (isSelected) Color.White else Color.White.copy(alpha = 0.50f),
-                                    fontSize = 11.sp,
+                                    fontSize = 11.5.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                 )
                             }
                         }
                     }
 
-                    // Symmetrical Interior Jump Buttons & Center Circular Artwork Core
+                    // 2.4 Inside Jump Buttons & Spinning Vinyl Core
                     Row(
                         modifier = Modifier
-                            .width(174.dp)
+                            .fillMaxWidth(0.68f)
                             .align(Alignment.Center),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -435,10 +474,10 @@ fun ModernNowPlayingScreen(
                         // -10s Rewind Button
                         Box(
                             modifier = Modifier
-                                .size(30.dp)
+                                .size(32.dp)
                                 .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.08f))
-                                .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
+                                .background(Color.White.copy(alpha = 0.09f))
+                                .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape)
                                 .clickable {
                                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                     playerViewModel.seekBackward10s()
@@ -447,19 +486,20 @@ fun ModernNowPlayingScreen(
                         ) {
                             Text(
                                 text = "⟲10",
-                                color = Color.White.copy(alpha = 0.85f),
-                                fontSize = 9.sp,
+                                color = Color.White.copy(alpha = 0.88f),
+                                fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
 
-                        // Center Circular Album Artwork (~72dp)
+                        // Center Spinning Vinyl Core (~84dp)
                         Box(
                             modifier = Modifier
-                                .size(72.dp)
+                                .size(84.dp)
+                                .rotate(if (uiState.isPlaying) vinylRotation else 0f)
                                 .clip(CircleShape)
                                 .background(Color.Black)
-                                .border(1.5.dp, Color.White.copy(alpha = 0.30f), CircleShape),
+                                .border(2.dp, Color.White.copy(alpha = 0.35f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             if (artworkFile != null && artworkFile.exists()) {
@@ -474,45 +514,54 @@ fun ModernNowPlayingScreen(
                                     imageVector = Icons.Default.MusicNote,
                                     contentDescription = null,
                                     tint = palette.accent,
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(40.dp)
                                 )
                             }
+
+                            // Tiny Center Spindle Pin
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White)
+                                    .border(1.dp, Color.Black.copy(alpha = 0.5f), CircleShape)
+                            )
                         }
 
                         // +10s Fast Forward Button
                         Box(
                             modifier = Modifier
-                                .size(30.dp)
+                                .size(32.dp)
                                 .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.08f))
-                                .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
-                            .clickable {
-                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                playerViewModel.seekForward10s()
-                            },
+                                .background(Color.White.copy(alpha = 0.09f))
+                                .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape)
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                    playerViewModel.seekForward10s()
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = "10⟳",
-                                color = Color.White.copy(alpha = 0.85f),
-                                fontSize = 9.sp,
+                                color = Color.White.copy(alpha = 0.88f),
+                                fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
 
-                    // Monospaced Timestamp & Triple Dots
+                    // 2.5 Monospaced Timestamp & Subtle Dots
                     Column(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = 24.dp),
+                            .padding(bottom = 26.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
                             text = elapsedText,
-                            color = Color.White.copy(alpha = 0.90f),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White.copy(alpha = 0.92f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace
                         )
                         Spacer(modifier = Modifier.height(2.dp))
@@ -526,24 +575,16 @@ fun ModernNowPlayingScreen(
                 }
             }
 
-            // 3. LOWER STAGE: Full-Span Vibrant Glassmorphic Audio Deck (Anchored to Bottom)
+            // 3. ANCHORED VIBRANT GLASSMORPHIС AUDIO DECK (Weight = 1.0f)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1.0f)
                     .clip(RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0xFF256BFE),
-                                Color(0xFF1650D8),
-                                Color(0xFF0C36A8)
-                            )
-                        )
-                    )
+                    .background(Brush.verticalGradient(colors = deckGradient))
                     .border(
                         1.dp,
-                        Color.White.copy(alpha = 0.22f),
+                        Color.White.copy(alpha = 0.24f),
                         RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp)
                     )
                     .navigationBarsPadding()
@@ -553,7 +594,7 @@ fun ModernNowPlayingScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // 3.1 3-Line Synchronized Lyrics / Lossless Audio Showcase
+                    // 3.1 Synchronized Lyrics / Hi-Res Lossless Showcase
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -582,7 +623,7 @@ fun ModernNowPlayingScreen(
                                 Text(
                                     text = activeText,
                                     color = Color.White,
-                                    fontSize = 22.sp,
+                                    fontSize = 23.sp,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     textAlign = TextAlign.Center,
@@ -604,7 +645,7 @@ fun ModernNowPlayingScreen(
                         } else {
                             Text(
                                 text = "LOSSLESS HI-RES AUDIO",
-                                color = Color.White.copy(alpha = 0.50f),
+                                color = Color.White.copy(alpha = 0.55f),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 2.sp,
@@ -616,7 +657,7 @@ fun ModernNowPlayingScreen(
                             Text(
                                 text = "Immerse in the Sound",
                                 color = Color.White,
-                                fontSize = 21.sp,
+                                fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                                 textAlign = TextAlign.Center
                             )
@@ -625,7 +666,7 @@ fun ModernNowPlayingScreen(
 
                             Text(
                                 text = "Aether Audiophile DSP Deck",
-                                color = Color.White.copy(alpha = 0.50f),
+                                color = Color.White.copy(alpha = 0.55f),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
                                 textAlign = TextAlign.Center
@@ -633,17 +674,17 @@ fun ModernNowPlayingScreen(
                         }
                     }
 
-                    // 3.2 Overlapping Circular Artwork Discs + Track Title & Artist
+                    // 3.2 Track Info Row: Overlapping Circular Artwork Discs + Title/Artist
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Double Overlapping Circular Artworks
-                        Box(modifier = Modifier.size(54.dp, 38.dp)) {
-                            // Back disc
+                        Box(modifier = Modifier.size(56.dp, 40.dp)) {
+                            // Back art disc
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(38.dp)
                                     .clip(CircleShape)
                                     .background(Color.Black)
                                     .border(1.5.dp, Color.White.copy(alpha = 0.35f), CircleShape)
@@ -657,11 +698,11 @@ fun ModernNowPlayingScreen(
                                     )
                                 }
                             }
-                            // Front disc (Offset by 16dp)
+                            // Front art disc (Offset by 16dp)
                             Box(
                                 modifier = Modifier
                                     .offset(x = 16.dp)
-                                    .size(36.dp)
+                                    .size(38.dp)
                                     .clip(CircleShape)
                                     .background(Color.Black)
                                     .border(1.5.dp, Color.White, CircleShape)
@@ -691,7 +732,7 @@ fun ModernNowPlayingScreen(
                             Text(
                                 text = currentTrack?.title ?: "Select Track",
                                 color = Color.White,
-                                fontSize = 16.sp,
+                                fontSize = 16.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -707,13 +748,13 @@ fun ModernNowPlayingScreen(
                         }
                     }
 
-                    // 3.3 Transport Controls: Repeat • Prev • Solid White Play/Pause • Next • Favorite
+                    // 3.3 Premium Transport Controls: Repeat • Prev • Pure White Play/Pause • Next • Favorite
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Repeat / Repeat 1 Switcher
+                        // Repeat Switcher
                         Icon(
                             imageVector = when (uiState.repeatMode) {
                                 2 -> Icons.Default.RepeatOne
@@ -729,23 +770,24 @@ fun ModernNowPlayingScreen(
                                 }
                         )
 
-                        // Previous Track
+                        // Previous Track (High-end geometric skip icon)
                         Icon(
                             imageVector = Icons.Default.SkipPrevious,
                             contentDescription = "Previous",
                             tint = Color.White,
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(38.dp)
                                 .clickable {
                                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                     playerViewModel.prevTrack()
                                 }
                         )
 
-                        // Center Solid Pure White Play/Pause Circle (58dp)
+                        // Large Solid Pure White Play/Pause Button (64dp) with Floating Depth
                         Box(
                             modifier = Modifier
-                                .size(58.dp)
+                                .size(64.dp)
+                                .shadow(8.dp, CircleShape, spotColor = Color.Black)
                                 .clip(CircleShape)
                                 .background(Color.White)
                                 .clickable {
@@ -757,18 +799,18 @@ fun ModernNowPlayingScreen(
                             Icon(
                                 imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = if (uiState.isPlaying) "Pause" else "Play",
-                                tint = Color(0xFF0C36A8),
-                                modifier = Modifier.size(32.dp)
+                                tint = Color(0xFF0A2E8A),
+                                modifier = Modifier.size(36.dp)
                             )
                         }
 
-                        // Next Track
+                        // Next Track (High-end geometric skip icon)
                         Icon(
                             imageVector = Icons.Default.SkipNext,
                             contentDescription = "Next",
                             tint = Color.White,
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(38.dp)
                                 .clickable {
                                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                     playerViewModel.nextTrack()
