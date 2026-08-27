@@ -1,5 +1,6 @@
 package com.ipodmodern.audio.ui.screens
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,9 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -29,23 +28,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ipodmodern.audio.core.sync.SyncServerState
-import com.ipodmodern.audio.ui.theme.ModernAccentBlue
-import com.ipodmodern.audio.ui.theme.ModernAccentCyan
-import com.ipodmodern.audio.ui.theme.ModernAccentEmerald
-import com.ipodmodern.audio.ui.theme.ModernAccentPurple
-import com.ipodmodern.audio.ui.theme.ModernHeroGradient
-import com.ipodmodern.audio.ui.theme.ModernTextMuted
-import com.ipodmodern.audio.ui.theme.ModernTextPrimary
-import com.ipodmodern.audio.ui.theme.ModernTextSecondary
+import com.ipodmodern.audio.ui.components.RaycastCard
+import com.ipodmodern.audio.ui.components.RaycastKeycapBadge
+import com.ipodmodern.audio.ui.theme.RaycastAccentGreen
+import com.ipodmodern.audio.ui.theme.RaycastAsh
+import com.ipodmodern.audio.ui.theme.RaycastBody
+import com.ipodmodern.audio.ui.theme.RaycastCanvas
+import com.ipodmodern.audio.ui.theme.RaycastHairline
+import com.ipodmodern.audio.ui.theme.RaycastHairlineStrong
+import com.ipodmodern.audio.ui.theme.RaycastInk
+import com.ipodmodern.audio.ui.theme.RaycastMute
+import com.ipodmodern.audio.ui.theme.RaycastPrimaryWhite
+import com.ipodmodern.audio.ui.theme.RaycastRadiusLg
+import com.ipodmodern.audio.ui.theme.RaycastRadiusMd
+import com.ipodmodern.audio.ui.theme.RaycastSurface
+import com.ipodmodern.audio.ui.theme.RaycastSurfaceElevated
 
 @Composable
 fun SyncServerScreen(
@@ -53,12 +58,14 @@ fun SyncServerScreen(
     onRescanClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(Color(0xFF07080B))
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+            .background(RaycastCanvas)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
@@ -66,7 +73,7 @@ fun SyncServerScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .padding(vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -74,85 +81,55 @@ fun SyncServerScreen(
                 Text(
                     text = "WI-FI SYNC & INGESTION",
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = ModernAccentCyan,
-                    letterSpacing = 1.2.sp
+                    fontWeight = FontWeight.Bold,
+                    color = RaycastMute,
+                    letterSpacing = 1.0.sp
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "Sync Hub",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = ModernTextPrimary
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RaycastInk,
+                    letterSpacing = 0.2.sp
                 )
             }
 
-            // Server Status Pill
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (serverState.isRunning) ModernAccentEmerald.copy(alpha = 0.15f) else Color(0xFF1E232E))
-                    .border(
-                        1.dp,
-                        if (serverState.isRunning) ModernAccentEmerald.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.12f),
-                        RoundedCornerShape(12.dp)
-                    )
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(if (serverState.isRunning) ModernAccentEmerald else Color.Gray)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (serverState.isRunning) "ONLINE" else "OFFLINE",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (serverState.isRunning) ModernAccentEmerald else Color.Gray
-                    )
-                }
-            }
+            // Server Status Keycap Badge
+            RaycastKeycapBadge(
+                text = if (serverState.isRunning) "SERVER ONLINE" else "SERVER OFFLINE",
+                textColor = if (serverState.isRunning) RaycastAccentGreen else RaycastAsh,
+                accentColor = if (serverState.isRunning) RaycastAccentGreen else RaycastAsh
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // MARK: - Connection Card
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(20.dp, RoundedCornerShape(24.dp), spotColor = ModernAccentCyan.copy(alpha = 0.3f))
-                .clip(RoundedCornerShape(24.dp))
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color(0xFF141822), Color(0xFF0F1118))
-                    )
-                )
-                .border(1.dp, Color(0x28FFFFFF), RoundedCornerShape(24.dp))
-                .padding(24.dp)
+        // MARK: - Connection Card (Raycast Command-Palette Frame)
+        RaycastCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RaycastRadiusLg,
+            backgroundColor = RaycastSurface
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(60.dp)
+                        .size(54.dp)
                         .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                listOf(ModernAccentCyan, ModernAccentBlue)
-                            )
-                        ),
+                        .background(RaycastSurfaceElevated)
+                        .border(1.dp, RaycastHairline, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Wifi,
                         contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(32.dp)
+                        tint = if (serverState.isRunning) RaycastPrimaryWhite else RaycastMute,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
 
@@ -160,9 +137,10 @@ fun SyncServerScreen(
 
                 Text(
                     text = "Wireless Audio Transfer",
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ModernTextPrimary
+                    color = RaycastInk,
+                    letterSpacing = 0.2.sp
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -170,27 +148,28 @@ fun SyncServerScreen(
                 Text(
                     text = "Open this address in any browser on your computer connected to the same Wi-Fi network:",
                     fontSize = 13.sp,
-                    color = ModernTextSecondary,
-                    textAlign = TextAlign.Center
+                    color = RaycastBody,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 18.sp
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Highlighted IP Pill
+                // Highlighted IP Pill Box
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF090B10))
-                        .border(1.dp, ModernAccentCyan.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .clip(RaycastRadiusMd)
+                        .background(RaycastSurfaceElevated)
+                        .border(1.dp, RaycastHairlineStrong, RaycastRadiusMd)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (serverState.isRunning) "http://${serverState.hostAddress}:${serverState.port}" else "Connecting to Wi-Fi...",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = ModernAccentCyan,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RaycastPrimaryWhite,
                         fontFamily = FontFamily.Monospace
                     )
                 }
@@ -201,68 +180,63 @@ fun SyncServerScreen(
 
         // MARK: - Session Statistics Card
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color(0xFF10131B))
-                    .border(1.dp, Color(0x20FFFFFF), RoundedCornerShape(18.dp))
-                    .padding(16.dp)
+            RaycastCard(
+                modifier = Modifier.weight(1f),
+                shape = RaycastRadiusMd
             ) {
-                Column {
+                Column(modifier = Modifier.padding(14.dp)) {
                     Icon(
                         imageVector = Icons.Default.CloudUpload,
                         contentDescription = null,
-                        tint = ModernAccentBlue,
-                        modifier = Modifier.size(20.dp)
+                        tint = RaycastBody,
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "${serverState.totalUploadedFiles}",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = ModernTextPrimary
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RaycastInk
                     )
                     Text(
                         text = "Files Synced",
                         fontSize = 11.sp,
-                        color = ModernTextMuted
+                        color = RaycastMute
                     )
                 }
             }
 
-            Box(
+            RaycastCard(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color(0xFF10131B))
-                    .border(1.dp, Color(0x20FFFFFF), RoundedCornerShape(18.dp))
-                    .clickable { onRescanClick() }
-                    .padding(16.dp)
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        onRescanClick()
+                    },
+                shape = RaycastRadiusMd,
+                backgroundColor = RaycastSurfaceElevated
             ) {
-                Column {
+                Column(modifier = Modifier.padding(14.dp)) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = null,
-                        tint = ModernAccentEmerald,
-                        modifier = Modifier.size(20.dp)
+                        tint = RaycastPrimaryWhite,
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "Rescan",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = ModernTextPrimary
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RaycastPrimaryWhite
                     )
                     Text(
                         text = "Refresh Library",
                         fontSize = 11.sp,
-                        color = ModernTextMuted
+                        color = RaycastBody
                     )
                 }
             }
@@ -271,11 +245,11 @@ fun SyncServerScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = "Supports bit-perfect FLAC, DSD (.dsf/.dff), WAV, ALAC, and .CUE sheet splitting",
+            text = "Supports bit-perfect FLAC, DSD (.dsf/.dff), WAV, ALAC, and .CUE sheets",
             fontSize = 11.sp,
-            color = ModernTextMuted,
+            color = RaycastAsh,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(bottom = 70.dp)
+            modifier = Modifier.padding(bottom = 120.dp)
         )
     }
 }

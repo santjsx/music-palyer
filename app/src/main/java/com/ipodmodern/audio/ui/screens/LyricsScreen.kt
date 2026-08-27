@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,11 +38,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ipodmodern.audio.core.model.LyricLine
 import com.ipodmodern.audio.ui.components.TactileIconButton
-import com.ipodmodern.audio.ui.theme.ModernAccentCyan
-import com.ipodmodern.audio.ui.theme.ModernAccentGold
-import com.ipodmodern.audio.ui.theme.ModernTextMuted
-import com.ipodmodern.audio.ui.theme.ModernTextPrimary
-import com.ipodmodern.audio.ui.theme.ModernTextSecondary
+import com.ipodmodern.audio.ui.theme.RaycastAccentBlue
+import com.ipodmodern.audio.ui.theme.RaycastAsh
+import com.ipodmodern.audio.ui.theme.RaycastBody
+import com.ipodmodern.audio.ui.theme.RaycastCanvas
+import com.ipodmodern.audio.ui.theme.RaycastInk
+import com.ipodmodern.audio.ui.theme.RaycastMute
+import com.ipodmodern.audio.ui.theme.RaycastPrimaryWhite
 
 @Composable
 fun LyricsScreen(
@@ -68,15 +69,7 @@ fun LyricsScreen(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0xFF101420),
-                        Color(0xFF090A0E),
-                        Color(0xFF050608)
-                    )
-                )
-            )
+            .background(RaycastCanvas)
     ) {
         // Top Bar
         Row(
@@ -92,7 +85,7 @@ fun LyricsScreen(
                     contentDescription = "Back",
                     onClick = onBackClick,
                     size = 42.dp,
-                    iconSize = 24.dp
+                    iconSize = 22.dp
                 )
             } else {
                 Spacer(modifier = Modifier.size(42.dp))
@@ -102,15 +95,15 @@ fun LyricsScreen(
                 Text(
                     text = "LYRICS",
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = ModernAccentCyan,
-                    letterSpacing = 1.5.sp
+                    fontWeight = FontWeight.Bold,
+                    color = RaycastMute,
+                    letterSpacing = 1.2.sp
                 )
                 Text(
                     text = songTitle,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = ModernTextPrimary,
+                    color = RaycastInk,
                     maxLines = 1
                 )
             }
@@ -127,18 +120,18 @@ fun LyricsScreen(
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
                         text = "No Synchronized Lyrics",
-                        fontSize = 18.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ModernTextPrimary
+                        color = RaycastInk
                     )
                     Text(
-                        text = "Place a matching .lrc file (e.g. SongName.lrc) in the same folder as your audio track.",
+                        text = "Place a matching .lrc file in the same directory as your audio track to enable line-by-line sync.",
                         fontSize = 13.sp,
-                        color = ModernTextSecondary,
+                        color = RaycastBody,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -158,23 +151,23 @@ fun LyricsScreen(
                     val isActive = index == activeLyricIndex
 
                     val textColor by animateColorAsState(
-                        targetValue = if (isActive) Color.White else ModernTextMuted.copy(alpha = 0.45f),
-                        animationSpec = tween(220),
+                        targetValue = if (isActive) RaycastPrimaryWhite else RaycastAsh,
+                        animationSpec = tween(200),
                         label = "lyric_color"
                     )
 
                     val scale by animateFloatAsState(
-                        targetValue = if (isActive) 1.05f else 1.0f,
+                        targetValue = if (isActive) 1.04f else 1.0f,
                         animationSpec = spring(stiffness = 500f),
                         label = "lyric_scale"
                     )
 
                     Text(
                         text = line.text,
-                        fontSize = if (isActive) 24.sp else 19.sp,
-                        fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.SemiBold,
+                        fontSize = if (isActive) 23.sp else 18.sp,
+                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
                         color = textColor,
-                        lineHeight = if (isActive) 32.sp else 26.sp,
+                        lineHeight = if (isActive) 30.sp else 24.sp,
                         modifier = Modifier
                             .fillMaxWidth()
                             .scale(scale)
@@ -190,11 +183,11 @@ fun LyricsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(36.dp)
+                    .height(32.dp)
                     .align(Alignment.TopCenter)
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color(0xFF101420), Color.Transparent)
+                            listOf(RaycastCanvas, Color.Transparent)
                         )
                     )
             )
@@ -203,11 +196,11 @@ fun LyricsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(36.dp)
+                    .height(32.dp)
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color.Transparent, Color(0xFF050608))
+                            listOf(Color.Transparent, RaycastCanvas)
                         )
                     )
             )

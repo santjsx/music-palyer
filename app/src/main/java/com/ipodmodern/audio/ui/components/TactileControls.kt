@@ -1,8 +1,7 @@
 package com.ipodmodern.audio.ui.components
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -19,14 +18,15 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -51,67 +52,220 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ipodmodern.audio.ui.theme.LocalModernColors
-import com.ipodmodern.audio.ui.theme.ModernAccentBlue
-import com.ipodmodern.audio.ui.theme.ModernAccentCyan
-import com.ipodmodern.audio.ui.theme.ModernAccentEmerald
-import com.ipodmodern.audio.ui.theme.ModernAccentPurple
-import com.ipodmodern.audio.ui.theme.ModernHeroGradient
-import com.ipodmodern.audio.ui.theme.ModernTextMuted
-import com.ipodmodern.audio.ui.theme.ModernTextPrimary
-import com.ipodmodern.audio.ui.theme.ModernTextSecondary
+import com.ipodmodern.audio.ui.theme.RaycastAccentBlue
+import com.ipodmodern.audio.ui.theme.RaycastAccentGreen
+import com.ipodmodern.audio.ui.theme.RaycastAccentYellow
+import com.ipodmodern.audio.ui.theme.RaycastAsh
+import com.ipodmodern.audio.ui.theme.RaycastBody
+import com.ipodmodern.audio.ui.theme.RaycastHairline
+import com.ipodmodern.audio.ui.theme.RaycastHairlineStrong
+import com.ipodmodern.audio.ui.theme.RaycastInk
+import com.ipodmodern.audio.ui.theme.RaycastKeycapGradient
+import com.ipodmodern.audio.ui.theme.RaycastMute
+import com.ipodmodern.audio.ui.theme.RaycastOnPrimary
+import com.ipodmodern.audio.ui.theme.RaycastPrimaryPressed
+import com.ipodmodern.audio.ui.theme.RaycastPrimaryWhite
+import com.ipodmodern.audio.ui.theme.RaycastRadiusMd
+import com.ipodmodern.audio.ui.theme.RaycastRadiusXs
+import com.ipodmodern.audio.ui.theme.RaycastSurface
+import com.ipodmodern.audio.ui.theme.RaycastSurfaceCard
+import com.ipodmodern.audio.ui.theme.RaycastSurfaceElevated
+import java.util.Locale
 
 /**
- * Double-bezel glass card container with top highlight and subtle ambient shadow.
+ * Raycast Surface Card Container with 1px hairline border (no drop shadows).
  */
 @Composable
-fun TactileGlassCard(
+fun RaycastCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(24.dp),
-    backgroundColor: Color = Color(0xFF101319),
-    borderColor: Color = Color(0x24FFFFFF),
+    shape: Shape = RoundedCornerShape(12.dp),
+    backgroundColor: Color = RaycastSurface,
+    borderColor: Color = RaycastHairline,
     content: @Composable () -> Unit
 ) {
     Box(
         modifier = modifier
-            .shadow(
-                elevation = 16.dp,
-                shape = shape,
-                ambientColor = Color.Black.copy(alpha = 0.6f),
-                spotColor = Color.Black.copy(alpha = 0.8f)
-            )
             .clip(shape)
             .background(backgroundColor)
             .border(1.dp, borderColor, shape)
-            .drawBehind {
-                // Top inner highlight sheen
-                drawLine(
-                    color = Color.White.copy(alpha = 0.12f),
-                    start = Offset(16.dp.toPx(), 1f),
-                    end = Offset(size.width - 16.dp.toPx(), 1f),
-                    strokeWidth = 1.5f
-                )
-            }
     ) {
         content()
     }
 }
 
 /**
- * Realistic tactile glass button with spring-press physics and inner lighting.
+ * Keycap-style physical badge for audio badges and keyboard hints.
+ */
+@Composable
+fun RaycastKeycapBadge(
+    text: String,
+    modifier: Modifier = Modifier,
+    textColor: Color = RaycastInk,
+    accentColor: Color? = null
+) {
+    Box(
+        modifier = modifier
+            .clip(RaycastRadiusXs)
+            .background(RaycastKeycapGradient)
+            .border(1.dp, RaycastHairline, RaycastRadiusXs)
+            .padding(horizontal = 7.dp, vertical = 3.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            if (accentColor != null) {
+                Box(
+                    modifier = Modifier
+                        .size(5.dp)
+                        .clip(CircleShape)
+                        .background(accentColor)
+                )
+            }
+            Text(
+                text = text,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor,
+                fontFamily = FontFamily.Monospace,
+                letterSpacing = 0.4.sp
+            )
+        }
+    }
+}
+
+/**
+ * Universal Raycast Primary White Action Pill Button.
+ */
+@Composable
+fun RaycastPrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null
+) {
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.94f else 1.0f,
+        animationSpec = spring(stiffness = 600f, dampingRatio = 0.75f),
+        label = "btn_scale"
+    )
+
+    Box(
+        modifier = modifier
+            .scale(scale)
+            .clip(CircleShape)
+            .background(if (isPressed) RaycastPrimaryPressed else RaycastPrimaryWhite)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onClick()
+            }
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = RaycastOnPrimary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Text(
+                text = text,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = RaycastOnPrimary,
+                letterSpacing = 0.2.sp
+            )
+        }
+    }
+}
+
+/**
+ * Raycast Secondary / Tertiary Button with 1px hairline border.
+ */
+@Composable
+fun RaycastSecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null
+) {
+    val view = LocalView.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1.0f,
+        animationSpec = spring(stiffness = 600f),
+        label = "sec_btn_scale"
+    )
+
+    Box(
+        modifier = modifier
+            .scale(scale)
+            .clip(CircleShape)
+            .background(RaycastSurfaceElevated)
+            .border(1.dp, if (isPressed) RaycastHairlineStrong else RaycastHairline, CircleShape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) {
+                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                onClick()
+            }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = RaycastInk,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+            Text(
+                text = text,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = RaycastInk,
+                letterSpacing = 0.2.sp
+            )
+        }
+    }
+}
+
+/**
+ * Tactile Icon Button in Raycast button-tertiary style.
  */
 @Composable
 fun TactileIconButton(
@@ -119,93 +273,64 @@ fun TactileIconButton(
     contentDescription: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    size: Dp = 48.dp,
-    iconSize: Dp = 22.dp,
+    size: Dp = 44.dp,
+    iconSize: Dp = 20.dp,
+    tint: Color = RaycastInk,
     isActive: Boolean = false,
-    activeColor: Color = ModernAccentBlue,
-    inactiveColor: Color = ModernTextSecondary,
     badgeText: String? = null
 ) {
+    val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.88f else 1.0f,
-        animationSpec = spring(dampingRatio = 0.55f, stiffness = 600f),
-        label = "tactile_scale"
+        targetValue = if (isPressed) 0.90f else 1.0f,
+        animationSpec = spring(stiffness = 700f, dampingRatio = 0.7f),
+        label = "icon_press_scale"
     )
-
-    val iconColor by animateColorAsState(
-        targetValue = if (isActive) activeColor else inactiveColor,
-        animationSpec = tween(180),
-        label = "icon_color"
-    )
-
-    val bgBrush = if (isActive) {
-        Brush.radialGradient(
-            listOf(activeColor.copy(alpha = 0.25f), Color(0xFF161A22))
-        )
-    } else {
-        Brush.linearGradient(
-            listOf(Color(0xFF1A1E27), Color(0xFF12151B))
-        )
-    }
-
-    val borderStroke = if (isActive) {
-        activeColor.copy(alpha = 0.5f)
-    } else {
-        Color.White.copy(alpha = 0.10f)
-    }
 
     Box(
         modifier = modifier
             .size(size)
             .scale(scale)
-            .shadow(
-                elevation = if (isActive) 10.dp else 4.dp,
-                shape = CircleShape,
-                spotColor = if (isActive) activeColor.copy(alpha = 0.4f) else Color.Black
-            )
             .clip(CircleShape)
-            .background(bgBrush)
-            .border(1.dp, borderStroke, CircleShape)
+            .background(if (isActive) RaycastSurfaceCard else RaycastSurfaceElevated)
+            .border(
+                1.dp,
+                if (isActive) RaycastHairlineStrong else RaycastHairline,
+                CircleShape
+            )
             .clickable(
                 interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
-            .drawBehind {
-                // Top crescent sheen
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(Color.White.copy(alpha = 0.15f), Color.Transparent),
-                        center = Offset(this.size.width / 2, 4.dp.toPx()),
-                        radius = this.size.width / 2
-                    )
-                )
+                indication = null
+            ) {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onClick()
             },
         contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = iconColor,
+            tint = if (isActive) RaycastPrimaryWhite else tint,
             modifier = Modifier.size(iconSize)
         )
 
+        // Tiny Badge or Dot for Active State
         if (badgeText != null) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .offset(x = (-2).dp, y = 2.dp)
-                    .background(activeColor, CircleShape)
+                    .clip(CircleShape)
+                    .background(RaycastPrimaryWhite)
                     .padding(horizontal = 4.dp, vertical = 1.dp)
             ) {
                 Text(
                     text = badgeText,
-                    color = Color.White,
                     fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = RaycastOnPrimary
                 )
             }
         }
@@ -213,89 +338,68 @@ fun TactileIconButton(
 }
 
 /**
- * Primary Hero Play/Pause button with radial neon glow and animated morph.
+ * Universal Raycast Primary White Hero Play/Pause Button.
  */
 @Composable
 fun TactilePlayPauseHeroButton(
     isPlaying: Boolean,
-    onToggle: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    size: Dp = 72.dp
+    size: Dp = 68.dp
 ) {
+    val view = LocalView.current
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.90f else 1.0f,
-        animationSpec = spring(dampingRatio = 0.5f, stiffness = 550f),
-        label = "hero_play_scale"
+        targetValue = if (isPressed) 0.92f else 1.0f,
+        animationSpec = spring(stiffness = 600f, dampingRatio = 0.75f),
+        label = "hero_scale"
     )
-
-    val glowColor = ModernAccentBlue
 
     Box(
         modifier = modifier
             .size(size)
             .scale(scale)
-            .shadow(
-                elevation = 20.dp,
-                shape = CircleShape,
-                ambientColor = glowColor.copy(alpha = 0.5f),
-                spotColor = glowColor.copy(alpha = 0.7f)
-            )
             .clip(CircleShape)
-            .background(
-                Brush.linearGradient(
-                    listOf(ModernAccentBlue, ModernAccentPurple)
-                )
-            )
-            .border(1.5.dp, Color.White.copy(alpha = 0.35f), CircleShape)
+            .background(if (isPressed) RaycastPrimaryPressed else RaycastPrimaryWhite)
             .clickable(
                 interactionSource = interactionSource,
-                indication = null,
-                onClick = onToggle
-            )
-            .drawBehind {
-                // Top bevel reflection
-                drawCircle(
-                    brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.4f), Color.Transparent),
-                        startY = 0f,
-                        endY = this.size.height * 0.6f
-                    )
-                )
+                indication = null
+            ) {
+                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                onClick()
             },
         contentAlignment = Alignment.Center
     ) {
         AnimatedContent(
             targetState = isPlaying,
             transitionSpec = {
-                (fadeIn(animationSpec = tween(150, easing = FastOutSlowInEasing)))
-                    .togetherWith(fadeOut(animationSpec = tween(150)))
+                fadeIn(animationSpec = tween(140)) togetherWith fadeOut(animationSpec = tween(140))
             },
-            label = "play_pause_morph"
+            label = "hero_icon"
         ) { playing ->
             Icon(
                 imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                 contentDescription = if (playing) "Pause" else "Play",
-                tint = Color.White,
-                modifier = Modifier.size(36.dp)
+                tint = RaycastOnPrimary,
+                modifier = Modifier.size(size * 0.46f)
             )
         }
     }
 }
 
 /**
- * Complete tactile transport controls row (Shuffle, Prev, Hero Play/Pause, Next, Repeat).
+ * Raycast Transport Deck Row.
  */
 @Composable
 fun TactileTransportRow(
     isPlaying: Boolean,
     isShuffle: Boolean,
-    repeatMode: Int, // 0 = OFF, 1 = ALL, 2 = ONE
-    onTogglePlayPause: () -> Unit,
-    onPrevClick: () -> Unit,
+    repeatMode: Int,
+    onPlayPauseClick: () -> Unit,
     onNextClick: () -> Unit,
+    onPrevClick: () -> Unit,
     onToggleShuffle: () -> Unit,
     onToggleRepeat: () -> Unit,
     modifier: Modifier = Modifier
@@ -303,7 +407,7 @@ fun TactileTransportRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -311,54 +415,54 @@ fun TactileTransportRow(
         TactileIconButton(
             icon = Icons.Default.Shuffle,
             contentDescription = "Shuffle",
-            isActive = isShuffle,
-            activeColor = ModernAccentCyan,
             onClick = onToggleShuffle,
             size = 46.dp,
-            iconSize = 20.dp
+            iconSize = 18.dp,
+            tint = if (isShuffle) RaycastAccentBlue else RaycastMute,
+            isActive = isShuffle
         )
 
         // Previous Track
         TactileIconButton(
             icon = Icons.Default.SkipPrevious,
-            contentDescription = "Previous Track",
+            contentDescription = "Previous",
             onClick = onPrevClick,
-            size = 54.dp,
-            iconSize = 26.dp
+            size = 52.dp,
+            iconSize = 22.dp
         )
 
-        // Hero Play / Pause Button
+        // Hero Play / Pause
         TactilePlayPauseHeroButton(
             isPlaying = isPlaying,
-            onToggle = onTogglePlayPause,
-            size = 72.dp
+            onClick = onPlayPauseClick,
+            size = 68.dp
         )
 
         // Next Track
         TactileIconButton(
             icon = Icons.Default.SkipNext,
-            contentDescription = "Next Track",
+            contentDescription = "Next",
             onClick = onNextClick,
-            size = 54.dp,
-            iconSize = 26.dp
+            size = 52.dp,
+            iconSize = 22.dp
         )
 
         // Repeat Mode
         TactileIconButton(
             icon = if (repeatMode == 2) Icons.Default.RepeatOne else Icons.Default.Repeat,
             contentDescription = "Repeat",
-            isActive = repeatMode > 0,
-            activeColor = ModernAccentPurple,
-            badgeText = if (repeatMode == 2) "1" else null,
             onClick = onToggleRepeat,
             size = 46.dp,
-            iconSize = 20.dp
+            iconSize = 18.dp,
+            tint = if (repeatMode > 0) RaycastAccentGreen else RaycastMute,
+            isActive = repeatMode > 0,
+            badgeText = if (repeatMode == 2) "1" else null
         )
     }
 }
 
 /**
- * Fluid interactive timeline scrubber with glowing active track and smooth drag.
+ * Raycast Precision Waveform/Timeline Scrubber.
  */
 @Composable
 fun TactileTimelineScrubber(
@@ -367,45 +471,47 @@ fun TactileTimelineScrubber(
     onSeekTo: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val totalMs = durationMs.coerceAtLeast(1L)
+    val progress = (positionMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f)
+
     var isDragging by remember { mutableStateOf(false) }
     var dragProgress by remember { mutableFloatStateOf(0f) }
 
-    val totalDuration = durationMs.coerceAtLeast(1L)
-    val currentProgress = if (isDragging) dragProgress else (positionMs.toFloat() / totalDuration).coerceIn(0f, 1f)
+    val currentProgress = if (isDragging) dragProgress else progress
 
-    val thumbScale by animateFloatAsState(
-        targetValue = if (isDragging) 1.35f else 1.0f,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 600f),
-        label = "scrubber_thumb_scale"
-    )
-
-    fun formatTime(ms: Long): String {
-        val totalSec = (ms / 1000).coerceAtLeast(0)
-        val minutes = totalSec / 60
-        val seconds = totalSec % 60
-        return String.format("%02d:%02d", minutes, seconds)
+    val elapsedText = remember(isDragging, positionMs, dragProgress, totalMs) {
+        val ms = if (isDragging) (dragProgress * totalMs).toLong() else positionMs
+        val totalSec = ms / 1000
+        val m = totalSec / 60
+        val s = totalSec % 60
+        String.format(Locale.US, "%02d:%02d", m, s)
     }
 
-    val elapsedText = formatTime(if (isDragging) (dragProgress * totalDuration).toLong() else positionMs)
-    val remainingMs = (totalDuration - (if (isDragging) (dragProgress * totalDuration).toLong() else positionMs)).coerceAtLeast(0L)
-    val remainingText = "-${formatTime(remainingMs)}"
+    val remainingText = remember(isDragging, positionMs, dragProgress, totalMs) {
+        val currentMs = if (isDragging) (dragProgress * totalMs).toLong() else positionMs
+        val remainMs = (totalMs - currentMs).coerceAtLeast(0L)
+        val totalSec = remainMs / 1000
+        val m = totalSec / 60
+        val s = totalSec % 60
+        String.format(Locale.US, "-%02d:%02d", m, s)
+    }
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 4.dp)
+            .padding(horizontal = 24.dp)
     ) {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(32.dp)
-                .pointerInput(totalDuration) {
+                .height(30.dp)
+                .pointerInput(Unit) {
                     detectTapGestures { offset ->
                         val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
-                        onSeekTo((newProgress * totalDuration).toLong())
+                        onSeekTo((newProgress * totalMs).toLong())
                     }
                 }
-                .pointerInput(totalDuration) {
+                .pointerInput(Unit) {
                     detectHorizontalDragGestures(
                         onDragStart = { offset ->
                             isDragging = true
@@ -413,11 +519,9 @@ fun TactileTimelineScrubber(
                         },
                         onDragEnd = {
                             isDragging = false
-                            onSeekTo((dragProgress * totalDuration).toLong())
+                            onSeekTo((dragProgress * totalMs).toLong())
                         },
-                        onDragCancel = {
-                            isDragging = false
-                        },
+                        onDragCancel = { isDragging = false },
                         onHorizontalDrag = { change, _ ->
                             change.consume()
                             dragProgress = (change.position.x / size.width).coerceIn(0f, 1f)
@@ -426,42 +530,35 @@ fun TactileTimelineScrubber(
                 },
             contentAlignment = Alignment.CenterStart
         ) {
-            val widthPx = constraints.maxWidth.toFloat()
-            val trackHeight = if (isDragging) 6.dp else 4.dp
+            val trackHeight = if (isDragging) 4.dp else 3.dp
 
-            // Background Track
+            // Background Hairline Track
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(trackHeight)
                     .clip(CircleShape)
-                    .background(Color(0xFF222834))
+                    .background(RaycastHairline)
             )
 
-            // Active Glowing Progress Track
+            // Active White Progress Track
             Box(
                 modifier = Modifier
                     .fillMaxWidth(currentProgress)
                     .height(trackHeight)
                     .clip(CircleShape)
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(ModernAccentCyan, ModernAccentBlue)
-                        )
-                    )
+                    .background(RaycastPrimaryWhite)
             )
 
             // Draggable Thumb
-            val thumbOffsetDp = ((maxWidth - 14.dp) * currentProgress).coerceAtLeast(0.dp)
+            val thumbOffsetDp = ((maxWidth - 12.dp) * currentProgress).coerceAtLeast(0.dp)
             Box(
                 modifier = Modifier
                     .offset(x = thumbOffsetDp)
-                    .size(14.dp)
-                    .scale(thumbScale)
-                    .shadow(8.dp, CircleShape, spotColor = ModernAccentBlue)
+                    .size(if (isDragging) 14.dp else 10.dp)
                     .clip(CircleShape)
-                    .background(Color.White)
-                    .border(2.dp, ModernAccentBlue, CircleShape)
+                    .background(RaycastPrimaryWhite)
+                    .border(1.dp, RaycastHairline, CircleShape)
             )
         }
 
@@ -469,28 +566,29 @@ fun TactileTimelineScrubber(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .offset(y = 12.dp),
+                .padding(top = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = elapsedText,
-                color = ModernTextMuted,
+                color = RaycastMute,
                 fontSize = 11.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                fontFamily = FontFamily.Monospace
             )
             Text(
                 text = remainingText,
-                color = ModernTextMuted,
+                color = RaycastMute,
                 fontSize = 11.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                fontFamily = FontFamily.Monospace
             )
         }
     }
 }
 
 /**
- * Modern tactile volume bar with quick mute.
+ * Raycast Precision Volume Slider.
  */
 @Composable
 fun TactileVolumeBar(
@@ -503,16 +601,16 @@ fun TactileVolumeBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 8.dp),
+            .padding(horizontal = 24.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Icon(
             imageVector = if (volume <= 0.01f) Icons.Default.VolumeMute else Icons.Default.VolumeDown,
             contentDescription = "Volume",
-            tint = if (volume > 0.01f) ModernTextSecondary else ModernTextMuted,
+            tint = if (volume > 0.01f) RaycastBody else RaycastAsh,
             modifier = Modifier
-                .size(18.dp)
+                .size(16.dp)
                 .clickable {
                     if (volume > 0.01f) onVolumeChange(0.0f) else onVolumeChange(0.5f)
                 }
@@ -521,7 +619,7 @@ fun TactileVolumeBar(
         BoxWithConstraints(
             modifier = Modifier
                 .weight(1f)
-                .height(28.dp)
+                .height(24.dp)
                 .pointerInput(Unit) {
                     detectTapGestures { offset ->
                         val newVol = (offset.x / size.width).coerceIn(0f, 1f)
@@ -544,14 +642,14 @@ fun TactileVolumeBar(
                 },
             contentAlignment = Alignment.CenterStart
         ) {
-            val trackHeight = if (isDragging) 6.dp else 4.dp
+            val trackHeight = if (isDragging) 4.dp else 3.dp
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(trackHeight)
                     .clip(CircleShape)
-                    .background(Color(0xFF1E232E))
+                    .background(RaycastHairline)
             )
 
             Box(
@@ -559,30 +657,24 @@ fun TactileVolumeBar(
                     .fillMaxWidth(volume.coerceIn(0f, 1f))
                     .height(trackHeight)
                     .clip(CircleShape)
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(Color(0xFF475569), ModernAccentBlue)
-                        )
-                    )
+                    .background(RaycastPrimaryWhite)
             )
 
-            val thumbOffsetDp = ((maxWidth - 12.dp) * volume.coerceIn(0f, 1f)).coerceAtLeast(0.dp)
+            val thumbOffsetDp = ((maxWidth - 10.dp) * volume.coerceIn(0f, 1f)).coerceAtLeast(0.dp)
             Box(
                 modifier = Modifier
                     .offset(x = thumbOffsetDp)
-                    .size(12.dp)
-                    .scale(if (isDragging) 1.3f else 1.0f)
-                    .shadow(4.dp, CircleShape, spotColor = ModernAccentBlue)
+                    .size(if (isDragging) 12.dp else 9.dp)
                     .clip(CircleShape)
-                    .background(Color.White)
+                    .background(RaycastPrimaryWhite)
             )
         }
 
         Icon(
             imageVector = Icons.Default.VolumeUp,
             contentDescription = "Volume High",
-            tint = ModernTextSecondary,
-            modifier = Modifier.size(18.dp)
+            tint = RaycastBody,
+            modifier = Modifier.size(16.dp)
         )
     }
 }

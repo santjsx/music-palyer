@@ -1,19 +1,21 @@
 package com.ipodmodern.audio.ui.components
 
+import android.graphics.BitmapFactory
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,27 +36,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.ipodmodern.audio.core.model.Track
-import com.ipodmodern.audio.ui.theme.ModernAccentBlue
-import com.ipodmodern.audio.ui.theme.ModernAccentCyan
-import com.ipodmodern.audio.ui.theme.ModernAccentPurple
-import com.ipodmodern.audio.ui.theme.ModernTextMuted
-import com.ipodmodern.audio.ui.theme.ModernTextPrimary
-import com.ipodmodern.audio.ui.theme.ModernTextSecondary
-import java.io.File
+import com.ipodmodern.audio.ui.theme.RaycastBody
+import com.ipodmodern.audio.ui.theme.RaycastHairline
+import com.ipodmodern.audio.ui.theme.RaycastHairlineStrong
+import com.ipodmodern.audio.ui.theme.RaycastInk
+import com.ipodmodern.audio.ui.theme.RaycastMute
+import com.ipodmodern.audio.ui.theme.RaycastOnPrimary
+import com.ipodmodern.audio.ui.theme.RaycastPrimaryWhite
+import com.ipodmodern.audio.ui.theme.RaycastRadiusLg
+import com.ipodmodern.audio.ui.theme.RaycastRadiusSm
+import com.ipodmodern.audio.ui.theme.RaycastSurface
+import com.ipodmodern.audio.ui.theme.RaycastSurfaceElevated
 
-/**
- * Floating glassmorphic mini-player pill docked above bottom navigation.
- */
 @Composable
 fun MiniPlayerBar(
     track: Track?,
@@ -68,138 +70,144 @@ fun MiniPlayerBar(
 ) {
     if (track == null) return
 
-    val progress = if (durationMs > 0) {
-        (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
-    } else 0f
+    val view = LocalView.current
+    val progress = if (durationMs > 0) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+
+    val artworkBitmap = remember(track.artworkUri) {
+        track.artworkUri?.let { path ->
+            try { BitmapFactory.decodeFile(path) } catch (e: Exception) { null }
+        }
+    }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .shadow(
-                elevation = 20.dp,
-                shape = RoundedCornerShape(22.dp),
-                ambientColor = Color.Black.copy(alpha = 0.7f),
-                spotColor = ModernAccentBlue.copy(alpha = 0.35f)
-            )
-            .clip(RoundedCornerShape(22.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        Color(0xFF161A24).copy(alpha = 0.95f),
-                        Color(0xFF0F1118).copy(alpha = 0.98f)
-                    )
-                )
-            )
-            .border(1.dp, Color(0x2EFFFFFF), RoundedCornerShape(22.dp))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onBarClick
-            )
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-            ) {
-                // Album Art Squircle
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF1E222D))
-                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (!track.artworkUri.isNullOrEmpty()) {
-                        val model = if (track.artworkUri.startsWith("/")) File(track.artworkUri) else track.artworkUri
-                        AsyncImage(
-                            model = model,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.MusicNote,
-                            contentDescription = null,
-                            tint = ModernAccentBlue,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // Song Title & Artist
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = track.title,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ModernTextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = track.artist,
-                        fontSize = 12.sp,
-                        color = ModernTextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Play/Pause Tactile Circle
-                TactileIconButton(
-                    icon = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    isActive = isPlaying,
-                    activeColor = ModernAccentBlue,
-                    onClick = onPlayPauseClick,
-                    size = 40.dp,
-                    iconSize = 22.dp
-                )
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                // Next Track Button
-                TactileIconButton(
-                    icon = Icons.Default.SkipNext,
-                    contentDescription = "Next Track",
-                    onClick = onNextClick,
-                    size = 40.dp,
-                    iconSize = 22.dp
-                )
+            .padding(horizontal = 14.dp, vertical = 4.dp)
+            .clip(RaycastRadiusLg)
+            .background(RaycastSurface)
+            .border(1.dp, RaycastHairline, RaycastRadiusLg)
+            .clickable {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onBarClick()
             }
-
-            // Hairline Progress Indicator at bottom of pill
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Album Art Thumbnail (38px)
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .background(Color(0xFF222836))
+                    .size(38.dp)
+                    .clip(RaycastRadiusSm)
+                    .background(RaycastSurfaceElevated)
+                    .border(1.dp, RaycastHairline, RaycastRadiusSm),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(fraction = progress)
-                        .height(2.dp)
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(ModernAccentCyan, ModernAccentBlue)
-                            )
-                        )
+                if (artworkBitmap != null) {
+                    Image(
+                        bitmap = artworkBitmap.asImageBitmap(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint = RaycastMute,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            // Title & Artist
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = track.title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RaycastInk,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = track.artist,
+                    fontSize = 11.sp,
+                    color = RaycastBody,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
+
+            // Mini Play/Pause Button (Raycast Universal White CTA Circle)
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(RaycastPrimaryWhite)
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        onPlayPauseClick()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                AnimatedContent(
+                    targetState = isPlaying,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "mini_play"
+                ) { playing ->
+                    Icon(
+                        imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (playing) "Pause" else "Play",
+                        tint = RaycastOnPrimary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            // Next Track Button
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(RaycastSurfaceElevated)
+                    .border(1.dp, RaycastHairline, CircleShape)
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        onNextClick()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SkipNext,
+                    contentDescription = "Next",
+                    tint = RaycastInk,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        // Hairline Progress Track at Bottom Edge
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .align(Alignment.BottomCenter)
+                .background(RaycastHairline)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(progress)
+                    .fillMaxHeight()
+                    .background(RaycastPrimaryWhite)
+            )
         }
     }
 }

@@ -1,168 +1,118 @@
 package com.ipodmodern.audio.ui.theme
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// MARK: - Modern Obsidian Palette
-val ModernBgDark = Color(0xFF07080A)
-val ModernCardDark = Color(0xFF101217)
-val ModernCardHighlight = Color(0xFF181B23)
-val ModernCardElevated = Color(0xFF1C202A)
+// MARK: - Raycast Surface Ladder (Dark-Only System)
+val RaycastCanvas = Color(0xFF07080A)           // Pure near-black canvas background
+val RaycastSurface = Color(0xFF0D0D0D)          // Cards & elevated panels
+val RaycastSurfaceElevated = Color(0xFF101111)  // Inputs, buttons, pill-tabs
+val RaycastSurfaceCard = Color(0xFF141517)      // App-icon tiles, keycap backgrounds
+val RaycastButtonFg = Color(0xFF18191A)         // In-card deep surface variant
 
-// Glass Borders & Hairlines
-val ModernGlassBorder = Color(0x22FFFFFF)
-val ModernGlassBorderLight = Color(0x44FFFFFF)
-val ModernGlassBorderActive = Color(0x883B82F6)
+// MARK: - Raycast Hairlines (1px Card Borders, No Drop Shadows)
+val RaycastHairline = Color(0xFF242728)         // Universal 1px border
+val RaycastHairlineSoft = Color(0x14FFFFFF)     // Translucent overlay border (rgba 0.08)
+val RaycastHairlineStrong = Color(0x29FFFFFF)   // Stronger divider (rgba 0.16)
 
-// Accent Colors
-val ModernAccentBlue = Color(0xFF3B82F6)
-val ModernAccentCyan = Color(0xFF06B6D4)
+// MARK: - Raycast Primary Brand Action (Universal White CTA)
+val RaycastPrimaryWhite = Color(0xFFFFFFFF)     // Universal primary action pill
+val RaycastPrimaryPressed = Color(0xFFE8E8E8)   // Pressed state
+val RaycastOnPrimary = Color(0xFF000000)        // Pure black on white CTA
+
+// MARK: - Raycast Text Ladder
+val RaycastInk = Color(0xFFF4F4F6)              // Primary headline text
+val RaycastBody = Color(0xFFCDCDCD)             // Default body text
+val RaycastCharcoal = Color(0xFFD3D3D4)         // Brighter body
+val RaycastMute = Color(0xFF9C9C9D)             // Metadata, captions, secondary
+val RaycastAsh = Color(0xFF6A6B6C)              // Low-emphasis utility & disabled
+val RaycastStone = Color(0xFF434345)            // Least-emphasis icon color
+
+// MARK: - Raycast Semantic Accents (Reserved for illustrations & key badges)
+val RaycastAccentBlue = Color(0xFF57C1FF)
+val RaycastAccentBlueSoft = Color(0x2657C1FF)
+val RaycastAccentGreen = Color(0xFF59D499)
+val RaycastAccentGreenSoft = Color(0x2659D499)
+val RaycastAccentYellow = Color(0xFFFFC533)
+val RaycastAccentYellowSoft = Color(0x26FFC533)
+val RaycastAccentRed = Color(0xFFFF6161)
+val RaycastAccentRedSoft = Color(0x26FF6161)
+
+// MARK: - Raycast Keycap Subtle 3D Physical Gradient
+val RaycastKeycapGradient = Brush.verticalGradient(
+    listOf(Color(0xFF16181B), Color(0xFF0D0E10))
+)
+
+// Legacy theme aliases for backwards compatibility
+val ModernBgDark = RaycastCanvas
+val ModernSurfaceDark = RaycastSurface
+val ModernCardDark = RaycastSurfaceCard
+val ModernTextPrimary = RaycastInk
+val ModernTextSecondary = RaycastBody
+val ModernTextMuted = RaycastMute
+val ModernAccentBlue = RaycastAccentBlue
+val ModernAccentCyan = RaycastAccentBlue
 val ModernAccentPurple = Color(0xFF8B5CF6)
-val ModernAccentRose = Color(0xFFF43F5E)
-val ModernAccentGold = Color(0xFFF59E0B)
-val ModernAccentEmerald = Color(0xFF10B981)
+val ModernAccentEmerald = RaycastAccentGreen
+val ModernAccentGold = RaycastAccentYellow
+val ModernHeroGradient = Brush.linearGradient(listOf(RaycastAccentBlue, Color(0xFF6366F1), Color(0xFF8B5CF6)))
 
-// Text Colors
-val ModernTextPrimary = Color(0xFFF8FAFC)
-val ModernTextSecondary = Color(0xFF94A3B8)
-val ModernTextMuted = Color(0xFF64748B)
+// MARK: - Raycast Rounded Corner Scale
+val RaycastRadiusXs = RoundedCornerShape(4.dp)      // Keycaps, badges, tags
+val RaycastRadiusSm = RoundedCornerShape(6.dp)      // Rows, micro chips
+val RaycastRadiusMd = RoundedCornerShape(8.dp)      // Buttons, search inputs, icon tiles
+val RaycastRadiusLg = RoundedCornerShape(12.dp)     // Feature cards, panels
+val RaycastRadiusXl = RoundedCornerShape(16.dp)     // Large mockup containers, modals
+val RaycastRadiusFull = RoundedCornerShape(9999.dp) // Pill-tab chips, primary CTAs
 
-// Gradients
-val ModernHeroGradient = Brush.horizontalGradient(
-    listOf(Color(0xFF3B82F6), Color(0xFF8B5CF6))
-)
-val ModernAccentGradient = Brush.linearGradient(
-    listOf(Color(0xFF2563EB), Color(0xFF06B6D4))
-)
-val ModernGoldGradient = Brush.linearGradient(
-    listOf(Color(0xFFF59E0B), Color(0xFFFBBF24))
-)
-
-data class ModernColors(
-    val background: Color = ModernBgDark,
-    val cardBackground: Color = ModernCardDark,
-    val cardHighlight: Color = ModernCardHighlight,
-    val cardElevated: Color = ModernCardElevated,
-    val glassBorder: Color = ModernGlassBorder,
-    val glassBorderLight: Color = ModernGlassBorderLight,
-    val accentPrimary: Color = ModernAccentBlue,
-    val textPrimary: Color = ModernTextPrimary,
-    val textSecondary: Color = ModernTextSecondary,
-    val textMuted: Color = ModernTextMuted
+@Immutable
+data class RaycastColorSystem(
+    val canvas: Color = RaycastCanvas,
+    val surface: Color = RaycastSurface,
+    val surfaceElevated: Color = RaycastSurfaceElevated,
+    val surfaceCard: Color = RaycastSurfaceCard,
+    val hairline: Color = RaycastHairline,
+    val hairlineStrong: Color = RaycastHairlineStrong,
+    val primary: Color = RaycastPrimaryWhite,
+    val onPrimary: Color = RaycastOnPrimary,
+    val ink: Color = RaycastInk,
+    val body: Color = RaycastBody,
+    val mute: Color = RaycastMute,
+    val ash: Color = RaycastAsh
 )
 
-val LocalModernColors = staticCompositionLocalOf { ModernColors() }
-
-val ModernTypography = Typography(
-    headlineLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 28.sp,
-        lineHeight = 34.sp,
-        letterSpacing = (-0.5).sp,
-        color = ModernTextPrimary
-    ),
-    headlineMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Bold,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = (-0.3).sp,
-        color = ModernTextPrimary
-    ),
-    titleLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 18.sp,
-        lineHeight = 24.sp,
-        letterSpacing = (-0.2).sp,
-        color = ModernTextPrimary
-    ),
-    titleMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 15.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.sp,
-        color = ModernTextPrimary
-    ),
-    bodyLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.sp,
-        color = ModernTextSecondary
-    ),
-    bodyMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Normal,
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
-        letterSpacing = 0.sp,
-        color = ModernTextSecondary
-    ),
-    labelSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Bold,
-        fontSize = 10.sp,
-        lineHeight = 14.sp,
-        letterSpacing = 0.8.sp,
-        color = ModernTextMuted
-    )
-)
+val LocalRaycastColors = staticCompositionLocalOf { RaycastColorSystem() }
 
 @Composable
 fun ModernAppTheme(
     content: @Composable () -> Unit
 ) {
-    val colors = remember { ModernColors() }
     val colorScheme = darkColorScheme(
-        primary = ModernAccentBlue,
-        secondary = ModernAccentCyan,
-        background = ModernBgDark,
-        surface = ModernCardDark,
-        onPrimary = Color.White,
-        onBackground = ModernTextPrimary,
-        onSurface = ModernTextPrimary
+        primary = RaycastPrimaryWhite,
+        onPrimary = RaycastOnPrimary,
+        background = RaycastCanvas,
+        onBackground = RaycastInk,
+        surface = RaycastSurface,
+        onSurface = RaycastInk,
+        surfaceVariant = RaycastSurfaceElevated,
+        onSurfaceVariant = RaycastBody,
+        outline = RaycastHairline
     )
 
-    CompositionLocalProvider(
-        LocalModernColors provides colors
-    ) {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            typography = ModernTypography,
-            content = content
-        )
-    }
+    MaterialTheme(
+        colorScheme = colorScheme,
+        content = content
+    )
 }
