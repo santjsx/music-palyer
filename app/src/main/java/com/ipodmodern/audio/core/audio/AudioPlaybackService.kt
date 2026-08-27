@@ -13,15 +13,20 @@ import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.ipodmodern.audio.R
 import com.ipodmodern.audio.core.model.Track
 import com.ipodmodern.audio.ui.MainActivity
+import java.io.File
 
 class AudioPlaybackService : Service() {
 
     private var wakeLock: PowerManager.WakeLock? = null
+    private var mediaSession: MediaSessionCompat? = null
 
     companion object {
         const val CHANNEL_ID = "aether_playback_channel"
@@ -41,13 +46,18 @@ class AudioPlaybackService : Service() {
         const val EXTRA_BADGE = "extra_badge"
         const val EXTRA_ARTWORK_URI = "extra_artwork_uri"
         const val EXTRA_IS_PLAYING = "extra_is_playing"
+        const val EXTRA_POSITION_MS = "extra_position_ms"
+        const val EXTRA_DURATION_MS = "extra_duration_ms"
 
         var playbackActionListener: ((String) -> Unit)? = null
+        var seekActionListener: ((Long) -> Unit)? = null
 
         fun updateService(
             context: Context,
             track: Track?,
-            isPlaying: Boolean
+            isPlaying: Boolean,
+            positionMs: Long = 0L,
+            durationMs: Long = 0L
         ) {
             val intent = Intent(context, AudioPlaybackService::class.java).apply {
                 action = ACTION_UPDATE_NOTIFICATION
@@ -55,8 +65,10 @@ class AudioPlaybackService : Service() {
                 putExtra(EXTRA_ARTIST, track?.artist ?: "Lossless Hi-Fi")
                 putExtra(EXTRA_ALBUM, track?.album ?: "")
                 putExtra(EXTRA_BADGE, track?.badgeText ?: "24-BIT • FLAC")
-                putExtra(EXTRA_ARTWORK_URI, track?.artworkUri?.toString())
+                putExtra(EXTRA_ARTWORK_URI, track?.artworkUri)
                 putExtra(EXTRA_IS_PLAYING, isPlaying)
+                putExtra(EXTRA_POSITION_MS, positionMs)
+                putExtra(EXTRA_DURATION_MS, if (durationMs > 0) durationMs else (track?.durationMs ?: 0L))
             }
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -89,6 +101,40 @@ class AudioPlaybackService : Service() {
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "AetherAudio::BackgroundWakeLock").apply {
             setReferenceCounted(false)
         }
+
+        // Initialize Android System MediaSessionCompat
+        mediaSession = MediaSessionCompat(this, "AetherAudioSession").apply {
+            setFlags(
+                MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
+                        MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS
+            )
+            setCallback(object : MediaSessionCompat.Callback() {
+                override fun onPlay() {
+                    playbackActionListener?.invoke(ACTION_PLAY)
+                }
+
+                override fun onPause() {
+                    playbackActionListener?.invoke(ACTION_PAUSE)
+                }
+
+                override fun onSkipToNext() {
+                    playbackActionListener?.invoke(ACTION_NEXT)
+                }
+
+                override fun onSkipToPrevious() {
+                    playbackActionListener?.invoke(ACTION_PREV)
+                }
+
+                override fun onSeekTo(pos: Long) {
+                    seekActionListener?.invoke(pos)
+                }
+
+                override fun onStop() {
+                    playbackActionListener?.invoke(ACTION_STOP)
+                }
+            })
+            isActive = true
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -97,10 +143,10 @@ class AudioPlaybackService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Aether Hi-Fi Playback",
+                "Aether Audio Playback",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Uninterrupted background lossless playback"
+                description = "Audiophile lossless background audio playback"
                 setShowBadge(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
@@ -109,13 +155,104 @@ class AudioPlaybackService : Service() {
         }
     }
 
+    private fun decodeArtworkBitmap(artworkUriStr: String?): Bitmap? {
+        if (artworkUriStr.isNullOrEmpty()) return null
+        return try {
+            val file = File(artworkUriStr)
+            if (file.exists()) {
+                val options = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+                BitmapFactory.decodeFile(file.absolutePath, options)
+                var inSampleSize = 1
+                while (options.outWidth / inSampleSize > 512 || options.outHeight / inSampleSize > 512) {
+                    inSampleSize *= 2
+                }
+                options.inJustDecodeBounds = false
+                options.inSampleSize = inSampleSize
+                BitmapFactory.decodeFile(file.absolutePath, options)
+            } else {
+                val uri = Uri.parse(artworkUriStr)
+                contentResolver.openInputStream(uri)?.use { stream ->
+                    BitmapFactory.decodeStream(stream)
+                }
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun updateMediaSession(
+        title: String,
+        artist: String,
+        album: String,
+        badge: String,
+        durationMs: Long,
+        positionMs: Long,
+        isPlaying: Boolean,
+        artworkBitmap: Bitmap?
+    ) {
+        val session = mediaSession ?: return
+
+        // 1. Update PlaybackStateCompat (Enables System Lockscreen / Quick Settings Scrubber & Buttons)
+        val actions = PlaybackStateCompat.ACTION_PLAY or
+                PlaybackStateCompat.ACTION_PAUSE or
+                PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+                PlaybackStateCompat.ACTION_SEEK_TO or
+                PlaybackStateCompat.ACTION_STOP
+
+        val state = if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED
+        val playbackSpeed = if (isPlaying) 1.0f else 0.0f
+
+        val playbackState = PlaybackStateCompat.Builder()
+            .setActions(actions)
+            .setState(state, positionMs, playbackSpeed)
+            .build()
+        session.setPlaybackState(playbackState)
+
+        // 2. Update MediaMetadataCompat (Provides track title, artist, album, full artwork to Android OS)
+        val metadataBuilder = MediaMetadataCompat.Builder()
+            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
+            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
+            .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album)
+            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, durationMs)
+            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, title)
+            .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, "$artist • $badge")
+
+        if (artworkBitmap != null) {
+            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, artworkBitmap)
+            metadataBuilder.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, artworkBitmap)
+        }
+
+        session.setMetadata(metadataBuilder.build())
+    }
+
     private fun buildMediaNotification(
         title: String,
         artist: String,
+        album: String,
         badge: String,
+        durationMs: Long,
+        positionMs: Long,
         artworkUriStr: String?,
         isPlaying: Boolean
     ): Notification {
+        val artworkBitmap = decodeArtworkBitmap(artworkUriStr)
+
+        // Sync with Android System MediaSession
+        updateMediaSession(
+            title = title,
+            artist = artist,
+            album = album,
+            badge = badge,
+            durationMs = durationMs,
+            positionMs = positionMs,
+            isPlaying = isPlaying,
+            artworkBitmap = artworkBitmap
+        )
+
         val openIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -132,17 +269,8 @@ class AudioPlaybackService : Service() {
         val nextIntent = Intent(this, AudioPlaybackService::class.java).apply { action = ACTION_NEXT }
         val pendingNext = PendingIntent.getService(this, 3, nextIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
-        var artworkBitmap: Bitmap? = null
-        if (!artworkUriStr.isNullOrEmpty()) {
-            try {
-                val uri = Uri.parse(artworkUriStr)
-                contentResolver.openInputStream(uri)?.use { stream ->
-                    artworkBitmap = BitmapFactory.decodeStream(stream)
-                }
-            } catch (e: Exception) {
-                // Ignore fallback to null
-            }
-        }
+        val stopIntent = Intent(this, AudioPlaybackService::class.java).apply { action = ACTION_STOP }
+        val pendingStop = PendingIntent.getService(this, 4, stopIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
         val playPauseIcon = if (isPlaying) {
             android.R.drawable.ic_media_pause
@@ -150,14 +278,26 @@ class AudioPlaybackService : Service() {
             android.R.drawable.ic_media_play
         }
 
+        // Android System MediaStyle
+        val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
+        mediaSession?.sessionToken?.let { token ->
+            mediaStyle.setMediaSession(token)
+        }
+        mediaStyle.setShowActionsInCompactView(0, 1, 2)
+        mediaStyle.setShowCancelButton(true)
+        mediaStyle.setCancelButtonIntent(pendingStop)
+
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
-            .setContentText("$artist • $badge")
+            .setContentText(artist)
+            .setSubText(badge)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentIntent(pendingOpenIntent)
+            .setDeleteIntent(pendingStop)
             .setOngoing(isPlaying)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setStyle(mediaStyle)
             .addAction(android.R.drawable.ic_media_previous, "Previous", pendingPrev)
             .addAction(playPauseIcon, if (isPlaying) "Pause" else "Play", pendingToggle)
             .addAction(android.R.drawable.ic_media_next, "Next", pendingNext)
@@ -174,9 +314,12 @@ class AudioPlaybackService : Service() {
             ACTION_UPDATE_NOTIFICATION -> {
                 val title = intent.getStringExtra(EXTRA_TITLE) ?: "Aether Audio"
                 val artist = intent.getStringExtra(EXTRA_ARTIST) ?: "Lossless Hi-Fi"
+                val album = intent.getStringExtra(EXTRA_ALBUM) ?: ""
                 val badge = intent.getStringExtra(EXTRA_BADGE) ?: "24-BIT • FLAC"
                 val artworkUri = intent.getStringExtra(EXTRA_ARTWORK_URI)
                 val isPlaying = intent.getBooleanExtra(EXTRA_IS_PLAYING, true)
+                val positionMs = intent.getLongExtra(EXTRA_POSITION_MS, 0L)
+                val durationMs = intent.getLongExtra(EXTRA_DURATION_MS, 0L)
 
                 if (isPlaying) {
                     wakeLock?.acquire(30 * 60 * 1000L) // 30 minutes wake lock per song refresh
@@ -184,7 +327,16 @@ class AudioPlaybackService : Service() {
                     wakeLock?.release()
                 }
 
-                val notification = buildMediaNotification(title, artist, badge, artworkUri, isPlaying)
+                val notification = buildMediaNotification(
+                    title = title,
+                    artist = artist,
+                    album = album,
+                    badge = badge,
+                    durationMs = durationMs,
+                    positionMs = positionMs,
+                    artworkUriStr = artworkUri,
+                    isPlaying = isPlaying
+                )
                 startForeground(NOTIFICATION_ID, notification)
             }
             ACTION_PLAY -> {
@@ -204,6 +356,7 @@ class AudioPlaybackService : Service() {
             }
             ACTION_STOP -> {
                 wakeLock?.release()
+                mediaSession?.isActive = false
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
@@ -214,6 +367,8 @@ class AudioPlaybackService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         wakeLock?.release()
+        mediaSession?.release()
+        mediaSession = null
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
 }

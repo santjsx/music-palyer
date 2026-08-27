@@ -115,10 +115,11 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.server.cors)
 
-    // Media3
+    // Media3 & MediaSession
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
     implementation(libs.androidx.media3.common)
+    implementation(libs.androidx.media)
 
     // Coil Image Loader
     implementation(libs.coil.compose)

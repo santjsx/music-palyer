@@ -85,6 +85,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 AudioPlaybackService.ACTION_PREV -> prevTrack()
             }
         }
+        AudioPlaybackService.seekActionListener = { targetMs ->
+            seekTo(targetMs)
+        }
 
         audioEngine.onPlaybackCompleted = {
             onSongCompleted()
@@ -94,7 +97,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun updateForegroundNotification(track: Track?, isPlaying: Boolean) {
-        AudioPlaybackService.updateService(getApplication(), track, isPlaying)
+        val pos = _playbackProgress.value.positionMs
+        val dur = if (_playbackProgress.value.durationMs > 0) _playbackProgress.value.durationMs else (track?.durationMs ?: 0L)
+        AudioPlaybackService.updateService(getApplication(), track, isPlaying, pos, dur)
     }
 
     private fun onSongCompleted() {
