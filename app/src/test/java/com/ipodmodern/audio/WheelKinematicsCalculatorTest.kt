@@ -61,15 +61,23 @@ class WheelKinematicsCalculatorTest {
     @Test
     fun testInertialMomentumDecay() {
         val calc = WheelKinematicsCalculator(frictionCoefficient = 3.0)
-        calc.reset(100f, 100f, 200f, 100f)
+        val t0 = 1_000_000_000L
+        calc.reset(100f, 100f, 200f, 100f, timestampNs = t0)
 
-        // Spin fast
+        // Spin fast: 45 degrees in 50ms
+        val t1 = t0 + 50_000_000L
         val rad1 = Math.toRadians(45.0)
-        calc.onTouchMove(100f, 100f, 100f + 100f * kotlin.math.cos(rad1).toFloat(), 100f + 100f * kotlin.math.sin(rad1).toFloat(), 10_000_000L)
+        calc.onTouchMove(
+            100f,
+            100f,
+            100f + 100f * kotlin.math.cos(rad1).toFloat(),
+            100f + 100f * kotlin.math.sin(rad1).toFloat(),
+            timestampNs = t1
+        )
 
         // Coast
         var totalCoastTicks = 0
-        for (i in 0 until 50) {
+        for (i in 0 until 100) {
             val ticks = calc.stepInertia(0.02) // 20ms frame
             totalCoastTicks += kotlin.math.abs(ticks)
             if (calc.isCoastComplete()) break

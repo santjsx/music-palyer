@@ -42,20 +42,27 @@ jobs:
       - name: Run Unit Tests
         run: ./gradlew test
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug
+      - name: Build Release & Debug APKs
+        run: ./gradlew assembleRelease assembleDebug
+
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ModernPlayer-Release-APK
+          path: app/build/outputs/apk/release/app-release.apk
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: iPod-Modern-Debug-APK
+          name: ModernPlayer-Debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Attach APK to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/apk/debug/app-debug.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
