@@ -44,7 +44,7 @@ data class PlayerUiState(
     val eqGains: FloatArray = FloatArray(10) { 0.0f },
     val selectedEqBandIndex: Int = 0,
     val dynamicPrecutDb: Float = 0.0f,
-    val currentPresetName: String = "Audiophile Flat",
+    val currentPresetName: String = "Lossless Flat",
     val isScanning: Boolean = false
 )
 
@@ -221,23 +221,29 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 db.artistDao().insertArtists(artists)
 
                 withContext(Dispatchers.Main) {
-                    _uiState.value = _uiState.value.copy(isScanning = false)
+                    val activeTrack = _uiState.value.currentTrack
+                    val isPlaying = _uiState.value.isPlaying
+
                     originalQueue = scannedTracks
-                    playbackQueue = scannedTracks
-                    setQueue(scannedTracks, 0, autoPlay = false)
+                    if (playbackQueue.isEmpty()) {
+                        playbackQueue = scannedTracks
+                    }
+
+                    _uiState.value = _uiState.value.copy(
+                        isScanning = false,
+                        allTracks = scannedTracks,
+                        totalTracksInQueue = if (playbackQueue.isNotEmpty()) playbackQueue.size else scannedTracks.size
+                    )
+
+                    // Only set initial queue if NO track is currently selected or playing!
+                    if (activeTrack == null && !isPlaying) {
+                        setQueue(scannedTracks, 0, autoPlay = false)
+                    }
                 }
             } else {
                 withContext(Dispatchers.Main) {
                     _uiState.value = _uiState.value.copy(
-                        isScanning = false,
-                        currentTrack = null,
-                        allTracks = emptyList(),
-                        totalTracksInQueue = 0,
-                        isPlaying = false,
-                        positionMs = 0L,
-                        durationMs = 0L,
-                        lyrics = emptyList(),
-                        currentLyricText = null
+                        isScanning = false
                     )
                 }
             }
@@ -303,7 +309,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val track = playbackQueue.getOrNull(queueIndex) ?: return
         audioEngine.loadAndPlay(track.filePath, autoPlay = startPlaying)
 
-        // Load real lyrics from local .lrc file if present
         val realLyrics = localMusicScanner.loadLyricsForTrack(track)
 
         _uiState.value = _uiState.value.copy(

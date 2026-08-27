@@ -1,24 +1,36 @@
 package com.ipodmodern.audio.ui.screens
 
 import android.graphics.BitmapFactory
+import android.view.HapticFeedbackConstants
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Subject
@@ -30,40 +42,58 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.ipodmodern.audio.core.model.Track
 import com.ipodmodern.audio.ui.components.RaycastKeycapBadge
 import com.ipodmodern.audio.ui.components.TactileIconButton
 import com.ipodmodern.audio.ui.components.TactileTimelineScrubber
 import com.ipodmodern.audio.ui.components.TactileTransportRow
 import com.ipodmodern.audio.ui.components.TactileVolumeBar
-import com.ipodmodern.audio.ui.theme.AetherCanvas
-import com.ipodmodern.audio.ui.theme.AetherCyan
-import com.ipodmodern.audio.ui.theme.AetherCyanGlow
-import com.ipodmodern.audio.ui.theme.AetherHairline
-import com.ipodmodern.audio.ui.theme.AetherInk
-import com.ipodmodern.audio.ui.theme.AetherMute
-import com.ipodmodern.audio.ui.theme.AetherPrimaryWhite
-import com.ipodmodern.audio.ui.theme.AetherRadiusLg
-import com.ipodmodern.audio.ui.theme.AetherRadiusMd
-import com.ipodmodern.audio.ui.theme.AetherRose
-import com.ipodmodern.audio.ui.theme.AetherSurface
-import com.ipodmodern.audio.ui.theme.AetherSurfaceElevated
-import com.ipodmodern.audio.ui.theme.AetherViolet
+import com.ipodmodern.audio.ui.theme.AmberCanvas
+import com.ipodmodern.audio.ui.theme.AmberChampagne
+import com.ipodmodern.audio.ui.theme.AmberCognac
+import com.ipodmodern.audio.ui.theme.AmberGold
+import com.ipodmodern.audio.ui.theme.AmberGoldGlow
+import com.ipodmodern.audio.ui.theme.AmberHairline
+import com.ipodmodern.audio.ui.theme.AmberHairlineStrong
+import com.ipodmodern.audio.ui.theme.AmberInk
+import com.ipodmodern.audio.ui.theme.AmberMute
+import com.ipodmodern.audio.ui.theme.AmberPrimaryWhite
+import com.ipodmodern.audio.ui.theme.AmberRadiusLg
+import com.ipodmodern.audio.ui.theme.AmberRadiusMd
+import com.ipodmodern.audio.ui.theme.AmberRadiusXl
+import com.ipodmodern.audio.ui.theme.AmberRose
+import com.ipodmodern.audio.ui.theme.AmberSurface
+import com.ipodmodern.audio.ui.theme.AmberSurfaceCard
+import com.ipodmodern.audio.ui.theme.AmberSurfaceElevated
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlin.math.sign
 
 @Composable
 fun ModernNowPlayingScreen(
@@ -81,6 +111,7 @@ fun ModernNowPlayingScreen(
     onPlayPauseClick: () -> Unit = {},
     onNextClick: () -> Unit = {},
     onPrevClick: () -> Unit = {},
+    onTrackSelect: (Int) -> Unit = {},
     onSeekTo: (Long) -> Unit = {},
     onVolumeChange: (Float) -> Unit = {},
     onToggleShuffle: () -> Unit = {},
@@ -91,26 +122,31 @@ fun ModernNowPlayingScreen(
     onCollapseClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val artworkBitmap = remember(currentTrack?.artworkUri) {
-        currentTrack?.artworkUri?.let { path ->
-            try {
-                BitmapFactory.decodeFile(path)
-            } catch (e: Exception) {
-                null
-            }
+    val view = LocalView.current
+    val coroutineScope = rememberCoroutineScope()
+
+    val queue = if (allTracks.isNotEmpty()) allTracks else listOfNotNull(currentTrack)
+    val activeIndex = if (currentTrackIndex > 0) (currentTrackIndex - 1).coerceIn(0, queue.size - 1) else 0
+
+    // Smooth carousel animation offset
+    val carouselOffset = remember { Animatable(activeIndex.toFloat()) }
+
+    LaunchedEffect(activeIndex) {
+        if (abs(carouselOffset.value - activeIndex.toFloat()) > 0.01f) {
+            carouselOffset.animateTo(
+                targetValue = activeIndex.toFloat(),
+                animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+            )
         }
     }
-
-    val totalQueueCount = allTracks.size.coerceAtLeast(1)
-    val displayIndex = if (currentTrackIndex > 0) currentTrackIndex else 1
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(AetherCanvas)
+            .background(AmberCanvas)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
@@ -135,15 +171,15 @@ fun ModernNowPlayingScreen(
                     text = "AETHER HI-FI",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = AetherCyan,
-                    letterSpacing = 1.6.sp
+                    color = AmberGold,
+                    letterSpacing = 1.8.sp
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "$displayIndex of $totalQueueCount",
+                    text = "${activeIndex + 1} of ${queue.size.coerceAtLeast(1)}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = AetherInk,
+                    color = AmberInk,
                     fontFamily = FontFamily.Monospace
                 )
             }
@@ -154,114 +190,115 @@ fun ModernNowPlayingScreen(
                 onClick = onToggleFavorite,
                 size = 42.dp,
                 iconSize = 20.dp,
-                tint = if (isFavorite) AetherRose else AetherInk
+                tint = if (isFavorite) AmberRose else AmberInk
             )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // MARK: - Dynamic 3D Curved Carousel (Inspired by Reference Design)
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(310.dp)
+                .draggable(
+                    orientation = Orientation.Horizontal,
+                    state = rememberDraggableState { delta ->
+                        coroutineScope.launch {
+                            val newTarget = (carouselOffset.value - delta / 220f).coerceIn(0f, (queue.size - 1).toFloat().coerceAtLeast(0f))
+                            carouselOffset.snapTo(newTarget)
+                        }
+                    },
+                    onDragStopped = { velocity ->
+                        coroutineScope.launch {
+                            val current = carouselOffset.value
+                            val target = if (abs(velocity) > 300f) {
+                                (current - sign(velocity) * 0.6f).roundToInt()
+                            } else {
+                                current.roundToInt()
+                            }.coerceIn(0, queue.size - 1)
+
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            carouselOffset.animateTo(
+                                target.toFloat(),
+                                spring(dampingRatio = 0.72f, stiffness = 450f)
+                            )
+                            if (target != activeIndex) {
+                                onTrackSelect(target)
+                            }
+                        }
+                    }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            val centerIndex = carouselOffset.value
+
+            // Ambient Gold Radiant Halo behind active card
+            Box(
+                modifier = Modifier
+                    .size(240.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(AmberGoldGlow, Color.Transparent)
+                        )
+                    )
+            )
+
+            // Render 3D fanned cards (active center ± 2 neighbors)
+            val minVisible = (centerIndex - 2.5f).toInt().coerceAtLeast(0)
+            val maxVisible = (centerIndex + 2.5f).toInt().coerceAtMost(queue.size - 1)
+
+            for (i in minVisible..maxVisible) {
+                val trackItem = queue[i]
+                val offsetFromCenter = i - centerIndex
+                val absOffset = abs(offsetFromCenter)
+
+                // 3D parameters
+                val translationX = offsetFromCenter * 140f
+                val rotationY = (offsetFromCenter * -24f).coerceIn(-48f, 48f)
+                val scale = (1.0f - absOffset * 0.12f).coerceIn(0.75f, 1.0f)
+                val zIndexVal = 100f - absOffset * 10f
+                val darkOverlayAlpha = (absOffset * 0.45f).coerceIn(0f, 0.75f)
+
+                CoverFlowCardItem(
+                    track = trackItem,
+                    isCenter = absOffset < 0.3f,
+                    modifier = Modifier
+                        .zIndex(zIndexVal)
+                        .graphicsLayer {
+                            this.translationX = translationX
+                            this.rotationY = rotationY
+                            this.scaleX = scale
+                            this.scaleY = scale
+                            this.cameraDistance = 14f * density
+                            this.transformOrigin = TransformOrigin(0.5f, 0.5f)
+                        }
+                        .clickable {
+                            if (i != activeIndex) {
+                                coroutineScope.launch {
+                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                    carouselOffset.animateTo(i.toFloat(), spring(dampingRatio = 0.72f, stiffness = 450f))
+                                    onTrackSelect(i)
+                                }
+                            }
+                        },
+                    darkOverlayAlpha = darkOverlayAlpha
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // MARK: - Center Album Artwork Card with Specular Ambient Aura
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.86f)
-                .aspectRatio(1.0f),
-            contentAlignment = Alignment.Center
-        ) {
-            // Ambient Aura Glow
-            Box(
-                modifier = Modifier
-                    .fillMaxSize(0.92f)
-                    .clip(AetherRadiusLg)
-                    .background(
-                        Brush.radialGradient(
-                            listOf(AetherCyanGlow, Color.Transparent)
-                        )
-                    )
-            )
+        // Hi-Res Audio Keycap Badge
+        val badgeText = currentTrack?.badgeText ?: "24-BIT • 96kHz LOSSLESS"
+        RaycastKeycapBadge(
+            text = badgeText,
+            textColor = AmberGold,
+            accentColor = AmberGold
+        )
 
-            // Primary Artwork Tile
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(AetherRadiusLg)
-                    .background(AetherSurface)
-                    .border(1.dp, AetherHairline, AetherRadiusLg),
-                contentAlignment = Alignment.Center
-            ) {
-                if (artworkBitmap != null) {
-                    Image(
-                        bitmap = artworkBitmap.asImageBitmap(),
-                        contentDescription = currentTrack?.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MusicNote,
-                            contentDescription = null,
-                            tint = AetherCyan,
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Text(
-                            text = "Lossless Master",
-                            fontSize = 12.sp,
-                            color = AetherMute,
-                            fontWeight = FontWeight.Medium,
-                            letterSpacing = 0.8.sp
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // MARK: - Track Title & Artist
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        ) {
-            Text(
-                text = currentTrack?.title ?: "Select a Track",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = AetherInk,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                letterSpacing = 0.2.sp
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = currentTrack?.artist ?: "Unknown Artist",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Normal,
-                color = AetherMute,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Hi-Res Audio Keycap Badge
-            val badgeText = currentTrack?.badgeText ?: "24-BIT • 96kHz LOSSLESS"
-            RaycastKeycapBadge(
-                text = badgeText,
-                textColor = AetherCyan,
-                accentColor = AetherCyan
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         // MARK: - Precision Waveform Scrubber
         TactileTimelineScrubber(
@@ -270,9 +307,9 @@ fun ModernNowPlayingScreen(
             onSeekTo = onSeekTo
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // MARK: - Tactile Transport Row (Hero White CTA)
+        // MARK: - Tactile Transport Row (Hero White CTA with Amber Accents)
         TactileTransportRow(
             isPlaying = isPlaying,
             isShuffle = isShuffle,
@@ -284,7 +321,7 @@ fun ModernNowPlayingScreen(
             onToggleRepeat = onToggleRepeat
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         // MARK: - Precision Volume Slider
         TactileVolumeBar(
@@ -292,9 +329,9 @@ fun ModernNowPlayingScreen(
             onVolumeChange = onVolumeChange
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // MARK: - Quick Bottom Pill Actions (Lyrics & Studio 10-EQ)
+        // MARK: - Quick Bottom Actions (Lyrics & Studio 10-EQ)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -305,9 +342,9 @@ fun ModernNowPlayingScreen(
             Box(
                 modifier = Modifier
                     .weight(1.4f)
-                    .clip(AetherRadiusMd)
-                    .background(AetherSurfaceElevated)
-                    .border(1.dp, AetherHairline, AetherRadiusMd)
+                    .clip(AmberRadiusMd)
+                    .background(AmberSurfaceElevated)
+                    .border(1.dp, AmberHairline, AmberRadiusMd)
                     .clickable { onLyricsClick() }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 contentAlignment = Alignment.Center
@@ -319,14 +356,14 @@ fun ModernNowPlayingScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Subject,
                         contentDescription = "Lyrics",
-                        tint = AetherCyan,
+                        tint = AmberGold,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
                         text = if (!currentLyricText.isNullOrBlank()) currentLyricText else "Synchronized Lyrics",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = AetherInk,
+                        color = AmberInk,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -337,9 +374,9 @@ fun ModernNowPlayingScreen(
             Box(
                 modifier = Modifier
                     .weight(0.9f)
-                    .clip(AetherRadiusMd)
-                    .background(AetherSurfaceElevated)
-                    .border(1.dp, AetherHairline, AetherRadiusMd)
+                    .clip(AmberRadiusMd)
+                    .background(AmberSurfaceElevated)
+                    .border(1.dp, AmberHairline, AmberRadiusMd)
                     .clickable { onEqClick() }
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 contentAlignment = Alignment.Center
@@ -351,19 +388,135 @@ fun ModernNowPlayingScreen(
                     Icon(
                         imageVector = Icons.Default.Equalizer,
                         contentDescription = "EQ",
-                        tint = AetherPrimaryWhite,
+                        tint = AmberGold,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
                         text = "10-EQ",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = AetherInk
+                        color = AmberInk
                     )
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+/**
+ * 3D Curved Carousel Card Item (Faithful to Reference Design).
+ */
+@Composable
+fun CoverFlowCardItem(
+    track: Track,
+    isCenter: Boolean,
+    darkOverlayAlpha: Float,
+    modifier: Modifier = Modifier
+) {
+    val artworkBitmap = remember(track.artworkUri) {
+        track.artworkUri?.let { path ->
+            try { BitmapFactory.decodeFile(path) } catch (e: Exception) { null }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .width(220.dp)
+            .height(290.dp)
+            .shadow(
+                elevation = if (isCenter) 24.dp else 8.dp,
+                shape = RoundedCornerShape(22.dp),
+                spotColor = AmberGold.copy(alpha = 0.35f)
+            )
+            .clip(RoundedCornerShape(22.dp))
+            .background(AmberSurface)
+            .border(
+                1.5.dp,
+                if (isCenter) AmberHairlineStrong else AmberHairline,
+                RoundedCornerShape(22.dp)
+            )
+    ) {
+        // Upper Artwork
+        if (artworkBitmap != null) {
+            Image(
+                bitmap = artworkBitmap.asImageBitmap(),
+                contentDescription = track.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0xFF2E2216), Color(0xFF140E08))
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MusicNote,
+                    contentDescription = null,
+                    tint = AmberGold,
+                    modifier = Modifier.size(56.dp)
+                )
+            }
+        }
+
+        // Dark gradient shade on non-center cards
+        if (darkOverlayAlpha > 0.01f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = darkOverlayAlpha))
+            )
+        }
+
+        // Frosted Glass Dark Gradient Footer with Song Title and Artist (as in screenshot)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.Transparent,
+                            Color(0xCC0C0906),
+                            Color(0xF00C0906)
+                        )
+                    )
+                )
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = track.title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = AmberPrimaryWhite,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = track.artist,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = AmberChampagne,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
     }
 }

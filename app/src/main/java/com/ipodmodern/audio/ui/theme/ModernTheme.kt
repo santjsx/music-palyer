@@ -10,141 +10,172 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-// MARK: - Aether Luxury Obsidian & Stellar Void Canvas
-val AetherCanvas = Color(0xFF050608)           // Deepest stellar black canvas
-val AetherSurface = Color(0xFF0C0E14)          // Glassmorphic surface panels
-val AetherSurfaceElevated = Color(0xFF131722)  // Interactive inputs, pill-tabs, elevated cards
-val AetherSurfaceCard = Color(0xFF181D2B)      // Active tiles, keycaps, hero containers
-val AetherButtonFg = Color(0xFF1E2333)         // Secondary button interior
+// MARK: - Aether Luxury Amber, Cognac & Warm Obsidian Theme
+val AmberCanvas = Color(0xFF0C0906)           // Ultra-deep warm espresso canvas
+val AmberSurface = Color(0xFF16100A)          // Dark cognac glassmorphic cards
+val AmberSurfaceElevated = Color(0xFF221910)  // Elevated interactive buttons & inputs
+val AmberSurfaceCard = Color(0xFF2E2216)      // Active tiles, keycaps, hero containers
+val AmberButtonFg = Color(0xFF3B2B1C)         // Secondary button interior
 
-// MARK: - Aether Specular Hairlines & Glass Borders
-val AetherHairline = Color(0xFF1E2536)         // Subtle precision border (1px)
-val AetherHairlineSoft = Color(0x1AFFFFFF)     // Translucent specular highlight
-val AetherHairlineStrong = Color(0xFF323D57)   // Active focus/selected state border
+// MARK: - Specular Golden Hairlines & Glass Borders
+val AmberHairline = Color(0xFF382717)         // Subtle precision border (1px)
+val AmberHairlineSoft = Color(0x29F59E0B)     // Translucent amber highlight
+val AmberHairlineStrong = Color(0xFFD97706)   // Active focus/selected state gold border
 
-// MARK: - Aether Luminous Brand Accents
-val AetherCyan = Color(0xFF00E5FF)             // Luminous Ethereal Cyan (Hi-Res Lossless)
-val AetherCyanGlow = Color(0x3300E5FF)         // Ambient Cyan Aura
-val AetherViolet = Color(0xFF8B5CF6)           // Cosmic Lossless Violet
-val AetherVioletGlow = Color(0x338B5CF6)       // Ambient Violet Aura
-val AetherEmerald = Color(0xFF10B981)          // Studio Master Green
-val AetherAmber = Color(0xFFF59E0B)            // Valve Warmth Amber
-val AetherRose = Color(0xFFF43F5E)             // Favorite Heart Rose
+// MARK: - Luminous Amber & Sunset Accents
+val AmberGold = Color(0xFFF59E0B)             // Luminous Sunset Amber
+val AmberGoldGlow = Color(0x40F59E0B)         // Radiant Amber Aura
+val AmberCognac = Color(0xFFEA580C)           // Rich Deep Cognac
+val AmberChampagne = Color(0xFFFEF3C7)        // Champagne highlight text
+val AmberEmerald = Color(0xFF10B981)          // Studio Master Green
+val AmberRose = Color(0xFFF43F5E)             // Favorite Heart Rose
 
-// MARK: - Aether Primary Action (Solid White Hero Pill)
-val AetherPrimaryWhite = Color(0xFFFFFFFF)     // High-contrast primary CTA
-val AetherPrimaryPressed = Color(0xFFE2E8F0)   // Pressed feedback
-val AetherOnPrimary = Color(0xFF000000)        // Pure obsidian glyphs on white
+// MARK: - Primary Action (Solid White Hero Pill with Amber Specular Accent)
+val AmberPrimaryWhite = Color(0xFFFFFFFF)     // High-contrast primary CTA
+val AmberPrimaryPressed = Color(0xFFFDE68A)   // Warm gold pressed feedback
+val AmberOnPrimary = Color(0xFF000000)        // Pure obsidian glyphs on white
 
-// MARK: - Aether Typography Ladder
-val AetherInk = Color(0xFFF8FAFC)              // Pure diamond white headlines
-val AetherBody = Color(0xFFCBD5E1)             // Primary body text
-val AetherCharcoal = Color(0xFF94A3B8)         // Secondary body / metadata
-val AetherMute = Color(0xFF64748B)             // Captions, format badges, labels
-val AetherAsh = Color(0xFF475569)              // Disabled & subtle markers
+// MARK: - Typography Ladder
+val AmberInk = Color(0xFFFFFBEB)              // Diamond warm white headlines
+val AmberBody = Color(0xFFE2D9CC)             // Primary body text
+val AmberCharcoal = Color(0xFFB5A695)         // Secondary body / metadata
+val AmberMute = Color(0xFF8C7A68)             // Captions, format badges, labels
+val AmberAsh = Color(0xFF5E4E3F)              // Disabled & subtle markers
 
-// MARK: - Aether Gradients
-val AetherAuroraGradient = Brush.linearGradient(
-    listOf(AetherCyan, AetherViolet)
+// MARK: - Ambient Gradients
+val AmberAuroraGradient = Brush.linearGradient(
+    listOf(AmberGold, AmberCognac)
 )
-val AetherCardGradient = Brush.verticalGradient(
-    listOf(Color(0xFF131722), Color(0xFF0C0E14))
+val AmberCardGradient = Brush.verticalGradient(
+    listOf(Color(0xFF261C12), Color(0xFF140E08))
 )
-val AetherKeycapGradient = Brush.verticalGradient(
-    listOf(Color(0xFF1C2233), Color(0xFF10141F))
+val AmberKeycapGradient = Brush.verticalGradient(
+    listOf(Color(0xFF332314), Color(0xFF1E140B))
 )
 
 // Legacy Aliases for backwards compatibility across existing components
-val RaycastCanvas = AetherCanvas
-val RaycastSurface = AetherSurface
-val RaycastSurfaceElevated = AetherSurfaceElevated
-val RaycastSurfaceCard = AetherSurfaceCard
-val RaycastButtonFg = AetherButtonFg
-val RaycastHairline = AetherHairline
-val RaycastHairlineSoft = AetherHairlineSoft
-val RaycastHairlineStrong = AetherHairlineStrong
-val RaycastPrimaryWhite = AetherPrimaryWhite
-val RaycastPrimaryPressed = AetherPrimaryPressed
-val RaycastOnPrimary = AetherOnPrimary
-val RaycastInk = AetherInk
-val RaycastBody = AetherBody
-val RaycastCharcoal = AetherCharcoal
-val RaycastMute = AetherMute
-val RaycastAsh = AetherAsh
-val RaycastStone = Color(0xFF334155)
-val RaycastAccentBlue = AetherCyan
-val RaycastAccentBlueSoft = AetherCyanGlow
-val RaycastAccentGreen = AetherEmerald
+val AetherCanvas = AmberCanvas
+val AetherSurface = AmberSurface
+val AetherSurfaceElevated = AmberSurfaceElevated
+val AetherSurfaceCard = AmberSurfaceCard
+val AetherButtonFg = AmberButtonFg
+val AetherHairline = AmberHairline
+val AetherHairlineSoft = AmberHairlineSoft
+val AetherHairlineStrong = AmberHairlineStrong
+val AetherPrimaryWhite = AmberPrimaryWhite
+val AetherPrimaryPressed = AmberPrimaryPressed
+val AetherOnPrimary = AmberOnPrimary
+val AetherInk = AmberInk
+val AetherBody = AmberBody
+val AetherCharcoal = AmberCharcoal
+val AetherMute = AmberMute
+val AetherAsh = AmberAsh
+val AetherCyan = AmberGold
+val AetherCyanGlow = AmberGoldGlow
+val AetherViolet = AmberCognac
+val AetherAmber = AmberGold
+val AetherEmerald = AmberEmerald
+val AetherRose = AmberRose
+val AetherKeycapGradient = AmberKeycapGradient
+
+val RaycastCanvas = AmberCanvas
+val RaycastSurface = AmberSurface
+val RaycastSurfaceElevated = AmberSurfaceElevated
+val RaycastSurfaceCard = AmberSurfaceCard
+val RaycastButtonFg = AmberButtonFg
+val RaycastHairline = AmberHairline
+val RaycastHairlineSoft = AmberHairlineSoft
+val RaycastHairlineStrong = AmberHairlineStrong
+val RaycastPrimaryWhite = AmberPrimaryWhite
+val RaycastPrimaryPressed = AmberPrimaryPressed
+val RaycastOnPrimary = AmberOnPrimary
+val RaycastInk = AmberInk
+val RaycastBody = AmberBody
+val RaycastCharcoal = AmberCharcoal
+val RaycastMute = AmberMute
+val RaycastAsh = AmberAsh
+val RaycastStone = Color(0xFF4A3C2F)
+val RaycastAccentBlue = AmberGold
+val RaycastAccentBlueSoft = AmberGoldGlow
+val RaycastAccentGreen = AmberEmerald
 val RaycastAccentGreenSoft = Color(0x2610B981)
-val RaycastAccentYellow = AetherAmber
+val RaycastAccentYellow = AmberGold
 val RaycastAccentYellowSoft = Color(0x26F59E0B)
-val RaycastAccentRed = AetherRose
+val RaycastAccentRed = AmberRose
 val RaycastAccentRedSoft = Color(0x26F43F5E)
-val RaycastKeycapGradient = AetherKeycapGradient
+val RaycastKeycapGradient = AmberKeycapGradient
 
-val ModernBgDark = AetherCanvas
-val ModernSurfaceDark = AetherSurface
-val ModernCardDark = AetherSurfaceCard
-val ModernTextPrimary = AetherInk
-val ModernTextSecondary = AetherBody
-val ModernTextMuted = AetherMute
-val ModernAccentBlue = AetherCyan
-val ModernAccentCyan = AetherCyan
-val ModernAccentPurple = AetherViolet
-val ModernAccentEmerald = AetherEmerald
-val ModernAccentGold = AetherAmber
-val ModernHeroGradient = AetherAuroraGradient
+val ModernBgDark = AmberCanvas
+val ModernSurfaceDark = AmberSurface
+val ModernCardDark = AmberSurfaceCard
+val ModernTextPrimary = AmberInk
+val ModernTextSecondary = AmberBody
+val ModernTextMuted = AmberMute
+val ModernAccentBlue = AmberGold
+val ModernAccentCyan = AmberGold
+val ModernAccentPurple = AmberCognac
+val ModernAccentEmerald = AmberEmerald
+val ModernAccentGold = AmberGold
+val ModernHeroGradient = AmberAuroraGradient
 
-// MARK: - Aether Corner Radii
-val RaycastRadiusXs = RoundedCornerShape(4.dp)
-val RaycastRadiusSm = RoundedCornerShape(8.dp)
-val RaycastRadiusMd = RoundedCornerShape(12.dp)
-val RaycastRadiusLg = RoundedCornerShape(16.dp)
-val RaycastRadiusXl = RoundedCornerShape(20.dp)
-val RaycastRadiusFull = RoundedCornerShape(9999.dp)
+// MARK: - Corner Radii
+val AmberRadiusXs = RoundedCornerShape(6.dp)
+val AmberRadiusSm = RoundedCornerShape(10.dp)
+val AmberRadiusMd = RoundedCornerShape(14.dp)
+val AmberRadiusLg = RoundedCornerShape(20.dp)
+val AmberRadiusXl = RoundedCornerShape(26.dp)
+val AmberRadiusFull = RoundedCornerShape(9999.dp)
 
-val AetherRadiusXs = RaycastRadiusXs
-val AetherRadiusSm = RaycastRadiusSm
-val AetherRadiusMd = RaycastRadiusMd
-val AetherRadiusLg = RaycastRadiusLg
-val AetherRadiusXl = RaycastRadiusXl
-val AetherRadiusFull = RaycastRadiusFull
+val RaycastRadiusXs = AmberRadiusXs
+val RaycastRadiusSm = AmberRadiusSm
+val RaycastRadiusMd = AmberRadiusMd
+val RaycastRadiusLg = AmberRadiusLg
+val RaycastRadiusXl = AmberRadiusXl
+val RaycastRadiusFull = AmberRadiusFull
+
+val AetherRadiusXs = AmberRadiusXs
+val AetherRadiusSm = AmberRadiusSm
+val AetherRadiusMd = AmberRadiusMd
+val AetherRadiusLg = AmberRadiusLg
+val AetherRadiusXl = AmberRadiusXl
+val AetherRadiusFull = AmberRadiusFull
 
 @Immutable
-data class AetherColorSystem(
-    val canvas: Color = AetherCanvas,
-    val surface: Color = AetherSurface,
-    val surfaceElevated: Color = AetherSurfaceElevated,
-    val surfaceCard: Color = AetherSurfaceCard,
-    val hairline: Color = AetherHairline,
-    val hairlineStrong: Color = AetherHairlineStrong,
-    val primary: Color = AetherPrimaryWhite,
-    val onPrimary: Color = AetherOnPrimary,
-    val cyan: Color = AetherCyan,
-    val violet: Color = AetherViolet,
-    val ink: Color = AetherInk,
-    val body: Color = AetherBody,
-    val mute: Color = AetherMute,
-    val ash: Color = AetherAsh
+data class AmberColorSystem(
+    val canvas: Color = AmberCanvas,
+    val surface: Color = AmberSurface,
+    val surfaceElevated: Color = AmberSurfaceElevated,
+    val surfaceCard: Color = AmberSurfaceCard,
+    val hairline: Color = AmberHairline,
+    val hairlineStrong: Color = AmberHairlineStrong,
+    val primary: Color = AmberPrimaryWhite,
+    val onPrimary: Color = AmberOnPrimary,
+    val gold: Color = AmberGold,
+    val cognac: Color = AmberCognac,
+    val ink: Color = AmberInk,
+    val body: Color = AmberBody,
+    val mute: Color = AmberMute,
+    val ash: Color = AmberAsh
 )
 
-val LocalAetherColors = staticCompositionLocalOf { AetherColorSystem() }
-val LocalRaycastColors = LocalAetherColors
+val LocalAmberColors = staticCompositionLocalOf { AmberColorSystem() }
+val LocalAetherColors = LocalAmberColors
+val LocalRaycastColors = LocalAmberColors
 
 @Composable
 fun ModernAppTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = darkColorScheme(
-        primary = AetherPrimaryWhite,
-        onPrimary = AetherOnPrimary,
-        background = AetherCanvas,
-        onBackground = AetherInk,
-        surface = AetherSurface,
-        onSurface = AetherInk,
-        surfaceVariant = AetherSurfaceElevated,
-        onSurfaceVariant = AetherBody,
-        outline = AetherHairline
+        primary = AmberPrimaryWhite,
+        onPrimary = AmberOnPrimary,
+        background = AmberCanvas,
+        onBackground = AmberInk,
+        surface = AmberSurface,
+        onSurface = AmberInk,
+        surfaceVariant = AmberSurfaceElevated,
+        onSurfaceVariant = AmberBody,
+        outline = AmberHairline
     )
 
     MaterialTheme(

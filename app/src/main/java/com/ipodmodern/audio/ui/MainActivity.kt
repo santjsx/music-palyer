@@ -10,9 +10,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import com.ipodmodern.audio.ui.components.MiniPlayerBar
 import com.ipodmodern.audio.ui.components.ModernBottomNavIsland
@@ -40,8 +36,8 @@ import com.ipodmodern.audio.ui.screens.ModernLibraryScreen
 import com.ipodmodern.audio.ui.screens.ModernNowPlayingScreen
 import com.ipodmodern.audio.ui.screens.ScreenType
 import com.ipodmodern.audio.ui.screens.SyncServerScreen
+import com.ipodmodern.audio.ui.theme.AmberCanvas
 import com.ipodmodern.audio.ui.theme.ModernAppTheme
-import com.ipodmodern.audio.ui.theme.ModernBgDark
 import com.ipodmodern.audio.ui.viewmodel.CoverFlowViewModel
 import com.ipodmodern.audio.ui.viewmodel.MenuViewModel
 import com.ipodmodern.audio.ui.viewmodel.PlayerViewModel
@@ -58,7 +54,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            // Automatic runtime permission requester for storage & audio library access
             val permissionLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestMultiplePermissions()
             ) { permissions ->
@@ -86,15 +81,13 @@ class MainActivity : ComponentActivity() {
 
                 if (permissionsToRequest.isNotEmpty()) {
                     permissionLauncher.launch(permissionsToRequest.toTypedArray())
-                } else {
-                    playerViewModel.rescanLibrary()
                 }
             }
 
             ModernAppTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = ModernBgDark
+                    color = AmberCanvas
                 ) {
                     ModernMusicAppContent(
                         playerViewModel = playerViewModel,
@@ -104,18 +97,6 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        val isGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
-        } else {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-        }
-        if (isGranted) {
-            playerViewModel.rescanLibrary()
         }
     }
 }
@@ -128,7 +109,6 @@ fun ModernMusicAppContent(
     syncViewModel: SyncViewModel
 ) {
     val playerState by playerViewModel.uiState.collectAsState()
-    val navState by menuViewModel.navState.collectAsState()
     val syncServerState by syncViewModel.serverState.collectAsState()
 
     var activeScreen by remember { mutableStateOf(ScreenType.MENU_MAIN) }
@@ -153,7 +133,6 @@ fun ModernMusicAppContent(
         }
     }
 
-    // Hardware and gesture back handling
     BackHandler(enabled = activeScreen != ScreenType.MENU_MAIN) {
         handleBack()
     }
@@ -163,9 +142,9 @@ fun ModernMusicAppContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(ModernBgDark)
+            .background(AmberCanvas)
     ) {
-        // MARK: - Main Screen Switcher
+        // MARK: - Instant Zero-Lag Screen Switcher
         when (activeScreen) {
             ScreenType.NOW_PLAYING,
             ScreenType.COVER_FLOW -> {
@@ -184,6 +163,7 @@ fun ModernMusicAppContent(
                     onPlayPauseClick = { playerViewModel.togglePlayPause() },
                     onNextClick = { playerViewModel.nextTrack() },
                     onPrevClick = { playerViewModel.prevTrack() },
+                    onTrackSelect = { index -> playerViewModel.playTrackAtIndex(index) },
                     onSeekTo = { targetMs -> playerViewModel.seekTo(targetMs) },
                     onVolumeChange = { vol -> playerViewModel.setVolumeDirect(vol) },
                     onToggleShuffle = { playerViewModel.toggleShuffle() },
@@ -265,7 +245,6 @@ fun ModernMusicAppContent(
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
             ) {
-                // Floating Mini Player (if track is loaded)
                 if (playerState.currentTrack != null) {
                     MiniPlayerBar(
                         track = playerState.currentTrack,
@@ -278,7 +257,6 @@ fun ModernMusicAppContent(
                     )
                 }
 
-                // Floating Bottom Navigation Island
                 ModernBottomNavIsland(
                     currentScreen = activeScreen,
                     onTabSelected = { tab ->
