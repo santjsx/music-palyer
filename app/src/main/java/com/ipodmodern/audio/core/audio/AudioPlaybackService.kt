@@ -29,7 +29,7 @@ class AudioPlaybackService : Service() {
     private var mediaSession: MediaSessionCompat? = null
 
     companion object {
-        const val CHANNEL_ID = "aether_playback_channel"
+        const val CHANNEL_ID = "aether_playback_channel_v3"
         const val NOTIFICATION_ID = 2002
 
         const val ACTION_PLAY = "com.ipodmodern.audio.ACTION_PLAY"
@@ -141,16 +141,25 @@ class AudioPlaybackService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = getSystemService(NotificationManager::class.java)
+            // Delete old low-importance channel if present
+            try {
+                manager.deleteNotificationChannel("aether_playback_channel")
+            } catch (e: Exception) {
+                // Ignore
+            }
+
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Aether Audio Playback",
-                NotificationManager.IMPORTANCE_LOW
+                "Aether Hi-Fi Audio Playback",
+                NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Audiophile lossless background audio playback"
-                setShowBadge(false)
+                description = "Audiophile lossless background audio playback & controls"
+                setShowBadge(true)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                setSound(null, null)
+                enableVibration(false)
             }
-            val manager = getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(channel)
         }
     }
@@ -295,8 +304,12 @@ class AudioPlaybackService : Service() {
             .setContentIntent(pendingOpenIntent)
             .setDeleteIntent(pendingStop)
             .setOngoing(isPlaying)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setSilent(true)
+            .setOnlyAlertOnce(true)
             .setStyle(mediaStyle)
             .addAction(android.R.drawable.ic_media_previous, "Previous", pendingPrev)
             .addAction(playPauseIcon, if (isPlaying) "Pause" else "Play", pendingToggle)
@@ -337,7 +350,15 @@ class AudioPlaybackService : Service() {
                     artworkUriStr = artworkUri,
                     isPlaying = isPlaying
                 )
-                startForeground(NOTIFICATION_ID, notification)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(
+                        NOTIFICATION_ID,
+                        notification,
+                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                    )
+                } else {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
             }
             ACTION_PLAY -> {
                 playbackActionListener?.invoke(ACTION_PLAY)
