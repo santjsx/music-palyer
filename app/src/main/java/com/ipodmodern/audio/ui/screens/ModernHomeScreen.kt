@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -110,9 +111,10 @@ fun ModernHomeScreen(
         modifier = modifier
             .fillMaxSize()
             .background(ObsidianBg)
+            .statusBarsPadding()
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 120.dp)
+        contentPadding = PaddingValues(top = 10.dp, bottom = 120.dp)
     ) {
         // 1. Top Bar: Hamburger Menu + Notifications Bell
         item {

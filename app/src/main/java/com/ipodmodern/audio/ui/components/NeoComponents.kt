@@ -350,19 +350,49 @@ fun RotaryLoudnessKnob(
                     val sweepRange = 270f
                     val normalizedAngle = (angleDeg - startAngle).coerceIn(0f, sweepRange)
                     val newVolume = (normalizedAngle / sweepRange).coerceIn(0f, 1f)
+                    val oldInt = (currentVolume * 50).toInt()
+                    val newInt = (newVolume * 50).toInt()
+                    if (oldInt != newInt) {
+                        view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                    }
                     currentVolume = newVolume
-                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                     onVolumeChanged(newVolume)
                 }
             },
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val strokeWidth = 5.dp.toPx()
-            val radius = (this.size.minDimension - strokeWidth * 3) / 2f
+            val strokeWidth = 5.5.dp.toPx()
+            val radius = (this.size.minDimension - strokeWidth * 4) / 2f
             val center = Offset(this.size.width / 2f, this.size.height / 2f)
 
-            // 1. Inactive background arc (270 degrees from 135 deg)
+            // 1. Tick Marks around the 270-degree perimeter (Swiss Hi-Fi dial aesthetic)
+            val tickCount = 28
+            for (i in 0..tickCount) {
+                val tickPct = i.toFloat() / tickCount
+                val tickAngleDeg = 135f + 270f * tickPct
+                val tickAngleRad = Math.toRadians(tickAngleDeg.toDouble())
+                val innerR = radius + strokeWidth * 0.8f
+                val outerR = radius + strokeWidth * 1.5f + (if (i % 7 == 0) 3.dp.toPx() else 0f)
+
+                val startX = center.x + (innerR * cos(tickAngleRad)).toFloat()
+                val startY = center.y + (innerR * sin(tickAngleRad)).toFloat()
+                val endX = center.x + (outerR * cos(tickAngleRad)).toFloat()
+                val endY = center.y + (outerR * sin(tickAngleRad)).toFloat()
+
+                val isTickActive = tickPct <= currentVolume
+                val tickColor = if (isTickActive) MintAccent.copy(alpha = 0.6f) else ObsidianBorder
+
+                drawLine(
+                    color = tickColor,
+                    start = Offset(startX, startY),
+                    end = Offset(endX, endY),
+                    strokeWidth = if (i % 7 == 0) 2.dp.toPx() else 1.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+            }
+
+            // 2. Inactive background arc (270 degrees from 135 deg)
             drawArc(
                 color = ObsidianTrackBg,
                 startAngle = 135f,
@@ -373,33 +403,53 @@ fun RotaryLoudnessKnob(
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
 
-            // 2. Active Mint Arc
+            // 3. Active Mint Arc
             val activeSweep = 270f * currentVolume
-            drawArc(
-                color = MintAccent,
-                startAngle = 135f,
-                sweepAngle = activeSweep,
-                useCenter = false,
-                topLeft = Offset(center.x - radius, center.y - radius),
-                size = Size(radius * 2, radius * 2),
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-            )
+            if (activeSweep > 0.5f) {
+                // Soft glow underlay
+                drawArc(
+                    color = MintAccent.copy(alpha = 0.25f),
+                    startAngle = 135f,
+                    sweepAngle = activeSweep,
+                    useCenter = false,
+                    topLeft = Offset(center.x - radius, center.y - radius),
+                    size = Size(radius * 2, radius * 2),
+                    style = Stroke(width = strokeWidth + 4.dp.toPx(), cap = StrokeCap.Round)
+                )
 
-            // 3. Indicator Thumb Dot
+                // Crisp Mint Arc
+                drawArc(
+                    color = MintAccent,
+                    startAngle = 135f,
+                    sweepAngle = activeSweep,
+                    useCenter = false,
+                    topLeft = Offset(center.x - radius, center.y - radius),
+                    size = Size(radius * 2, radius * 2),
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                )
+            }
+
+            // 4. Indicator Thumb Dot (Outer Mint Ring + Inner White Center)
             val thumbAngleRad = Math.toRadians((135f + activeSweep).toDouble())
             val thumbX = center.x + (radius * cos(thumbAngleRad)).toFloat()
             val thumbY = center.y + (radius * sin(thumbAngleRad)).toFloat()
+
+            drawCircle(
+                color = MintAccent,
+                radius = 7.dp.toPx(),
+                center = Offset(thumbX, thumbY)
+            )
             drawCircle(
                 color = Color.White,
-                radius = 6.dp.toPx(),
+                radius = 4.dp.toPx(),
                 center = Offset(thumbX, thumbY)
             )
         }
 
-        // Inner Brushed Surface Card
+        // Inner Brushed Obsidian Aluminum Surface Card
         Box(
             modifier = Modifier
-                .size(size * 0.72f)
+                .size(size * 0.70f)
                 .clip(CircleShape)
                 .background(ObsidianElevated)
                 .border(1.dp, ObsidianBorder, CircleShape),
@@ -409,9 +459,9 @@ fun RotaryLoudnessKnob(
                 Text(
                     text = "LOUDNESS",
                     color = TextMuted,
-                    fontSize = 10.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
+                    letterSpacing = 1.2.sp
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
