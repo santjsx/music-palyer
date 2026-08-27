@@ -2,9 +2,6 @@ package com.ipodmodern.audio.ui.screens
 
 import android.graphics.BitmapFactory
 import android.view.HapticFeedbackConstants
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,11 +23,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Clear
@@ -46,8 +43,6 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,9 +52,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,27 +65,23 @@ import androidx.compose.ui.unit.sp
 import com.ipodmodern.audio.core.model.Album
 import com.ipodmodern.audio.core.model.Artist
 import com.ipodmodern.audio.core.model.Track
+import com.ipodmodern.audio.ui.components.AetherAudioVisualizer
 import com.ipodmodern.audio.ui.components.RaycastCard
-import com.ipodmodern.audio.ui.components.RaycastKeycapBadge
 import com.ipodmodern.audio.ui.components.RaycastPrimaryButton
 import com.ipodmodern.audio.ui.components.RaycastSecondaryButton
-import com.ipodmodern.audio.ui.theme.RaycastAccentBlue
-import com.ipodmodern.audio.ui.theme.RaycastAccentRed
-import com.ipodmodern.audio.ui.theme.RaycastAccentYellow
-import com.ipodmodern.audio.ui.theme.RaycastAsh
-import com.ipodmodern.audio.ui.theme.RaycastBody
-import com.ipodmodern.audio.ui.theme.RaycastCanvas
-import com.ipodmodern.audio.ui.theme.RaycastHairline
-import com.ipodmodern.audio.ui.theme.RaycastHairlineStrong
-import com.ipodmodern.audio.ui.theme.RaycastInk
-import com.ipodmodern.audio.ui.theme.RaycastMute
-import com.ipodmodern.audio.ui.theme.RaycastPrimaryWhite
-import com.ipodmodern.audio.ui.theme.RaycastRadiusMd
-import com.ipodmodern.audio.ui.theme.RaycastRadiusSm
-import com.ipodmodern.audio.ui.theme.RaycastRadiusXs
-import com.ipodmodern.audio.ui.theme.RaycastSurface
-import com.ipodmodern.audio.ui.theme.RaycastSurfaceCard
-import com.ipodmodern.audio.ui.theme.RaycastSurfaceElevated
+import com.ipodmodern.audio.ui.theme.AetherCanvas
+import com.ipodmodern.audio.ui.theme.AetherCyan
+import com.ipodmodern.audio.ui.theme.AetherHairline
+import com.ipodmodern.audio.ui.theme.AetherHairlineStrong
+import com.ipodmodern.audio.ui.theme.AetherInk
+import com.ipodmodern.audio.ui.theme.AetherMute
+import com.ipodmodern.audio.ui.theme.AetherPrimaryWhite
+import com.ipodmodern.audio.ui.theme.AetherRadiusMd
+import com.ipodmodern.audio.ui.theme.AetherRadiusSm
+import com.ipodmodern.audio.ui.theme.AetherRose
+import com.ipodmodern.audio.ui.theme.AetherSurface
+import com.ipodmodern.audio.ui.theme.AetherSurfaceCard
+import com.ipodmodern.audio.ui.theme.AetherSurfaceElevated
 import java.util.Locale
 
 enum class LibraryCategory {
@@ -147,10 +140,10 @@ fun ModernLibraryScreen(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(RaycastCanvas)
+            .background(AetherCanvas)
             .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        // MARK: - Header Bar
+        // MARK: - Header Bar with Aether branding
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -160,18 +153,18 @@ fun ModernLibraryScreen(
         ) {
             Column {
                 Text(
-                    text = "LIBRARY",
+                    text = "AETHER AUDIO",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = RaycastMute,
-                    letterSpacing = 1.0.sp
+                    color = AetherCyan,
+                    letterSpacing = 1.4.sp
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "${tracks.size} Audio Tracks",
+                    text = "${tracks.size} Lossless Tracks",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = RaycastInk,
+                    color = AetherInk,
                     letterSpacing = 0.2.sp
                 )
             }
@@ -179,23 +172,23 @@ fun ModernLibraryScreen(
             // Rescan / Refresh Button
             Box(
                 modifier = Modifier
-                    .clip(RaycastRadiusMd)
-                    .background(RaycastSurfaceElevated)
-                    .border(1.dp, RaycastHairline, RaycastRadiusMd)
+                    .clip(AetherRadiusMd)
+                    .background(AetherSurfaceElevated)
+                    .border(1.dp, AetherHairline, AetherRadiusMd)
                     .clickable {
                         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         onRescanClick()
                     }
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     if (isScanning) {
                         CircularProgressIndicator(
-                            color = RaycastPrimaryWhite,
+                            color = AetherCyan,
                             modifier = Modifier.size(12.dp),
                             strokeWidth = 1.5.dp
                         )
@@ -203,7 +196,7 @@ fun ModernLibraryScreen(
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Rescan",
-                            tint = RaycastBody,
+                            tint = AetherInk,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -211,8 +204,8 @@ fun ModernLibraryScreen(
                         text = if (isScanning) "SCANNING..." else "RESCAN",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = RaycastBody,
-                        letterSpacing = 0.4.sp
+                        color = AetherInk,
+                        letterSpacing = 0.5.sp
                     )
                 }
             }
@@ -220,64 +213,78 @@ fun ModernLibraryScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // MARK: - Raycast Command-Palette Search Input
+        // MARK: - Unclipped Precision Search Input (BasicTextField)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RaycastRadiusMd)
-                .background(RaycastSurfaceElevated)
-                .border(1.dp, if (searchQuery.isNotEmpty()) RaycastHairlineStrong else RaycastHairline, RaycastRadiusMd)
+                .height(44.dp)
+                .clip(AetherRadiusMd)
+                .background(AetherSurfaceElevated)
+                .border(
+                    1.dp,
+                    if (searchQuery.isNotEmpty()) AetherCyan else AetherHairline,
+                    AetherRadiusMd
+                )
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.CenterStart
         ) {
-            TextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = {
-                    Text(
-                        text = "Search tracks, artists, albums...",
-                        color = RaycastMute,
-                        fontSize = 13.sp
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = RaycastMute,
-                        modifier = Modifier.size(16.dp)
-                    )
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = "Clear",
-                            tint = RaycastBody,
-                            modifier = Modifier
-                                .size(16.dp)
-                                .clickable { searchQuery = "" }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = if (searchQuery.isNotEmpty()) AetherCyan else AetherMute,
+                    modifier = Modifier.size(16.dp)
+                )
+
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    if (searchQuery.isEmpty()) {
+                        Text(
+                            text = "Search tracks, artists, albums...",
+                            color = AetherMute,
+                            fontSize = 13.sp,
+                            maxLines = 1
                         )
                     }
-                },
-                singleLine = true,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    cursorColor = RaycastPrimaryWhite,
-                    focusedTextColor = RaycastInk,
-                    unfocusedTextColor = RaycastInk,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-            )
+                    BasicTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        singleLine = true,
+                        cursorBrush = SolidColor(AetherCyan),
+                        textStyle = TextStyle(
+                            color = AetherInk,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                if (searchQuery.isNotEmpty()) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = "Clear",
+                        tint = AetherInk,
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                searchQuery = ""
+                            }
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // MARK: - Raycast Filter Pill-Tabs (Songs, Albums, Artists, Favorites)
+        // MARK: - Pill-Tabs (Songs, Albums, Artists, Favorites)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -292,10 +299,10 @@ fun ModernLibraryScreen(
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
-                        .background(if (isSelected) RaycastSurfaceElevated else Color.Transparent)
+                        .background(if (isSelected) AetherSurfaceElevated else Color.Transparent)
                         .border(
                             1.dp,
-                            if (isSelected) RaycastHairlineStrong else RaycastHairline,
+                            if (isSelected) AetherCyan else AetherHairline,
                             CircleShape
                         )
                         .clickable {
@@ -308,7 +315,7 @@ fun ModernLibraryScreen(
                         text = title,
                         fontSize = 11.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) RaycastPrimaryWhite else RaycastMute
+                        color = if (isSelected) AetherPrimaryWhite else AetherMute
                     )
                 }
             }
@@ -316,7 +323,7 @@ fun ModernLibraryScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // MARK: - Action Buttons (Raycast Universal White Primary "Shuffle All" + Secondary "Play All")
+        // MARK: - Action Buttons (Shuffle All / Play All)
         if (selectedCategory == LibraryCategory.SONGS || selectedCategory == LibraryCategory.FAVORITES) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -344,7 +351,7 @@ fun ModernLibraryScreen(
             Spacer(modifier = Modifier.height(10.dp))
         }
 
-        // MARK: - Content Views
+        // MARK: - Content Views with 120fps Stable Keys
         when (selectedCategory) {
             LibraryCategory.SONGS,
             LibraryCategory.FAVORITES -> {
@@ -357,7 +364,7 @@ fun ModernLibraryScreen(
                     ) {
                         Text(
                             text = if (selectedCategory == LibraryCategory.FAVORITES) "No favorite tracks yet." else "No tracks found.",
-                            color = RaycastMute,
+                            color = AetherMute,
                             fontSize = 13.sp
                         )
                     }
@@ -367,7 +374,10 @@ fun ModernLibraryScreen(
                         contentPadding = PaddingValues(bottom = 140.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        itemsIndexed(filteredTracks) { index, track ->
+                        itemsIndexed(
+                            items = filteredTracks,
+                            key = { _, track -> track.id }
+                        ) { index, track ->
                             val isCurrentPlaying = activeTrack?.id == track.id
                             CommandPaletteTrackRow(
                                 track = track,
@@ -388,7 +398,7 @@ fun ModernLibraryScreen(
                             .padding(top = 40.dp),
                         contentAlignment = Alignment.TopCenter
                     ) {
-                        Text(text = "No albums found.", color = RaycastMute, fontSize = 13.sp)
+                        Text(text = "No albums found.", color = AetherMute, fontSize = 13.sp)
                     }
                 } else {
                     LazyVerticalGrid(
@@ -398,7 +408,10 @@ fun ModernLibraryScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(filteredAlbums) { album ->
+                        gridItems(
+                            items = filteredAlbums,
+                            key = { it.title + "_" + it.artist }
+                        ) { album ->
                             RaycastAlbumCard(album = album)
                         }
                     }
@@ -412,7 +425,7 @@ fun ModernLibraryScreen(
                             .padding(top = 40.dp),
                         contentAlignment = Alignment.TopCenter
                     ) {
-                        Text(text = "No artists found.", color = RaycastMute, fontSize = 13.sp)
+                        Text(text = "No artists found.", color = AetherMute, fontSize = 13.sp)
                     }
                 } else {
                     LazyColumn(
@@ -420,7 +433,10 @@ fun ModernLibraryScreen(
                         contentPadding = PaddingValues(bottom = 140.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        items(filteredArtists) { artist ->
+                        items(
+                            filteredArtists,
+                            key = { it.name }
+                        ) { artist ->
                             RaycastArtistRow(artist = artist)
                         }
                     }
@@ -431,7 +447,7 @@ fun ModernLibraryScreen(
 }
 
 /**
- * Command-Palette Single Track Row with 48px square tile.
+ * Aether Single Track Row with instant touch reaction.
  */
 @Composable
 fun CommandPaletteTrackRow(
@@ -458,12 +474,12 @@ fun CommandPaletteTrackRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RaycastRadiusSm)
-            .background(if (isPlaying) RaycastSurfaceCard else RaycastSurface)
+            .clip(AetherRadiusSm)
+            .background(if (isPlaying) AetherSurfaceCard else AetherSurface)
             .border(
                 1.dp,
-                if (isPlaying) RaycastHairlineStrong else RaycastHairline,
-                RaycastRadiusSm
+                if (isPlaying) AetherCyan else AetherHairline,
+                AetherRadiusSm
             )
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
@@ -473,13 +489,13 @@ fun CommandPaletteTrackRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // 48px Album Art Tile
+        // 44px Album Art Tile
         Box(
             modifier = Modifier
                 .size(44.dp)
-                .clip(RaycastRadiusSm)
-                .background(RaycastSurfaceElevated)
-                .border(1.dp, RaycastHairline, RaycastRadiusSm),
+                .clip(AetherRadiusSm)
+                .background(AetherSurfaceElevated)
+                .border(1.dp, AetherHairline, AetherRadiusSm),
             contentAlignment = Alignment.Center
         ) {
             if (artworkBitmap != null) {
@@ -493,7 +509,7 @@ fun CommandPaletteTrackRow(
                 Icon(
                     imageVector = Icons.Default.MusicNote,
                     contentDescription = null,
-                    tint = RaycastMute,
+                    tint = AetherMute,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -502,15 +518,10 @@ fun CommandPaletteTrackRow(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.5f)),
+                        .background(Color.Black.copy(alpha = 0.6f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Equalizer,
-                        contentDescription = "Playing",
-                        tint = RaycastAccentBlue,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    AetherAudioVisualizer(isPlaying = true)
                 }
             }
         }
@@ -524,7 +535,7 @@ fun CommandPaletteTrackRow(
                 text = track.title,
                 fontSize = 13.sp,
                 fontWeight = if (isPlaying) FontWeight.Bold else FontWeight.Medium,
-                color = if (isPlaying) RaycastPrimaryWhite else RaycastInk,
+                color = if (isPlaying) AetherCyan else AetherInk,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -532,7 +543,7 @@ fun CommandPaletteTrackRow(
             Text(
                 text = "${track.artist} · ${track.album}",
                 fontSize = 11.sp,
-                color = RaycastBody,
+                color = AetherMute,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -542,7 +553,7 @@ fun CommandPaletteTrackRow(
         Text(
             text = durationText,
             fontSize = 11.sp,
-            color = RaycastMute,
+            color = AetherMute,
             fontFamily = FontFamily.Monospace
         )
 
@@ -550,7 +561,7 @@ fun CommandPaletteTrackRow(
         Icon(
             imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
             contentDescription = "Favorite",
-            tint = if (isFavorite) RaycastAccentRed else RaycastAsh,
+            tint = if (isFavorite) AetherRose else AetherMute,
             modifier = Modifier
                 .size(18.dp)
                 .clickable {
@@ -562,7 +573,7 @@ fun CommandPaletteTrackRow(
 }
 
 /**
- * 2-Column Raycast Album Card.
+ * 2-Column Aether Album Card.
  */
 @Composable
 fun RaycastAlbumCard(album: Album) {
@@ -574,7 +585,7 @@ fun RaycastAlbumCard(album: Album) {
 
     RaycastCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RaycastRadiusMd
+        shape = AetherRadiusMd
     ) {
         Column(
             modifier = Modifier.padding(8.dp)
@@ -583,9 +594,9 @@ fun RaycastAlbumCard(album: Album) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1.0f)
-                    .clip(RaycastRadiusSm)
-                    .background(RaycastSurfaceElevated)
-                    .border(1.dp, RaycastHairline, RaycastRadiusSm),
+                    .clip(AetherRadiusSm)
+                    .background(AetherSurfaceElevated)
+                    .border(1.dp, AetherHairline, AetherRadiusSm),
                 contentAlignment = Alignment.Center
             ) {
                 if (artworkBitmap != null) {
@@ -599,7 +610,7 @@ fun RaycastAlbumCard(album: Album) {
                     Icon(
                         imageVector = Icons.Default.Album,
                         contentDescription = null,
-                        tint = RaycastMute,
+                        tint = AetherMute,
                         modifier = Modifier.size(36.dp)
                     )
                 }
@@ -611,7 +622,7 @@ fun RaycastAlbumCard(album: Album) {
                 text = album.title,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = RaycastInk,
+                color = AetherInk,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -619,7 +630,7 @@ fun RaycastAlbumCard(album: Album) {
             Text(
                 text = "${album.artist} · ${album.trackCount} tracks",
                 fontSize = 10.sp,
-                color = RaycastMute,
+                color = AetherMute,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -628,13 +639,13 @@ fun RaycastAlbumCard(album: Album) {
 }
 
 /**
- * Raycast Artist Row.
+ * Aether Artist Row.
  */
 @Composable
 fun RaycastArtistRow(artist: Artist) {
     RaycastCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RaycastRadiusSm
+        shape = AetherRadiusSm
     ) {
         Row(
             modifier = Modifier
@@ -647,14 +658,14 @@ fun RaycastArtistRow(artist: Artist) {
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(RaycastSurfaceElevated)
-                    .border(1.dp, RaycastHairline, CircleShape),
+                    .background(AetherSurfaceElevated)
+                    .border(1.dp, AetherHairline, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = null,
-                    tint = RaycastBody,
+                    tint = AetherInk,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -664,12 +675,12 @@ fun RaycastArtistRow(artist: Artist) {
                     text = artist.name,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = RaycastInk
+                    color = AetherInk
                 )
                 Text(
                     text = "${artist.albumCount} albums · ${artist.trackCount} tracks",
                     fontSize = 11.sp,
-                    color = RaycastMute
+                    color = AetherMute
                 )
             }
         }

@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.audiofx.Equalizer
 import android.net.Uri
+import android.os.PowerManager
 import java.io.File
 
 class UnifiedAudioEngine(private val context: Context) {
@@ -23,6 +24,7 @@ class UnifiedAudioEngine(private val context: Context) {
         try {
             mediaPlayer?.release()
             mediaPlayer = MediaPlayer().apply {
+                setWakeMode(context.applicationContext, PowerManager.PARTIAL_WAKE_LOCK)
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)

@@ -14,16 +14,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
@@ -36,7 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
@@ -45,17 +42,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ipodmodern.audio.core.model.Track
-import com.ipodmodern.audio.ui.theme.RaycastBody
-import com.ipodmodern.audio.ui.theme.RaycastHairline
-import com.ipodmodern.audio.ui.theme.RaycastHairlineStrong
-import com.ipodmodern.audio.ui.theme.RaycastInk
-import com.ipodmodern.audio.ui.theme.RaycastMute
-import com.ipodmodern.audio.ui.theme.RaycastOnPrimary
-import com.ipodmodern.audio.ui.theme.RaycastPrimaryWhite
-import com.ipodmodern.audio.ui.theme.RaycastRadiusLg
-import com.ipodmodern.audio.ui.theme.RaycastRadiusSm
-import com.ipodmodern.audio.ui.theme.RaycastSurface
-import com.ipodmodern.audio.ui.theme.RaycastSurfaceElevated
+import com.ipodmodern.audio.ui.theme.AetherCyan
+import com.ipodmodern.audio.ui.theme.AetherHairline
+import com.ipodmodern.audio.ui.theme.AetherInk
+import com.ipodmodern.audio.ui.theme.AetherMute
+import com.ipodmodern.audio.ui.theme.AetherOnPrimary
+import com.ipodmodern.audio.ui.theme.AetherPrimaryWhite
+import com.ipodmodern.audio.ui.theme.AetherRadiusLg
+import com.ipodmodern.audio.ui.theme.AetherRadiusSm
+import com.ipodmodern.audio.ui.theme.AetherSurface
+import com.ipodmodern.audio.ui.theme.AetherSurfaceElevated
 
 @Composable
 fun MiniPlayerBar(
@@ -83,9 +79,9 @@ fun MiniPlayerBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 4.dp)
-            .clip(RaycastRadiusLg)
-            .background(RaycastSurface)
-            .border(1.dp, RaycastHairline, RaycastRadiusLg)
+            .clip(AetherRadiusLg)
+            .background(AetherSurface)
+            .border(1.dp, AetherHairline, AetherRadiusLg)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onBarClick()
@@ -102,9 +98,9 @@ fun MiniPlayerBar(
             Box(
                 modifier = Modifier
                     .size(38.dp)
-                    .clip(RaycastRadiusSm)
-                    .background(RaycastSurfaceElevated)
-                    .border(1.dp, RaycastHairline, RaycastRadiusSm),
+                    .clip(AetherRadiusSm)
+                    .background(AetherSurfaceElevated)
+                    .border(1.dp, AetherHairline, AetherRadiusSm),
                 contentAlignment = Alignment.Center
             ) {
                 if (artworkBitmap != null) {
@@ -118,7 +114,7 @@ fun MiniPlayerBar(
                     Icon(
                         imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
-                        tint = RaycastMute,
+                        tint = AetherMute,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -133,25 +129,25 @@ fun MiniPlayerBar(
                     text = track.title,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = RaycastInk,
+                    color = AetherInk,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = track.artist,
                     fontSize = 11.sp,
-                    color = RaycastBody,
+                    color = AetherMute,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            // Mini Play/Pause Button (Raycast Universal White CTA Circle)
+            // Mini Play/Pause Button
             Box(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(RaycastPrimaryWhite)
+                    .background(AetherPrimaryWhite)
                     .clickable {
                         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         onPlayPauseClick()
@@ -166,7 +162,7 @@ fun MiniPlayerBar(
                     Icon(
                         imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (playing) "Pause" else "Play",
-                        tint = RaycastOnPrimary,
+                        tint = AetherOnPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -177,8 +173,8 @@ fun MiniPlayerBar(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(RaycastSurfaceElevated)
-                    .border(1.dp, RaycastHairline, CircleShape)
+                    .background(AetherSurfaceElevated)
+                    .border(1.dp, AetherHairline, CircleShape)
                     .clickable {
                         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         onNextClick()
@@ -188,7 +184,7 @@ fun MiniPlayerBar(
                 Icon(
                     imageVector = Icons.Default.SkipNext,
                     contentDescription = "Next",
-                    tint = RaycastInk,
+                    tint = AetherInk,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -200,13 +196,17 @@ fun MiniPlayerBar(
                 .fillMaxWidth()
                 .height(2.dp)
                 .align(Alignment.BottomCenter)
-                .background(RaycastHairline)
+                .background(AetherHairline)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(progress)
                     .fillMaxHeight()
-                    .background(RaycastPrimaryWhite)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(AetherCyan, AetherPrimaryWhite)
+                        )
+                    )
             )
         }
     }

@@ -1,6 +1,5 @@
 package com.ipodmodern.audio.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -9,106 +8,143 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
-// MARK: - Raycast Surface Ladder (Dark-Only System)
-val RaycastCanvas = Color(0xFF07080A)           // Pure near-black canvas background
-val RaycastSurface = Color(0xFF0D0D0D)          // Cards & elevated panels
-val RaycastSurfaceElevated = Color(0xFF101111)  // Inputs, buttons, pill-tabs
-val RaycastSurfaceCard = Color(0xFF141517)      // App-icon tiles, keycap backgrounds
-val RaycastButtonFg = Color(0xFF18191A)         // In-card deep surface variant
+// MARK: - Aether Luxury Obsidian & Stellar Void Canvas
+val AetherCanvas = Color(0xFF050608)           // Deepest stellar black canvas
+val AetherSurface = Color(0xFF0C0E14)          // Glassmorphic surface panels
+val AetherSurfaceElevated = Color(0xFF131722)  // Interactive inputs, pill-tabs, elevated cards
+val AetherSurfaceCard = Color(0xFF181D2B)      // Active tiles, keycaps, hero containers
+val AetherButtonFg = Color(0xFF1E2333)         // Secondary button interior
 
-// MARK: - Raycast Hairlines (1px Card Borders, No Drop Shadows)
-val RaycastHairline = Color(0xFF242728)         // Universal 1px border
-val RaycastHairlineSoft = Color(0x14FFFFFF)     // Translucent overlay border (rgba 0.08)
-val RaycastHairlineStrong = Color(0x29FFFFFF)   // Stronger divider (rgba 0.16)
+// MARK: - Aether Specular Hairlines & Glass Borders
+val AetherHairline = Color(0xFF1E2536)         // Subtle precision border (1px)
+val AetherHairlineSoft = Color(0x1AFFFFFF)     // Translucent specular highlight
+val AetherHairlineStrong = Color(0xFF323D57)   // Active focus/selected state border
 
-// MARK: - Raycast Primary Brand Action (Universal White CTA)
-val RaycastPrimaryWhite = Color(0xFFFFFFFF)     // Universal primary action pill
-val RaycastPrimaryPressed = Color(0xFFE8E8E8)   // Pressed state
-val RaycastOnPrimary = Color(0xFF000000)        // Pure black on white CTA
+// MARK: - Aether Luminous Brand Accents
+val AetherCyan = Color(0xFF00E5FF)             // Luminous Ethereal Cyan (Hi-Res Lossless)
+val AetherCyanGlow = Color(0x3300E5FF)         // Ambient Cyan Aura
+val AetherViolet = Color(0xFF8B5CF6)           // Cosmic Lossless Violet
+val AetherVioletGlow = Color(0x338B5CF6)       // Ambient Violet Aura
+val AetherEmerald = Color(0xFF10B981)          // Studio Master Green
+val AetherAmber = Color(0xFFF59E0B)            // Valve Warmth Amber
+val AetherRose = Color(0xFFF43F5E)             // Favorite Heart Rose
 
-// MARK: - Raycast Text Ladder
-val RaycastInk = Color(0xFFF4F4F6)              // Primary headline text
-val RaycastBody = Color(0xFFCDCDCD)             // Default body text
-val RaycastCharcoal = Color(0xFFD3D3D4)         // Brighter body
-val RaycastMute = Color(0xFF9C9C9D)             // Metadata, captions, secondary
-val RaycastAsh = Color(0xFF6A6B6C)              // Low-emphasis utility & disabled
-val RaycastStone = Color(0xFF434345)            // Least-emphasis icon color
+// MARK: - Aether Primary Action (Solid White Hero Pill)
+val AetherPrimaryWhite = Color(0xFFFFFFFF)     // High-contrast primary CTA
+val AetherPrimaryPressed = Color(0xFFE2E8F0)   // Pressed feedback
+val AetherOnPrimary = Color(0xFF000000)        // Pure obsidian glyphs on white
 
-// MARK: - Raycast Semantic Accents (Reserved for illustrations & key badges)
-val RaycastAccentBlue = Color(0xFF57C1FF)
-val RaycastAccentBlueSoft = Color(0x2657C1FF)
-val RaycastAccentGreen = Color(0xFF59D499)
-val RaycastAccentGreenSoft = Color(0x2659D499)
-val RaycastAccentYellow = Color(0xFFFFC533)
-val RaycastAccentYellowSoft = Color(0x26FFC533)
-val RaycastAccentRed = Color(0xFFFF6161)
-val RaycastAccentRedSoft = Color(0x26FF6161)
+// MARK: - Aether Typography Ladder
+val AetherInk = Color(0xFFF8FAFC)              // Pure diamond white headlines
+val AetherBody = Color(0xFFCBD5E1)             // Primary body text
+val AetherCharcoal = Color(0xFF94A3B8)         // Secondary body / metadata
+val AetherMute = Color(0xFF64748B)             // Captions, format badges, labels
+val AetherAsh = Color(0xFF475569)              // Disabled & subtle markers
 
-// MARK: - Raycast Keycap Subtle 3D Physical Gradient
-val RaycastKeycapGradient = Brush.verticalGradient(
-    listOf(Color(0xFF16181B), Color(0xFF0D0E10))
+// MARK: - Aether Gradients
+val AetherAuroraGradient = Brush.linearGradient(
+    listOf(AetherCyan, AetherViolet)
+)
+val AetherCardGradient = Brush.verticalGradient(
+    listOf(Color(0xFF131722), Color(0xFF0C0E14))
+)
+val AetherKeycapGradient = Brush.verticalGradient(
+    listOf(Color(0xFF1C2233), Color(0xFF10141F))
 )
 
-// Legacy theme aliases for backwards compatibility
-val ModernBgDark = RaycastCanvas
-val ModernSurfaceDark = RaycastSurface
-val ModernCardDark = RaycastSurfaceCard
-val ModernTextPrimary = RaycastInk
-val ModernTextSecondary = RaycastBody
-val ModernTextMuted = RaycastMute
-val ModernAccentBlue = RaycastAccentBlue
-val ModernAccentCyan = RaycastAccentBlue
-val ModernAccentPurple = Color(0xFF8B5CF6)
-val ModernAccentEmerald = RaycastAccentGreen
-val ModernAccentGold = RaycastAccentYellow
-val ModernHeroGradient = Brush.linearGradient(listOf(RaycastAccentBlue, Color(0xFF6366F1), Color(0xFF8B5CF6)))
+// Legacy Aliases for backwards compatibility across existing components
+val RaycastCanvas = AetherCanvas
+val RaycastSurface = AetherSurface
+val RaycastSurfaceElevated = AetherSurfaceElevated
+val RaycastSurfaceCard = AetherSurfaceCard
+val RaycastButtonFg = AetherButtonFg
+val RaycastHairline = AetherHairline
+val RaycastHairlineSoft = AetherHairlineSoft
+val RaycastHairlineStrong = AetherHairlineStrong
+val RaycastPrimaryWhite = AetherPrimaryWhite
+val RaycastPrimaryPressed = AetherPrimaryPressed
+val RaycastOnPrimary = AetherOnPrimary
+val RaycastInk = AetherInk
+val RaycastBody = AetherBody
+val RaycastCharcoal = AetherCharcoal
+val RaycastMute = AetherMute
+val RaycastAsh = AetherAsh
+val RaycastStone = Color(0xFF334155)
+val RaycastAccentBlue = AetherCyan
+val RaycastAccentBlueSoft = AetherCyanGlow
+val RaycastAccentGreen = AetherEmerald
+val RaycastAccentGreenSoft = Color(0x2610B981)
+val RaycastAccentYellow = AetherAmber
+val RaycastAccentYellowSoft = Color(0x26F59E0B)
+val RaycastAccentRed = AetherRose
+val RaycastAccentRedSoft = Color(0x26F43F5E)
+val RaycastKeycapGradient = AetherKeycapGradient
 
-// MARK: - Raycast Rounded Corner Scale
-val RaycastRadiusXs = RoundedCornerShape(4.dp)      // Keycaps, badges, tags
-val RaycastRadiusSm = RoundedCornerShape(6.dp)      // Rows, micro chips
-val RaycastRadiusMd = RoundedCornerShape(8.dp)      // Buttons, search inputs, icon tiles
-val RaycastRadiusLg = RoundedCornerShape(12.dp)     // Feature cards, panels
-val RaycastRadiusXl = RoundedCornerShape(16.dp)     // Large mockup containers, modals
-val RaycastRadiusFull = RoundedCornerShape(9999.dp) // Pill-tab chips, primary CTAs
+val ModernBgDark = AetherCanvas
+val ModernSurfaceDark = AetherSurface
+val ModernCardDark = AetherSurfaceCard
+val ModernTextPrimary = AetherInk
+val ModernTextSecondary = AetherBody
+val ModernTextMuted = AetherMute
+val ModernAccentBlue = AetherCyan
+val ModernAccentCyan = AetherCyan
+val ModernAccentPurple = AetherViolet
+val ModernAccentEmerald = AetherEmerald
+val ModernAccentGold = AetherAmber
+val ModernHeroGradient = AetherAuroraGradient
+
+// MARK: - Aether Corner Radii
+val RaycastRadiusXs = RoundedCornerShape(4.dp)
+val RaycastRadiusSm = RoundedCornerShape(8.dp)
+val RaycastRadiusMd = RoundedCornerShape(12.dp)
+val RaycastRadiusLg = RoundedCornerShape(16.dp)
+val RaycastRadiusXl = RoundedCornerShape(20.dp)
+val RaycastRadiusFull = RoundedCornerShape(9999.dp)
+
+val AetherRadiusXs = RaycastRadiusXs
+val AetherRadiusSm = RaycastRadiusSm
+val AetherRadiusMd = RaycastRadiusMd
+val AetherRadiusLg = RaycastRadiusLg
+val AetherRadiusXl = RaycastRadiusXl
+val AetherRadiusFull = RaycastRadiusFull
 
 @Immutable
-data class RaycastColorSystem(
-    val canvas: Color = RaycastCanvas,
-    val surface: Color = RaycastSurface,
-    val surfaceElevated: Color = RaycastSurfaceElevated,
-    val surfaceCard: Color = RaycastSurfaceCard,
-    val hairline: Color = RaycastHairline,
-    val hairlineStrong: Color = RaycastHairlineStrong,
-    val primary: Color = RaycastPrimaryWhite,
-    val onPrimary: Color = RaycastOnPrimary,
-    val ink: Color = RaycastInk,
-    val body: Color = RaycastBody,
-    val mute: Color = RaycastMute,
-    val ash: Color = RaycastAsh
+data class AetherColorSystem(
+    val canvas: Color = AetherCanvas,
+    val surface: Color = AetherSurface,
+    val surfaceElevated: Color = AetherSurfaceElevated,
+    val surfaceCard: Color = AetherSurfaceCard,
+    val hairline: Color = AetherHairline,
+    val hairlineStrong: Color = AetherHairlineStrong,
+    val primary: Color = AetherPrimaryWhite,
+    val onPrimary: Color = AetherOnPrimary,
+    val cyan: Color = AetherCyan,
+    val violet: Color = AetherViolet,
+    val ink: Color = AetherInk,
+    val body: Color = AetherBody,
+    val mute: Color = AetherMute,
+    val ash: Color = AetherAsh
 )
 
-val LocalRaycastColors = staticCompositionLocalOf { RaycastColorSystem() }
+val LocalAetherColors = staticCompositionLocalOf { AetherColorSystem() }
+val LocalRaycastColors = LocalAetherColors
 
 @Composable
 fun ModernAppTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = darkColorScheme(
-        primary = RaycastPrimaryWhite,
-        onPrimary = RaycastOnPrimary,
-        background = RaycastCanvas,
-        onBackground = RaycastInk,
-        surface = RaycastSurface,
-        onSurface = RaycastInk,
-        surfaceVariant = RaycastSurfaceElevated,
-        onSurfaceVariant = RaycastBody,
-        outline = RaycastHairline
+        primary = AetherPrimaryWhite,
+        onPrimary = AetherOnPrimary,
+        background = AetherCanvas,
+        onBackground = AetherInk,
+        surface = AetherSurface,
+        onSurface = AetherInk,
+        surfaceVariant = AetherSurfaceElevated,
+        onSurfaceVariant = AetherBody,
+        outline = AetherHairline
     )
 
     MaterialTheme(

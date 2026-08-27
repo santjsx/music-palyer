@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.PlayCircleOutline
@@ -33,22 +31,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ipodmodern.audio.ui.screens.ScreenType
-import com.ipodmodern.audio.ui.theme.RaycastAccentBlue
-import com.ipodmodern.audio.ui.theme.RaycastBody
-import com.ipodmodern.audio.ui.theme.RaycastHairline
-import com.ipodmodern.audio.ui.theme.RaycastHairlineStrong
-import com.ipodmodern.audio.ui.theme.RaycastInk
-import com.ipodmodern.audio.ui.theme.RaycastMute
-import com.ipodmodern.audio.ui.theme.RaycastPrimaryWhite
-import com.ipodmodern.audio.ui.theme.RaycastRadiusLg
-import com.ipodmodern.audio.ui.theme.RaycastRadiusXl
-import com.ipodmodern.audio.ui.theme.RaycastSurface
-import com.ipodmodern.audio.ui.theme.RaycastSurfaceElevated
+import com.ipodmodern.audio.ui.theme.AetherCyan
+import com.ipodmodern.audio.ui.theme.AetherHairline
+import com.ipodmodern.audio.ui.theme.AetherMute
+import com.ipodmodern.audio.ui.theme.AetherPrimaryWhite
+import com.ipodmodern.audio.ui.theme.AetherRadiusLg
+import com.ipodmodern.audio.ui.theme.AetherRadiusXl
+import com.ipodmodern.audio.ui.theme.AetherSurface
+import com.ipodmodern.audio.ui.theme.AetherSurfaceElevated
 
 enum class ModernTab(val title: String, val icon: ImageVector) {
     LIBRARY("Library", Icons.Default.QueueMusic),
     NOW_PLAYING("Playing", Icons.Default.PlayCircleOutline),
-    EQUALIZER("DSP Studio", Icons.Default.Equalizer),
+    EQUALIZER("10-EQ", Icons.Default.Equalizer),
     SYNC("Wi-Fi Sync", Icons.Default.Wifi)
 }
 
@@ -71,9 +66,9 @@ fun ModernBottomNavIsland(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 6.dp)
-            .clip(RaycastRadiusXl)
-            .background(RaycastSurface)
-            .border(1.dp, RaycastHairline, RaycastRadiusXl)
+            .clip(AetherRadiusXl)
+            .background(AetherSurface)
+            .border(1.dp, AetherHairline, AetherRadiusXl)
             .padding(vertical = 6.dp, horizontal = 8.dp)
     ) {
         Row(
@@ -87,12 +82,12 @@ fun ModernBottomNavIsland(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .clip(RaycastRadiusLg)
-                        .background(if (isSelected) RaycastSurfaceElevated else Color.Transparent)
+                        .clip(AetherRadiusLg)
+                        .background(if (isSelected) AetherSurfaceElevated else Color.Transparent)
                         .border(
                             1.dp,
-                            if (isSelected) RaycastHairlineStrong else Color.Transparent,
-                            RaycastRadiusLg
+                            if (isSelected) AetherCyan else Color.Transparent,
+                            AetherRadiusLg
                         )
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
@@ -103,7 +98,7 @@ fun ModernBottomNavIsland(
                     Icon(
                         imageVector = tab.icon,
                         contentDescription = tab.title,
-                        tint = if (isSelected) RaycastPrimaryWhite else RaycastMute,
+                        tint = if (isSelected) AetherCyan else AetherMute,
                         modifier = Modifier.size(20.dp)
                     )
 
@@ -113,7 +108,7 @@ fun ModernBottomNavIsland(
                         text = tab.title,
                         fontSize = 10.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) RaycastPrimaryWhite else RaycastMute,
+                        color = if (isSelected) AetherPrimaryWhite else AetherMute,
                         letterSpacing = 0.2.sp
                     )
                 }

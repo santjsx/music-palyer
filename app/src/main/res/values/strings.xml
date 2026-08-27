@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Modern Player</string>
+    <string name="app_name">Aether</string>
     <string name="hold_active">Hold Active</string>
     <string name="sync_server_running">Wi-Fi Sync Server Active</string>
     <string name="audiophile_exclusive">AAudio Direct Exclusive Mode</string>

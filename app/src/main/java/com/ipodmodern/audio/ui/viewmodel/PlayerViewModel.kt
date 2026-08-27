@@ -1,9 +1,9 @@
 package com.ipodmodern.audio.ui.viewmodel
 
 import android.app.Application
-import android.media.MediaMetadataRetriever
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.ipodmodern.audio.core.audio.AudioPlaybackService
 import com.ipodmodern.audio.core.audio.UnifiedAudioEngine
 import com.ipodmodern.audio.core.database.MusicDatabase
 import com.ipodmodern.audio.core.database.entity.AlbumEntity
@@ -66,11 +66,25 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var volumeDismissJob: Job? = null
 
     init {
+        AudioPlaybackService.playbackActionListener = { action ->
+            when (action) {
+                AudioPlaybackService.ACTION_PLAY -> if (!_uiState.value.isPlaying) togglePlayPause()
+                AudioPlaybackService.ACTION_PAUSE -> if (_uiState.value.isPlaying) togglePlayPause()
+                AudioPlaybackService.ACTION_TOGGLE_PLAY -> togglePlayPause()
+                AudioPlaybackService.ACTION_NEXT -> nextTrack()
+                AudioPlaybackService.ACTION_PREV -> prevTrack()
+            }
+        }
+
         audioEngine.onPlaybackCompleted = {
             onSongCompleted()
         }
         scanAndLoadLocalMusic()
         startPositionTicker()
+    }
+
+    private fun updateForegroundNotification(track: Track?, isPlaying: Boolean) {
+        AudioPlaybackService.updateService(getApplication(), track, isPlaying)
     }
 
     private fun onSongCompleted() {
@@ -81,6 +95,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 seekTo(0)
                 audioEngine.play()
                 _uiState.value = _uiState.value.copy(isPlaying = true)
+                updateForegroundNotification(_uiState.value.currentTrack, true)
             }
             1 -> {
                 // Repeat All
@@ -94,6 +109,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     seekTo(0)
                     audioEngine.pause()
                     _uiState.value = _uiState.value.copy(isPlaying = false)
+                    updateForegroundNotification(_uiState.value.currentTrack, false)
                 }
             }
         }
@@ -265,6 +281,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 lyrics = emptyList(),
                 currentLyricText = null
             )
+            updateForegroundNotification(null, false)
             return
         }
         originalQueue = tracks
@@ -286,7 +303,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val track = playbackQueue.getOrNull(queueIndex) ?: return
         audioEngine.loadAndPlay(track.filePath, autoPlay = startPlaying)
 
-        // Load real lyrics from local .lrc file if present (no mock strings)
+        // Load real lyrics from local .lrc file if present
         val realLyrics = localMusicScanner.loadLyricsForTrack(track)
 
         _uiState.value = _uiState.value.copy(
@@ -301,6 +318,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             activeLyricIndex = if (realLyrics.isNotEmpty()) 0 else -1,
             currentLyricText = realLyrics.firstOrNull()?.text
         )
+
+        updateForegroundNotification(track, startPlaying)
     }
 
     fun playTrackAtIndex(index: Int) {
@@ -316,9 +335,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (_uiState.value.isPlaying) {
             audioEngine.pause()
             _uiState.value = _uiState.value.copy(isPlaying = false)
+            updateForegroundNotification(_uiState.value.currentTrack, false)
         } else {
             audioEngine.play()
             _uiState.value = _uiState.value.copy(isPlaying = true)
+            updateForegroundNotification(_uiState.value.currentTrack, true)
         }
     }
 
@@ -403,6 +424,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     override fun onCleared() {
         super.onCleared()
+        AudioPlaybackService.stopService(getApplication())
         audioEngine.release()
     }
 }

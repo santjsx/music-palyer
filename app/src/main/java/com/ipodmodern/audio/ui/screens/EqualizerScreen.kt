@@ -48,34 +48,34 @@ import androidx.compose.ui.unit.sp
 import com.ipodmodern.audio.core.model.EqualizerPreset
 import com.ipodmodern.audio.ui.components.RaycastCard
 import com.ipodmodern.audio.ui.components.RaycastKeycapBadge
-import com.ipodmodern.audio.ui.theme.RaycastAccentBlue
-import com.ipodmodern.audio.ui.theme.RaycastAccentGreen
-import com.ipodmodern.audio.ui.theme.RaycastAccentYellow
-import com.ipodmodern.audio.ui.theme.RaycastAsh
-import com.ipodmodern.audio.ui.theme.RaycastBody
-import com.ipodmodern.audio.ui.theme.RaycastCanvas
-import com.ipodmodern.audio.ui.theme.RaycastHairline
-import com.ipodmodern.audio.ui.theme.RaycastHairlineStrong
-import com.ipodmodern.audio.ui.theme.RaycastInk
-import com.ipodmodern.audio.ui.theme.RaycastMute
-import com.ipodmodern.audio.ui.theme.RaycastPrimaryWhite
-import com.ipodmodern.audio.ui.theme.RaycastRadiusMd
-import com.ipodmodern.audio.ui.theme.RaycastRadiusXs
-import com.ipodmodern.audio.ui.theme.RaycastSurface
-import com.ipodmodern.audio.ui.theme.RaycastSurfaceCard
-import com.ipodmodern.audio.ui.theme.RaycastSurfaceElevated
+import com.ipodmodern.audio.ui.theme.AetherAmber
+import com.ipodmodern.audio.ui.theme.AetherAsh
+import com.ipodmodern.audio.ui.theme.AetherCanvas
+import com.ipodmodern.audio.ui.theme.AetherCyan
+import com.ipodmodern.audio.ui.theme.AetherCyanGlow
+import com.ipodmodern.audio.ui.theme.AetherEmerald
+import com.ipodmodern.audio.ui.theme.AetherHairline
+import com.ipodmodern.audio.ui.theme.AetherHairlineStrong
+import com.ipodmodern.audio.ui.theme.AetherInk
+import com.ipodmodern.audio.ui.theme.AetherMute
+import com.ipodmodern.audio.ui.theme.AetherPrimaryWhite
+import com.ipodmodern.audio.ui.theme.AetherRadiusMd
+import com.ipodmodern.audio.ui.theme.AetherRadiusSm
+import com.ipodmodern.audio.ui.theme.AetherSurface
+import com.ipodmodern.audio.ui.theme.AetherSurfaceElevated
+import com.ipodmodern.audio.ui.theme.AetherViolet
 import java.util.Locale
 
-val RAYCAST_BAND_LABELS = listOf("31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k")
+val AETHER_BAND_LABELS = listOf("31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k")
 
-val RAYCAST_STUDIO_PRESETS = listOf(
+val AETHER_STUDIO_PRESETS = listOf(
     EqualizerPreset("Flat", FloatArray(10) { 0.0f }),
-    EqualizerPreset("Audiophile", floatArrayOf(2.5f, 2.0f, 1.0f, 0.0f, 0.0f, 0.5f, 1.5f, 2.0f, 2.5f, 3.0f)),
-    EqualizerPreset("Bass Boost", floatArrayOf(6.0f, 5.0f, 3.5f, 1.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.5f)),
-    EqualizerPreset("Rock", floatArrayOf(4.5f, 3.5f, 2.0f, 0.5f, -1.0f, -0.5f, 2.0f, 3.5f, 4.0f, 4.5f)),
-    EqualizerPreset("Vocal", floatArrayOf(-2.0f, -1.0f, 0.0f, 1.0f, 3.0f, 4.0f, 3.0f, 1.0f, 0.0f, -1.0f)),
+    EqualizerPreset("Master", floatArrayOf(2.5f, 2.0f, 1.0f, 0.0f, 0.0f, 0.5f, 1.5f, 2.0f, 2.5f, 3.0f)),
+    EqualizerPreset("Bass Surge", floatArrayOf(6.0f, 5.0f, 3.5f, 1.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.5f)),
+    EqualizerPreset("Vocal Focus", floatArrayOf(-2.0f, -1.0f, 0.0f, 1.0f, 3.0f, 4.0f, 3.0f, 1.0f, 0.0f, -1.0f)),
     EqualizerPreset("Electronic", floatArrayOf(5.0f, 4.0f, 1.5f, 0.0f, -1.5f, 1.5f, 2.0f, 3.0f, 4.5f, 5.0f)),
-    EqualizerPreset("Acoustic", floatArrayOf(2.5f, 2.0f, 1.0f, 1.0f, 1.5f, 2.0f, 3.0f, 3.0f, 2.5f, 2.0f))
+    EqualizerPreset("Acoustic", floatArrayOf(2.5f, 2.0f, 1.0f, 1.0f, 1.5f, 2.0f, 3.0f, 3.0f, 2.5f, 2.0f)),
+    EqualizerPreset("Rock", floatArrayOf(4.5f, 3.5f, 2.0f, 0.5f, -1.0f, -0.5f, 2.0f, 3.5f, 4.0f, 4.5f))
 )
 
 @Composable
@@ -95,7 +95,7 @@ fun EqualizerScreen(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(RaycastCanvas)
+            .background(AetherCanvas)
             .verticalScroll(scrollState)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -110,18 +110,18 @@ fun EqualizerScreen(
         ) {
             Column {
                 Text(
-                    text = "DSP STUDIO",
+                    text = "AETHER DSP STUDIO",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = RaycastMute,
-                    letterSpacing = 1.0.sp
+                    color = AetherCyan,
+                    letterSpacing = 1.4.sp
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = presetName.uppercase(),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = RaycastInk,
+                    color = AetherInk,
                     letterSpacing = 0.2.sp
                 )
             }
@@ -133,12 +133,12 @@ fun EqualizerScreen(
                 // Reset to Flat Action Pill
                 Box(
                     modifier = Modifier
-                        .clip(RaycastRadiusMd)
-                        .background(RaycastSurfaceElevated)
-                        .border(1.dp, RaycastHairline, RaycastRadiusMd)
+                        .clip(AetherRadiusMd)
+                        .background(AetherSurfaceElevated)
+                        .border(1.dp, AetherHairline, AetherRadiusMd)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            onPresetSelect(RAYCAST_STUDIO_PRESETS.first())
+                            onPresetSelect(AETHER_STUDIO_PRESETS.first())
                         }
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
@@ -150,14 +150,14 @@ fun EqualizerScreen(
                         Icon(
                             imageVector = Icons.Default.RestartAlt,
                             contentDescription = "Reset Flat",
-                            tint = RaycastBody,
+                            tint = AetherInk,
                             modifier = Modifier.size(13.dp)
                         )
                         Text(
                             text = "FLAT",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = RaycastBody,
+                            color = AetherInk,
                             letterSpacing = 0.4.sp
                         )
                     }
@@ -166,21 +166,21 @@ fun EqualizerScreen(
                 // Headroom Keycap Badge
                 RaycastKeycapBadge(
                     text = String.format(Locale.US, "HEADROOM: %.1f dB", dynamicPrecutDb),
-                    textColor = if (dynamicPrecutDb < -0.1f) RaycastAccentYellow else RaycastAccentGreen,
-                    accentColor = if (dynamicPrecutDb < -0.1f) RaycastAccentYellow else RaycastAccentGreen
+                    textColor = if (dynamicPrecutDb < -0.1f) AetherAmber else AetherEmerald,
+                    accentColor = if (dynamicPrecutDb < -0.1f) AetherAmber else AetherEmerald
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // MARK: - Raycast Command-Palette Parametric Response Card
+        // MARK: - Parametric Response Card
         RaycastCard(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp),
-            shape = RoundedCornerShape(12.dp),
-            backgroundColor = RaycastSurface
+                .height(104.dp),
+            shape = AetherRadiusMd,
+            backgroundColor = AetherSurface
         ) {
             Canvas(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 10.dp)) {
                 val w = size.width
@@ -189,7 +189,7 @@ fun EqualizerScreen(
 
                 // 0dB Center reference line
                 drawLine(
-                    color = RaycastHairlineStrong,
+                    color = AetherHairlineStrong,
                     start = Offset(0f, midY),
                     end = Offset(w, midY),
                     strokeWidth = 1.dp.toPx()
@@ -197,13 +197,13 @@ fun EqualizerScreen(
 
                 // Grid lines at +6dB and -6dB
                 drawLine(
-                    color = RaycastHairline,
+                    color = AetherHairline,
                     start = Offset(0f, midY - h * 0.28f),
                     end = Offset(w, midY - h * 0.28f),
                     strokeWidth = 1.dp.toPx()
                 )
                 drawLine(
-                    color = RaycastHairline,
+                    color = AetherHairline,
                     start = Offset(0f, midY + h * 0.28f),
                     end = Offset(w, midY + h * 0.28f),
                     strokeWidth = 1.dp.toPx()
@@ -244,8 +244,8 @@ fun EqualizerScreen(
                     path = fillPath,
                     brush = Brush.verticalGradient(
                         listOf(
-                            RaycastAccentBlue.copy(alpha = 0.22f),
-                            RaycastAccentBlue.copy(alpha = 0.04f),
+                            AetherCyan.copy(alpha = 0.25f),
+                            AetherViolet.copy(alpha = 0.05f),
                             Color.Transparent
                         )
                     )
@@ -254,35 +254,35 @@ fun EqualizerScreen(
                 // Crisp Cyan Stroke Line
                 drawPath(
                     path = strokePath,
-                    color = RaycastAccentBlue,
+                    color = AetherCyan,
                     style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
                 )
 
                 // Band Anchor Dots
                 points.forEach { pt ->
-                    drawCircle(color = RaycastPrimaryWhite, radius = 2.5.dp.toPx(), center = pt)
+                    drawCircle(color = AetherPrimaryWhite, radius = 2.5.dp.toPx(), center = pt)
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // MARK: - Preset Chips Carousel (Raycast pill-tabs)
+        // MARK: - Preset Chips Carousel
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            RAYCAST_STUDIO_PRESETS.forEach { preset ->
+            AETHER_STUDIO_PRESETS.forEach { preset ->
                 val isSelected = preset.name.equals(presetName, ignoreCase = true)
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
-                        .background(if (isSelected) RaycastSurfaceElevated else Color.Transparent)
+                        .background(if (isSelected) AetherSurfaceElevated else Color.Transparent)
                         .border(
                             1.dp,
-                            if (isSelected) RaycastHairlineStrong else RaycastHairline,
+                            if (isSelected) AetherCyan else AetherHairline,
                             CircleShape
                         )
                         .clickable {
@@ -295,7 +295,7 @@ fun EqualizerScreen(
                         text = preset.name,
                         fontSize = 12.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) RaycastPrimaryWhite else RaycastBody
+                        color = if (isSelected) AetherPrimaryWhite else AetherMute
                     )
                 }
             }
@@ -308,8 +308,8 @@ fun EqualizerScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 2.dp),
-            shape = RoundedCornerShape(12.dp),
-            backgroundColor = RaycastSurface
+            shape = AetherRadiusMd,
+            backgroundColor = AetherSurface
         ) {
             Row(
                 modifier = Modifier
@@ -343,9 +343,9 @@ fun EqualizerScreen(
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = when {
-                                gain > 0.1f -> RaycastAccentBlue
-                                gain < -0.1f -> RaycastAccentYellow
-                                else -> RaycastMute
+                                gain > 0.1f -> AetherCyan
+                                gain < -0.1f -> AetherAmber
+                                else -> AetherMute
                             },
                             fontFamily = FontFamily.Monospace
                         )
@@ -358,8 +358,8 @@ fun EqualizerScreen(
                                 .width(14.dp)
                                 .weight(1f)
                                 .clip(RoundedCornerShape(7.dp))
-                                .background(RaycastSurfaceElevated)
-                                .border(1.dp, RaycastHairline, RoundedCornerShape(7.dp)),
+                                .background(AetherSurfaceElevated)
+                                .border(1.dp, AetherHairline, RoundedCornerShape(7.dp)),
                             contentAlignment = Alignment.BottomCenter
                         ) {
                             // 0dB Center Reference Dash
@@ -368,7 +368,7 @@ fun EqualizerScreen(
                                     .fillMaxWidth()
                                     .height(1.dp)
                                     .align(Alignment.Center)
-                                    .background(RaycastHairlineStrong)
+                                    .background(AetherHairlineStrong)
                             )
 
                             // Active Fill Track
@@ -377,9 +377,9 @@ fun EqualizerScreen(
                                     .fillMaxWidth()
                                     .fillMaxHeight(normalizedGain)
                                     .background(
-                                        if (gain > 0.1f) RaycastAccentBlue.copy(alpha = 0.5f)
-                                        else if (gain < -0.1f) RaycastAccentYellow.copy(alpha = 0.35f)
-                                        else RaycastHairlineStrong
+                                        if (gain > 0.1f) AetherCyan.copy(alpha = 0.5f)
+                                        else if (gain < -0.1f) AetherAmber.copy(alpha = 0.35f)
+                                        else AetherHairlineStrong
                                     )
                             )
 
@@ -394,8 +394,8 @@ fun EqualizerScreen(
                                     modifier = Modifier
                                         .size(14.dp)
                                         .clip(CircleShape)
-                                        .background(RaycastPrimaryWhite)
-                                        .border(1.dp, RaycastHairline, CircleShape)
+                                        .background(AetherPrimaryWhite)
+                                        .border(1.dp, AetherCyan, CircleShape)
                                 )
                             }
                         }
@@ -404,10 +404,10 @@ fun EqualizerScreen(
 
                         // Frequency Band Label
                         Text(
-                            text = RAYCAST_BAND_LABELS[i],
+                            text = AETHER_BAND_LABELS[i],
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = RaycastBody,
+                            color = AetherInk,
                             fontFamily = FontFamily.Monospace,
                             textAlign = TextAlign.Center
                         )
@@ -419,9 +419,9 @@ fun EqualizerScreen(
         Spacer(modifier = Modifier.height(10.dp))
 
         Text(
-            text = "Drag faders vertically to sculpt 10-Band Biquad DSP response curve",
+            text = "Sculpt 10-Band Biquad DSP response curve in real-time",
             fontSize = 11.sp,
-            color = RaycastAsh,
+            color = AetherAsh,
             textAlign = TextAlign.Center
         )
 

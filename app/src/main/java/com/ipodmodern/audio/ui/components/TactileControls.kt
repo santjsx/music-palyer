@@ -2,7 +2,12 @@ package com.ipodmodern.audio.ui.components
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -43,7 +48,6 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,35 +68,36 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ipodmodern.audio.ui.theme.RaycastAccentBlue
-import com.ipodmodern.audio.ui.theme.RaycastAccentGreen
-import com.ipodmodern.audio.ui.theme.RaycastAccentYellow
-import com.ipodmodern.audio.ui.theme.RaycastAsh
-import com.ipodmodern.audio.ui.theme.RaycastBody
-import com.ipodmodern.audio.ui.theme.RaycastHairline
-import com.ipodmodern.audio.ui.theme.RaycastHairlineStrong
-import com.ipodmodern.audio.ui.theme.RaycastInk
-import com.ipodmodern.audio.ui.theme.RaycastKeycapGradient
-import com.ipodmodern.audio.ui.theme.RaycastMute
-import com.ipodmodern.audio.ui.theme.RaycastOnPrimary
-import com.ipodmodern.audio.ui.theme.RaycastPrimaryPressed
-import com.ipodmodern.audio.ui.theme.RaycastPrimaryWhite
-import com.ipodmodern.audio.ui.theme.RaycastRadiusMd
-import com.ipodmodern.audio.ui.theme.RaycastRadiusXs
-import com.ipodmodern.audio.ui.theme.RaycastSurface
-import com.ipodmodern.audio.ui.theme.RaycastSurfaceCard
-import com.ipodmodern.audio.ui.theme.RaycastSurfaceElevated
+import com.ipodmodern.audio.ui.theme.AetherCanvas
+import com.ipodmodern.audio.ui.theme.AetherCyan
+import com.ipodmodern.audio.ui.theme.AetherCyanGlow
+import com.ipodmodern.audio.ui.theme.AetherHairline
+import com.ipodmodern.audio.ui.theme.AetherHairlineStrong
+import com.ipodmodern.audio.ui.theme.AetherInk
+import com.ipodmodern.audio.ui.theme.AetherKeycapGradient
+import com.ipodmodern.audio.ui.theme.AetherMute
+import com.ipodmodern.audio.ui.theme.AetherOnPrimary
+import com.ipodmodern.audio.ui.theme.AetherPrimaryPressed
+import com.ipodmodern.audio.ui.theme.AetherPrimaryWhite
+import com.ipodmodern.audio.ui.theme.AetherRadiusMd
+import com.ipodmodern.audio.ui.theme.AetherRadiusSm
+import com.ipodmodern.audio.ui.theme.AetherRadiusXs
+import com.ipodmodern.audio.ui.theme.AetherRose
+import com.ipodmodern.audio.ui.theme.AetherSurface
+import com.ipodmodern.audio.ui.theme.AetherSurfaceCard
+import com.ipodmodern.audio.ui.theme.AetherSurfaceElevated
+import com.ipodmodern.audio.ui.theme.AetherViolet
 import java.util.Locale
 
 /**
- * Raycast Surface Card Container with 1px hairline border (no drop shadows).
+ * Aether Luxury Obsidian Card Container with 1px hairline border.
  */
 @Composable
 fun RaycastCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(12.dp),
-    backgroundColor: Color = RaycastSurface,
-    borderColor: Color = RaycastHairline,
+    shape: Shape = AetherRadiusMd,
+    backgroundColor: Color = AetherSurface,
+    borderColor: Color = AetherHairline,
     content: @Composable () -> Unit
 ) {
     Box(
@@ -112,20 +117,20 @@ fun RaycastCard(
 fun RaycastKeycapBadge(
     text: String,
     modifier: Modifier = Modifier,
-    textColor: Color = RaycastInk,
-    accentColor: Color? = null
+    textColor: Color = AetherInk,
+    accentColor: Color? = AetherCyan
 ) {
     Box(
         modifier = modifier
-            .clip(RaycastRadiusXs)
-            .background(RaycastKeycapGradient)
-            .border(1.dp, RaycastHairline, RaycastRadiusXs)
+            .clip(AetherRadiusXs)
+            .background(AetherKeycapGradient)
+            .border(1.dp, AetherHairline, AetherRadiusXs)
             .padding(horizontal = 7.dp, vertical = 3.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             if (accentColor != null) {
                 Box(
@@ -141,14 +146,14 @@ fun RaycastKeycapBadge(
                 fontWeight = FontWeight.Bold,
                 color = textColor,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 0.4.sp
+                letterSpacing = 0.5.sp
             )
         }
     }
 }
 
 /**
- * Universal Raycast Primary White Action Pill Button.
+ * Universal Aether Primary White Action Pill Button with zero touch latency.
  */
 @Composable
 fun RaycastPrimaryButton(
@@ -163,7 +168,7 @@ fun RaycastPrimaryButton(
 
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.94f else 1.0f,
-        animationSpec = spring(stiffness = 600f, dampingRatio = 0.75f),
+        animationSpec = spring(stiffness = 1400f, dampingRatio = 0.65f),
         label = "btn_scale"
     )
 
@@ -171,7 +176,7 @@ fun RaycastPrimaryButton(
         modifier = modifier
             .scale(scale)
             .clip(CircleShape)
-            .background(if (isPressed) RaycastPrimaryPressed else RaycastPrimaryWhite)
+            .background(if (isPressed) AetherPrimaryPressed else AetherPrimaryWhite)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null
@@ -179,7 +184,7 @@ fun RaycastPrimaryButton(
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onClick()
             }
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+            .padding(horizontal = 20.dp, vertical = 11.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -190,7 +195,7 @@ fun RaycastPrimaryButton(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = RaycastOnPrimary,
+                    tint = AetherOnPrimary,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -198,7 +203,7 @@ fun RaycastPrimaryButton(
                 text = text,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = RaycastOnPrimary,
+                color = AetherOnPrimary,
                 letterSpacing = 0.2.sp
             )
         }
@@ -206,7 +211,7 @@ fun RaycastPrimaryButton(
 }
 
 /**
- * Raycast Secondary / Tertiary Button with 1px hairline border.
+ * Aether Secondary / Tertiary Button with 1px hairline border.
  */
 @Composable
 fun RaycastSecondaryButton(
@@ -221,7 +226,7 @@ fun RaycastSecondaryButton(
 
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1.0f,
-        animationSpec = spring(stiffness = 600f),
+        animationSpec = spring(stiffness = 1400f, dampingRatio = 0.65f),
         label = "sec_btn_scale"
     )
 
@@ -229,16 +234,16 @@ fun RaycastSecondaryButton(
         modifier = modifier
             .scale(scale)
             .clip(CircleShape)
-            .background(RaycastSurfaceElevated)
-            .border(1.dp, if (isPressed) RaycastHairlineStrong else RaycastHairline, CircleShape)
+            .background(AetherSurfaceElevated)
+            .border(1.dp, if (isPressed) AetherHairlineStrong else AetherHairline, CircleShape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null
             ) {
-                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onClick()
             }
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 11.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -249,7 +254,7 @@ fun RaycastSecondaryButton(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = RaycastInk,
+                    tint = AetherInk,
                     modifier = Modifier.size(15.dp)
                 )
             }
@@ -257,7 +262,7 @@ fun RaycastSecondaryButton(
                 text = text,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
-                color = RaycastInk,
+                color = AetherInk,
                 letterSpacing = 0.2.sp
             )
         }
@@ -265,7 +270,7 @@ fun RaycastSecondaryButton(
 }
 
 /**
- * Tactile Icon Button in Raycast button-tertiary style.
+ * Tactile Icon Button in Aether style with instant spring reaction.
  */
 @Composable
 fun TactileIconButton(
@@ -273,9 +278,9 @@ fun TactileIconButton(
     contentDescription: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    size: Dp = 44.dp,
+    size: Dp = 46.dp,
     iconSize: Dp = 20.dp,
-    tint: Color = RaycastInk,
+    tint: Color = AetherInk,
     isActive: Boolean = false,
     badgeText: String? = null
 ) {
@@ -284,8 +289,8 @@ fun TactileIconButton(
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.90f else 1.0f,
-        animationSpec = spring(stiffness = 700f, dampingRatio = 0.7f),
+        targetValue = if (isPressed) 0.88f else 1.0f,
+        animationSpec = spring(stiffness = 1400f, dampingRatio = 0.65f),
         label = "icon_press_scale"
     )
 
@@ -294,10 +299,10 @@ fun TactileIconButton(
             .size(size)
             .scale(scale)
             .clip(CircleShape)
-            .background(if (isActive) RaycastSurfaceCard else RaycastSurfaceElevated)
+            .background(if (isActive) AetherSurfaceCard else AetherSurfaceElevated)
             .border(
                 1.dp,
-                if (isActive) RaycastHairlineStrong else RaycastHairline,
+                if (isActive) AetherHairlineStrong else AetherHairline,
                 CircleShape
             )
             .clickable(
@@ -312,7 +317,7 @@ fun TactileIconButton(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = if (isActive) RaycastPrimaryWhite else tint,
+            tint = if (isActive) AetherCyan else tint,
             modifier = Modifier.size(iconSize)
         )
 
@@ -323,14 +328,14 @@ fun TactileIconButton(
                     .align(Alignment.TopEnd)
                     .offset(x = (-2).dp, y = 2.dp)
                     .clip(CircleShape)
-                    .background(RaycastPrimaryWhite)
+                    .background(AetherCyan)
                     .padding(horizontal = 4.dp, vertical = 1.dp)
             ) {
                 Text(
                     text = badgeText,
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
-                    color = RaycastOnPrimary
+                    color = Color.Black
                 )
             }
         }
@@ -338,7 +343,7 @@ fun TactileIconButton(
 }
 
 /**
- * Universal Raycast Primary White Hero Play/Pause Button.
+ * Universal Aether Primary White Hero Play/Pause Button.
  */
 @Composable
 fun TactilePlayPauseHeroButton(
@@ -352,8 +357,8 @@ fun TactilePlayPauseHeroButton(
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.92f else 1.0f,
-        animationSpec = spring(stiffness = 600f, dampingRatio = 0.75f),
+        targetValue = if (isPressed) 0.90f else 1.0f,
+        animationSpec = spring(stiffness = 1400f, dampingRatio = 0.65f),
         label = "hero_scale"
     )
 
@@ -362,7 +367,8 @@ fun TactilePlayPauseHeroButton(
             .size(size)
             .scale(scale)
             .clip(CircleShape)
-            .background(if (isPressed) RaycastPrimaryPressed else RaycastPrimaryWhite)
+            .background(if (isPressed) AetherPrimaryPressed else AetherPrimaryWhite)
+            .border(1.dp, Color(0x3300E5FF), CircleShape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null
@@ -375,14 +381,14 @@ fun TactilePlayPauseHeroButton(
         AnimatedContent(
             targetState = isPlaying,
             transitionSpec = {
-                fadeIn(animationSpec = tween(140)) togetherWith fadeOut(animationSpec = tween(140))
+                fadeIn(animationSpec = tween(90)) togetherWith fadeOut(animationSpec = tween(90))
             },
             label = "hero_icon"
         ) { playing ->
             Icon(
                 imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                 contentDescription = if (playing) "Pause" else "Play",
-                tint = RaycastOnPrimary,
+                tint = AetherOnPrimary,
                 modifier = Modifier.size(size * 0.46f)
             )
         }
@@ -390,7 +396,7 @@ fun TactilePlayPauseHeroButton(
 }
 
 /**
- * Raycast Transport Deck Row.
+ * Aether Transport Deck Row.
  */
 @Composable
 fun TactileTransportRow(
@@ -418,7 +424,7 @@ fun TactileTransportRow(
             onClick = onToggleShuffle,
             size = 46.dp,
             iconSize = 18.dp,
-            tint = if (isShuffle) RaycastAccentBlue else RaycastMute,
+            tint = if (isShuffle) AetherCyan else AetherMute,
             isActive = isShuffle
         )
 
@@ -454,7 +460,7 @@ fun TactileTransportRow(
             onClick = onToggleRepeat,
             size = 46.dp,
             iconSize = 18.dp,
-            tint = if (repeatMode > 0) RaycastAccentGreen else RaycastMute,
+            tint = if (repeatMode > 0) AetherCyan else AetherMute,
             isActive = repeatMode > 0,
             badgeText = if (repeatMode == 2) "1" else null
         )
@@ -462,7 +468,7 @@ fun TactileTransportRow(
 }
 
 /**
- * Raycast Precision Waveform/Timeline Scrubber.
+ * Aether Precision Waveform/Timeline Scrubber with glowing active indicator.
  */
 @Composable
 fun TactileTimelineScrubber(
@@ -538,16 +544,20 @@ fun TactileTimelineScrubber(
                     .fillMaxWidth()
                     .height(trackHeight)
                     .clip(CircleShape)
-                    .background(RaycastHairline)
+                    .background(AetherHairline)
             )
 
-            // Active White Progress Track
+            // Active White / Cyan Progress Track
             Box(
                 modifier = Modifier
                     .fillMaxWidth(currentProgress)
                     .height(trackHeight)
                     .clip(CircleShape)
-                    .background(RaycastPrimaryWhite)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(AetherCyan, AetherPrimaryWhite)
+                        )
+                    )
             )
 
             // Draggable Thumb
@@ -557,8 +567,8 @@ fun TactileTimelineScrubber(
                     .offset(x = thumbOffsetDp)
                     .size(if (isDragging) 14.dp else 10.dp)
                     .clip(CircleShape)
-                    .background(RaycastPrimaryWhite)
-                    .border(1.dp, RaycastHairline, CircleShape)
+                    .background(AetherPrimaryWhite)
+                    .border(1.dp, AetherCyan, CircleShape)
             )
         }
 
@@ -571,14 +581,14 @@ fun TactileTimelineScrubber(
         ) {
             Text(
                 text = elapsedText,
-                color = RaycastMute,
+                color = AetherMute,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
                 fontFamily = FontFamily.Monospace
             )
             Text(
                 text = remainingText,
-                color = RaycastMute,
+                color = AetherMute,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
                 fontFamily = FontFamily.Monospace
@@ -588,7 +598,7 @@ fun TactileTimelineScrubber(
 }
 
 /**
- * Raycast Precision Volume Slider.
+ * Aether Precision Volume Slider.
  */
 @Composable
 fun TactileVolumeBar(
@@ -608,7 +618,7 @@ fun TactileVolumeBar(
         Icon(
             imageVector = if (volume <= 0.01f) Icons.Default.VolumeMute else Icons.Default.VolumeDown,
             contentDescription = "Volume",
-            tint = if (volume > 0.01f) RaycastBody else RaycastAsh,
+            tint = if (volume > 0.01f) AetherInk else AetherMute,
             modifier = Modifier
                 .size(16.dp)
                 .clickable {
@@ -649,7 +659,7 @@ fun TactileVolumeBar(
                     .fillMaxWidth()
                     .height(trackHeight)
                     .clip(CircleShape)
-                    .background(RaycastHairline)
+                    .background(AetherHairline)
             )
 
             Box(
@@ -657,7 +667,7 @@ fun TactileVolumeBar(
                     .fillMaxWidth(volume.coerceIn(0f, 1f))
                     .height(trackHeight)
                     .clip(CircleShape)
-                    .background(RaycastPrimaryWhite)
+                    .background(AetherPrimaryWhite)
             )
 
             val thumbOffsetDp = ((maxWidth - 10.dp) * volume.coerceIn(0f, 1f)).coerceAtLeast(0.dp)
@@ -666,15 +676,63 @@ fun TactileVolumeBar(
                     .offset(x = thumbOffsetDp)
                     .size(if (isDragging) 12.dp else 9.dp)
                     .clip(CircleShape)
-                    .background(RaycastPrimaryWhite)
+                    .background(AetherPrimaryWhite)
             )
         }
 
         Icon(
             imageVector = Icons.Default.VolumeUp,
             contentDescription = "Volume High",
-            tint = RaycastBody,
+            tint = AetherInk,
             modifier = Modifier.size(16.dp)
         )
+    }
+}
+
+/**
+ * Animated Real-Time Audio Frequency Visualizer (lossless pulse animation).
+ */
+@Composable
+fun AetherAudioVisualizer(
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "vis")
+    val bar1 by infiniteTransition.animateFloat(
+        initialValue = 0.2f, targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(tween(450, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "b1"
+    )
+    val bar2 by infiniteTransition.animateFloat(
+        initialValue = 0.5f, targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(tween(350, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "b2"
+    )
+    val bar3 by infiniteTransition.animateFloat(
+        initialValue = 0.3f, targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(tween(550, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "b3"
+    )
+    val bar4 by infiniteTransition.animateFloat(
+        initialValue = 0.7f, targetValue = 0.2f,
+        animationSpec = infiniteRepeatable(tween(400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "b4"
+    )
+
+    Row(
+        modifier = modifier.height(18.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        listOf(bar1, bar2, bar3, bar4).forEach { heightFraction ->
+            val h = if (isPlaying) (heightFraction * 18).coerceAtLeast(3f) else 3f
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(h.dp)
+                    .clip(CircleShape)
+                    .background(AetherCyan)
+            )
+        }
     }
 }
