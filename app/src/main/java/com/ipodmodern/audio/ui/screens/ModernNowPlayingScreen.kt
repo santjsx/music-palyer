@@ -2,8 +2,11 @@ package com.ipodmodern.audio.ui.screens
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -119,14 +122,23 @@ fun ModernNowPlayingScreen(
         currentTrack?.artworkUri?.let { File(it) }
     }
 
-    // Dynamic Lyrics preview
+    // Dynamic Real Synchronized Lyrics preview
     val lyrics = uiState.lyrics
     val activeIdx = progressState.activeLyricIndex
-    val liveLyricSnippet = remember(lyrics, activeIdx, progressState.currentLyricText) {
-        if (lyrics.isNotEmpty() && activeIdx >= 0 && activeIdx < lyrics.size) {
-            progressState.currentLyricText ?: lyrics[activeIdx].text
+    val liveLyricSnippet = remember(lyrics, activeIdx, progressState.currentLyricText, progressState.positionMs) {
+        val current = progressState.currentLyricText
+        if (!current.isNullOrBlank()) {
+            current
+        } else if (lyrics.isNotEmpty()) {
+            if (activeIdx >= 0 && activeIdx < lyrics.size) {
+                lyrics[activeIdx].text
+            } else if (progressState.positionMs < (lyrics.firstOrNull()?.timeMs ?: 0L)) {
+                "♪ ♪ ♪" // Instrumental prelude before first line
+            } else {
+                lyrics.lastOrNull()?.text ?: "♪ ♪ ♪"
+            }
         } else {
-            "తొలకరిలో తడిసిన హొయా" // Fallback / sample regional snippet
+            "Lyrics not available"
         }
     }
 
@@ -153,7 +165,7 @@ fun ModernNowPlayingScreen(
             .background(Color(0xFF14130F))
     ) {
         // LAYER 0: Ambient Blurred Backdrop from Album Art
-        if (artworkFile != null && artworkFile.exists()) {
+        if (artworkFile != null) {
             AsyncImage(
                 model = artworkFile,
                 contentDescription = null,
@@ -227,7 +239,7 @@ fun ModernNowPlayingScreen(
                     .background(Color(0x33000000)),
                 contentAlignment = Alignment.Center
             ) {
-                if (artworkFile != null && artworkFile.exists()) {
+                if (artworkFile != null) {
                     AsyncImage(
                         model = artworkFile,
                         contentDescription = currentTrack?.title,
@@ -304,9 +316,10 @@ fun ModernNowPlayingScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // 4. Live Lyrics Preview Pill
+                // 4. Live Lyrics Preview directly over the Scrubber Progress Bar
                 Row(
                     modifier = Modifier
+                        .fillMaxWidth()
                         .clip(RadiusFull)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
@@ -314,25 +327,38 @@ fun ModernNowPlayingScreen(
                         }
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.Start
                 ) {
-                    Text(
-                        text = liveLyricSnippet,
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    AnimatedContent(
+                        targetState = liveLyricSnippet,
+                        transitionSpec = {
+                            (fadeIn(animationSpec = tween(220)) + slideInVertically { it / 3 })
+                                .togetherWith(fadeOut(animationSpec = tween(180)) + slideOutVertically { -it / 3 })
+                        },
+                        modifier = Modifier.weight(1f, fill = false),
+                        label = "live_lyric_anim"
+                    ) { targetSnippet ->
+                        Text(
+                            text = targetSnippet,
+                            color = if (lyrics.isNotEmpty()) Color.White.copy(alpha = 0.95f) else Color.White.copy(alpha = 0.5f),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = "View Lyrics",
-                        tint = Color.White.copy(alpha = 0.7f),
+                        tint = Color.White.copy(alpha = 0.65f),
                         modifier = Modifier.size(18.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 // 5. Scrubber Bar with Elapsed & Remaining Time
                 Column(modifier = Modifier.fillMaxWidth()) {

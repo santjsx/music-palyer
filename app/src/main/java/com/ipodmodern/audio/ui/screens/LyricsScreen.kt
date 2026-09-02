@@ -1,5 +1,6 @@
 package com.ipodmodern.audio.ui.screens
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -21,30 +22,29 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ipodmodern.audio.core.model.LyricLine
-import com.ipodmodern.audio.ui.components.TactileIconButton
-import com.ipodmodern.audio.ui.theme.RaycastAccentBlue
-import com.ipodmodern.audio.ui.theme.RaycastAsh
-import com.ipodmodern.audio.ui.theme.RaycastBody
-import com.ipodmodern.audio.ui.theme.RaycastCanvas
-import com.ipodmodern.audio.ui.theme.RaycastInk
-import com.ipodmodern.audio.ui.theme.RaycastMute
-import com.ipodmodern.audio.ui.theme.RaycastPrimaryWhite
+import com.ipodmodern.audio.ui.theme.RadiusFull
 
 @Composable
 fun LyricsScreen(
@@ -55,6 +55,7 @@ fun LyricsScreen(
     onBackClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val view = LocalView.current
     val listState = rememberLazyListState()
 
     LaunchedEffect(activeLyricIndex) {
@@ -69,46 +70,62 @@ fun LyricsScreen(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(RaycastCanvas)
+            .background(Color(0xFF000000))
     ) {
         // Top Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             if (onBackClick != null) {
-                TactileIconButton(
-                    icon = Icons.Default.KeyboardArrowDown,
-                    contentDescription = "Back",
-                    onClick = onBackClick,
-                    size = 42.dp,
-                    iconSize = 22.dp
-                )
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x22FFFFFF))
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onBackClick()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Back",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             } else {
-                Spacer(modifier = Modifier.size(42.dp))
+                Spacer(modifier = Modifier.size(40.dp))
             }
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
+            ) {
                 Text(
                     text = "LYRICS",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = RaycastMute,
+                    color = Color(0xFFE50914),
                     letterSpacing = 1.2.sp
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = songTitle,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = RaycastInk,
-                    maxLines = 1
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(modifier = Modifier.size(42.dp))
+            Spacer(modifier = Modifier.size(40.dp))
         }
 
         if (lyrics.isEmpty()) {
@@ -120,18 +137,32 @@ fun LyricsScreen(
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF1E1F24)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = Color(0xFFE50914),
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
                     Text(
                         text = "No Synchronized Lyrics",
-                        fontSize = 17.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = RaycastInk
+                        color = Color.White
                     )
                     Text(
-                        text = "Place a matching .lrc file in the same directory as your audio track to enable line-by-line sync.",
+                        text = "We couldn't locate synchronized lyrics for this track on LRCLIB or locally.",
                         fontSize = 13.sp,
-                        color = RaycastBody,
+                        color = Color(0xFF8E8E93),
                         textAlign = TextAlign.Center
                     )
                 }
@@ -143,35 +174,36 @@ fun LyricsScreen(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 40.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 60.dp),
                 horizontalAlignment = Alignment.Start,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 itemsIndexed(lyrics) { index, line ->
                     val isActive = index == activeLyricIndex
 
                     val textColor by animateColorAsState(
-                        targetValue = if (isActive) RaycastPrimaryWhite else RaycastAsh,
-                        animationSpec = tween(200),
+                        targetValue = if (isActive) Color.White else Color(0xFF636366),
+                        animationSpec = tween(220),
                         label = "lyric_color"
                     )
 
                     val scale by animateFloatAsState(
-                        targetValue = if (isActive) 1.04f else 1.0f,
+                        targetValue = if (isActive) 1.03f else 1.0f,
                         animationSpec = spring(stiffness = 500f),
                         label = "lyric_scale"
                     )
 
                     Text(
                         text = line.text,
-                        fontSize = if (isActive) 23.sp else 18.sp,
+                        fontSize = if (isActive) 24.sp else 19.sp,
                         fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
                         color = textColor,
-                        lineHeight = if (isActive) 30.sp else 24.sp,
+                        lineHeight = if (isActive) 32.sp else 26.sp,
                         modifier = Modifier
                             .fillMaxWidth()
                             .scale(scale)
                             .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                 onSeekTo?.invoke(line.timeMs)
                             }
                             .padding(vertical = 4.dp)
@@ -183,11 +215,11 @@ fun LyricsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(32.dp)
+                    .height(48.dp)
                     .align(Alignment.TopCenter)
                     .background(
                         Brush.verticalGradient(
-                            listOf(RaycastCanvas, Color.Transparent)
+                            listOf(Color(0xFF000000), Color.Transparent)
                         )
                     )
             )
@@ -196,11 +228,11 @@ fun LyricsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(32.dp)
+                    .height(56.dp)
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color.Transparent, RaycastCanvas)
+                            listOf(Color.Transparent, Color(0xFF000000))
                         )
                     )
             )

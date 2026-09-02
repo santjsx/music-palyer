@@ -273,7 +273,7 @@ fun ModernHomeScreen(
                                     .background(ObsidianElevated),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (artworkFile != null && artworkFile.exists()) {
+                                if (artworkFile != null) {
                                     AsyncImage(
                                         model = artworkFile,
                                         contentDescription = null,
@@ -393,7 +393,7 @@ fun ModernHomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = PaddingValues(horizontal = 2.dp)
                     ) {
-                        items(allSongs.take(8)) { track ->
+                        items(items = allSongs.take(8), key = { it.id }) { track ->
                             val trackArt = remember(track.artworkUri) {
                                 track.artworkUri?.let { File(it) }
                             }
@@ -403,8 +403,8 @@ fun ModernHomeScreen(
                                     .width(110.dp)
                                     .clip(RadiusMd)
                                     .clickable {
-                                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                         playerViewModel.playTrack(track)
+                                        onNavigateToNowPlaying()
                                     }
                             ) {
                                 // Square Card with Play Overlay
@@ -416,7 +416,7 @@ fun ModernHomeScreen(
                                         .border(1.dp, ObsidianBorder, RadiusLg),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    if (trackArt != null && trackArt.exists()) {
+                                    if (trackArt != null) {
                                         AsyncImage(
                                             model = trackArt,
                                             contentDescription = null,

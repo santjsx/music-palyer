@@ -11,6 +11,7 @@ import com.ipodmodern.audio.core.database.entity.AlbumEntity
 import com.ipodmodern.audio.core.database.entity.ArtistEntity
 import com.ipodmodern.audio.core.database.entity.TrackEntity
 import com.ipodmodern.audio.core.haptics.HapticEngine
+import com.ipodmodern.audio.core.lyrics.LyricsRepository
 import com.ipodmodern.audio.core.model.EqualizerPreset
 import com.ipodmodern.audio.core.model.LyricLine
 import com.ipodmodern.audio.core.model.Track
@@ -68,8 +69,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val db = MusicDatabase.getInstance(application)
     val hapticEngine = HapticEngine(application)
     private val lyricsParser = LyricsParser()
+    private val lyricsRepository = LyricsRepository.getInstance(application)
     private val localMusicScanner = LocalMusicScanner(application)
     val audioEngine = UnifiedAudioEngine(application)
+
+    private var lyricsFetchJob: Job? = null
 
     private val prefs = application.getSharedPreferences("aether_player_preferences", Context.MODE_PRIVATE)
 
@@ -395,7 +399,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val track = playbackQueue.getOrNull(queueIndex) ?: return
         audioEngine.loadAndPlay(track.filePath, autoPlay = startPlaying)
 
-        val realLyrics = localMusicScanner.loadLyricsForTrack(track)
+        val cachedLyrics = lyricsRepository.getCachedLyrics(track) ?: emptyList()
 
         _uiState.value = _uiState.value.copy(
             currentTrack = track,
@@ -403,16 +407,33 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             isPlaying = startPlaying,
             currentTrackIndex = queueIndex + 1,
             totalTracksInQueue = playbackQueue.size,
-            lyrics = realLyrics,
+            lyrics = cachedLyrics,
             lastPlayedTrack = track
         )
 
         _playbackProgress.value = PlaybackProgress(
             positionMs = 0L,
             durationMs = track.durationMs,
-            activeLyricIndex = if (realLyrics.isNotEmpty()) 0 else -1,
-            currentLyricText = realLyrics.firstOrNull()?.text
+            activeLyricIndex = if (cachedLyrics.isNotEmpty()) 0 else -1,
+            currentLyricText = cachedLyrics.firstOrNull()?.text
         )
+
+        // If lyrics not found in local/cache, asynchronously fetch from LRCLIB
+        lyricsFetchJob?.cancel()
+        if (cachedLyrics.isEmpty()) {
+            lyricsFetchJob = viewModelScope.launch {
+                val fetchedLyrics = lyricsRepository.fetchLyricsOnline(track)
+                if (fetchedLyrics.isNotEmpty() && _uiState.value.currentTrack?.id == track.id) {
+                    _uiState.value = _uiState.value.copy(lyrics = fetchedLyrics)
+                    val pos = audioEngine.getCurrentPosition()
+                    val activeIdx = lyricsParser.findActiveLyricIndex(fetchedLyrics, pos)
+                    _playbackProgress.value = _playbackProgress.value.copy(
+                        activeLyricIndex = activeIdx,
+                        currentLyricText = if (activeIdx >= 0 && activeIdx < fetchedLyrics.size) fetchedLyrics[activeIdx].text else null
+                    )
+                }
+            }
+        }
 
         persistLastPlayback(track.id, 0L)
         updateForegroundNotification(track, startPlaying)

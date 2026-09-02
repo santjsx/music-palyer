@@ -151,7 +151,7 @@ fun PlayingQueueScreen(
                             .background(ObsidianSurface),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (artworkFile != null && artworkFile.exists()) {
+                        if (artworkFile != null) {
                             AsyncImage(
                                 model = artworkFile,
                                 contentDescription = null,
@@ -243,7 +243,7 @@ fun PlayingQueueScreen(
                                 .background(ObsidianElevated),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (artworkFile != null && artworkFile.exists()) {
+                            if (artworkFile != null) {
                                 AsyncImage(
                                     model = artworkFile,
                                     contentDescription = null,

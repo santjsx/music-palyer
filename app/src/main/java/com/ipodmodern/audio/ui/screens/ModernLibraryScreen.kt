@@ -488,7 +488,7 @@ fun ModernLibraryScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(filteredAlbums) { album ->
+                    items(items = filteredAlbums, key = { it.id }) { album ->
                         val albumArt = remember(album.artworkUri) { album.artworkUri?.let { File(it) } }
                         Column(
                             modifier = Modifier
@@ -506,7 +506,7 @@ fun ModernLibraryScreen(
                                     .background(Color(0xFF1C1D22)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (albumArt != null && albumArt.exists()) {
+                                if (albumArt != null) {
                                     AsyncImage(model = albumArt, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                 } else {
                                     Icon(Icons.Default.Album, contentDescription = null, tint = Color(0xFFE50914), modifier = Modifier.size(36.dp))
@@ -598,7 +598,7 @@ private fun ModernTrackRow(
                 .background(Color(0xFF1C1D22)),
             contentAlignment = Alignment.Center
         ) {
-            if (artworkFile != null && artworkFile.exists()) {
+            if (artworkFile != null) {
                 AsyncImage(
                     model = artworkFile,
                     contentDescription = null,
@@ -751,7 +751,7 @@ fun CategorySubScreen(
                                     .border(1.dp, ObsidianBorder, RadiusLg),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (albumArt != null && albumArt.exists()) {
+                                if (albumArt != null) {
                                     AsyncImage(
                                         model = albumArt,
                                         contentDescription = null,
@@ -1111,7 +1111,7 @@ fun AlbumDetailScreen(
                             .border(1.dp, ObsidianBorder, RadiusXl),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (artworkFile != null && artworkFile.exists()) {
+                        if (artworkFile != null) {
                             AsyncImage(
                                 model = artworkFile,
                                 contentDescription = null,

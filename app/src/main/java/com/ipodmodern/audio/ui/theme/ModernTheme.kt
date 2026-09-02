@@ -13,22 +13,22 @@ import androidx.compose.ui.unit.dp
 
 @Immutable
 data class ThemePalette(
-    val bg: Color = Color(0xFF0D0F12),
-    val surface: Color = Color(0xFF16191E),
-    val elevated: Color = Color(0xFF1E2229),
-    val pill: Color = Color(0xFF242932),
-    val trackBg: Color = Color(0xFF2B313D),
-    val border: Color = Color(0x14FFFFFF),
-    val borderSubtle: Color = Color(0x0AFFFFFF),
+    val bg: Color = Color(0xFF000000),
+    val surface: Color = Color(0xFF0D0E11),
+    val elevated: Color = Color(0xFF16181D),
+    val pill: Color = Color(0xFF1E2128),
+    val trackBg: Color = Color(0xFF262626),
+    val border: Color = Color(0x1AFFFFFF),
+    val borderSubtle: Color = Color(0x0DFFFFFF),
     val borderHighlight: Color = Color(0x33FFFFFF),
-    val accent: Color = Color(0xFF7AE898),
-    val accentLight: Color = Color(0xFFA3F2B8),
-    val accentDark: Color = Color(0xFF3EA35E),
-    val accentGlow: Color = Color(0x337AE898),
-    val pillBg: Color = Color(0x247AE898),
+    val accent: Color = Color(0xFFE50914),
+    val accentLight: Color = Color(0xFFFF4D5E),
+    val accentDark: Color = Color(0xFFB80710),
+    val accentGlow: Color = Color(0x33E50914),
+    val pillBg: Color = Color(0x2EE50914),
     val textPrimary: Color = Color(0xFFFFFFFF),
-    val textSecondary: Color = Color(0xFF9299A8),
-    val textMuted: Color = Color(0xFF5C6370),
+    val textSecondary: Color = Color(0xFF9E9EA4),
+    val textMuted: Color = Color(0xFF71717A),
     val textDark: Color = Color(0xFF383D48)
 )
 

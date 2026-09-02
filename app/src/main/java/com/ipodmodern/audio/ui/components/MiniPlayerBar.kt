@@ -126,7 +126,7 @@ fun MiniPlayerBar(
                         .background(Color(0xFF22242B)),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (artworkFile != null && artworkFile.exists()) {
+                    if (artworkFile != null) {
                         AsyncImage(
                             model = artworkFile,
                             contentDescription = null,

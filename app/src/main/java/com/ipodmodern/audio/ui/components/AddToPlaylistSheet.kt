@@ -91,7 +91,7 @@ fun AddToPlaylistSheet(
                         .background(Color.Black),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (artFile != null && artFile.exists()) {
+                    if (artFile != null) {
                         AsyncImage(
                             model = artFile,
                             contentDescription = null,
@@ -254,7 +254,7 @@ fun AddToPlaylistSheet(
                             if (alreadyInPlaylist) {
                                 Text(
                                     text = "Added",
-                                    color = Color(0xFF7AE898),
+                                    color = Color(0xFFE50914),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )

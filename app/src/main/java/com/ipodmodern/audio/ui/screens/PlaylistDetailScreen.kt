@@ -388,7 +388,7 @@ fun PlaylistDetailScreen(
                                 .background(Color.Black),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (artFile != null && artFile.exists()) {
+                            if (artFile != null) {
                                 AsyncImage(
                                     model = artFile,
                                     contentDescription = null,
