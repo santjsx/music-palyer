@@ -120,11 +120,11 @@ fun SettingsScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(ObsidianBg)
+            .background(com.ipodmodern.audio.ui.theme.LocalThemePalette.current.bg)
             .statusBarsPadding()
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(top = 10.dp, bottom = 120.dp)
+        contentPadding = PaddingValues(top = 10.dp, bottom = 180.dp)
     ) {
         // 1. Top Title
         item {
@@ -209,7 +209,7 @@ fun SettingsScreen(
                 SettingsItemRow(
                     icon = Icons.Default.SystemUpdate,
                     title = "Software Updates",
-                    subtitle = "Version 2.3.1 • Check for OTA updates",
+                    subtitle = "Version 2.4.0 • Check for OTA updates",
                     onClick = { onCheckUpdates() }
                 )
 
@@ -219,7 +219,7 @@ fun SettingsScreen(
                 SettingsItemRow(
                     icon = Icons.Default.Info,
                     title = "About",
-                    subtitle = "Aether Lossless Engine v2.3.1 • Flagship Core",
+                    subtitle = "Aether Lossless Engine v2.4.0 • Flagship Core",
                     onClick = { activeSheet = SettingsSheetType.ABOUT }
                 )
             }
@@ -271,13 +271,14 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(14.dp))
 
                         // Crossfade Duration Slider
+                        val activeAccent = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(text = "Crossfade Duration", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                Text(text = "${crossfadeSeconds.toInt()}s", color = MintAccent, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text(text = "${crossfadeSeconds.toInt()}s", color = activeAccent, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             }
                             Slider(
                                 value = crossfadeSeconds,
@@ -285,8 +286,8 @@ fun SettingsScreen(
                                 valueRange = 0f..12f,
                                 steps = 11,
                                 colors = SliderDefaults.colors(
-                                    thumbColor = MintAccent,
-                                    activeTrackColor = MintAccent,
+                                    thumbColor = activeAccent,
+                                    activeTrackColor = activeAccent,
                                     inactiveTrackColor = ObsidianTrackBg
                                 )
                             )
@@ -458,8 +459,8 @@ fun SettingsScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Version 2.3.1 • Flagship Edition",
-                                color = MintAccent,
+                                text = "Version 2.4.0 • Flagship Edition",
+                                color = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -597,7 +598,7 @@ private fun SettingsItemRow(
         Icon(
             imageVector = icon,
             contentDescription = title,
-            tint = MintAccent,
+            tint = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent,
             modifier = Modifier.size(22.dp)
         )
 

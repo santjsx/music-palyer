@@ -115,7 +115,7 @@ fun ModernHomeScreen(
             .statusBarsPadding()
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
-        contentPadding = PaddingValues(top = 10.dp, bottom = 120.dp)
+        contentPadding = PaddingValues(top = 10.dp, bottom = 180.dp)
     ) {
         // 1. Top Bar: Hamburger Menu + Notifications Bell
         item {
@@ -545,10 +545,11 @@ private fun LibraryShortcutItem(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            val itemAccent = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = MintAccent,
+                tint = itemAccent,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.height(6.dp))

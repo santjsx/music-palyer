@@ -70,7 +70,8 @@ fun ModernBottomNavIsland(
         ScreenType.MENU_MAIN -> ModernTab.EXPLORE
         ScreenType.MENU_MUSIC, ScreenType.MENU_SONGS, ScreenType.MENU_ALBUMS, ScreenType.MENU_ARTISTS, ScreenType.PLAYLISTS, ScreenType.PLAYLIST_DETAIL -> ModernTab.LIBRARY
         ScreenType.NOW_PLAYING, ScreenType.COVER_FLOW -> ModernTab.PLAY
-        ScreenType.SETTINGS, ScreenType.SYNC_SERVER -> ModernTab.SEARCH
+        ScreenType.SEARCH -> ModernTab.SEARCH
+        ScreenType.SETTINGS, ScreenType.SYNC_SERVER -> ModernTab.EXPLORE
         else -> ModernTab.LIBRARY
     }
 
@@ -88,6 +89,11 @@ fun ModernBottomNavIsland(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val palette = com.ipodmodern.audio.ui.theme.LocalThemePalette.current
+            val activeAccent = palette.accent
+            val activePillBg = palette.pillBg
+            val activePillBorder = palette.accentGlow
+
             ModernTab.values().forEach { tab ->
                 val isSelected = tab == activeTab
 
@@ -97,8 +103,8 @@ fun ModernBottomNavIsland(
                     label = "tab_scale"
                 )
 
-                val pillBg = if (isSelected) Color(0xFF381216) else Color.Transparent
-                val pillBorder = if (isSelected) Color(0x44E50914) else Color.Transparent
+                val pillBg = if (isSelected) activePillBg else Color.Transparent
+                val pillBorder = if (isSelected) activePillBorder else Color.Transparent
 
                 Box(
                     modifier = Modifier
@@ -123,13 +129,13 @@ fun ModernBottomNavIsland(
                         Icon(
                             imageVector = tab.icon,
                             contentDescription = tab.title,
-                            tint = if (isSelected) Color(0xFFE50914) else Color(0xFF8E8E93),
+                            tint = if (isSelected) activeAccent else Color(0xFF8E8E93),
                             modifier = Modifier.size(22.dp)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = tab.title,
-                            color = if (isSelected) Color(0xFFE50914) else Color(0xFF8E8E93),
+                            color = if (isSelected) activeAccent else Color(0xFF8E8E93),
                             fontSize = 11.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                         )

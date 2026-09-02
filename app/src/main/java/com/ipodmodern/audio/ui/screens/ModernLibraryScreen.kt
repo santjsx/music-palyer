@@ -103,6 +103,7 @@ fun ModernLibraryScreen(
     isPlaying: Boolean,
     onTrackSelect: (Track) -> Unit,
     onShuffleAll: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
@@ -260,17 +261,21 @@ fun ModernLibraryScreen(
                         }
                 )
 
-                // User Profile Avatar
+                // User Profile Avatar -> Opens Settings
                 Box(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF282A30)),
+                        .background(Color(0xFF282A30))
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onOpenSettings()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Person,
-                        contentDescription = "Profile",
+                        contentDescription = "Profile & Settings",
                         tint = Color.White.copy(alpha = 0.8f),
                         modifier = Modifier.size(20.dp)
                     )
@@ -349,14 +354,16 @@ fun ModernLibraryScreen(
 
             categories.forEach { (cat, title) ->
                 val isSelected = activeCategoryTab == cat
+                val themeAccent = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
+                        .clip(RadiusFull)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             activeCategoryTab = cat
                         }
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -365,12 +372,12 @@ fun ModernLibraryScreen(
                         Icon(
                             imageVector = cat.icon,
                             contentDescription = title,
-                            tint = if (isSelected) Color(0xFFE50914) else Color(0xFF8E8E93),
+                            tint = if (isSelected) themeAccent else Color(0xFF8E8E93),
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
                             text = title,
-                            color = if (isSelected) Color(0xFFE50914) else Color(0xFF8E8E93),
+                            color = if (isSelected) themeAccent else Color(0xFF8E8E93),
                             fontSize = 14.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                         )
@@ -378,13 +385,13 @@ fun ModernLibraryScreen(
 
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    // Red underline indicator
+                    // Dynamic underline indicator
                     Box(
                         modifier = Modifier
                             .width(if (isSelected) 40.dp else 0.dp)
                             .height(2.5.dp)
                             .clip(RadiusFull)
-                            .background(if (isSelected) Color(0xFFE50914) else Color.Transparent)
+                            .background(if (isSelected) themeAccent else Color.Transparent)
                     )
                 }
             }
@@ -407,7 +414,7 @@ fun ModernLibraryScreen(
 
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 4.dp, bottom = 140.dp),
+                    contentPadding = PaddingValues(top = 4.dp, bottom = 180.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     // Song Count Subheader
@@ -484,7 +491,7 @@ fun ModernLibraryScreen(
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 140.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 180.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -523,7 +530,7 @@ fun ModernLibraryScreen(
                 val folders = tracks.groupBy { File(it.filePath).parentFile?.name ?: "Storage" }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 140.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 180.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     items(folders.keys.toList()) { folderName ->
@@ -591,6 +598,7 @@ private fun ModernTrackRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Artwork Thumbnail (Rounded square)
+        val rowAccent = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent
         Box(
             modifier = Modifier
                 .size(48.dp)
@@ -609,7 +617,7 @@ private fun ModernTrackRow(
                 Icon(
                     imageVector = Icons.Default.MusicNote,
                     contentDescription = null,
-                    tint = Color(0xFFE50914),
+                    tint = rowAccent,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -622,7 +630,7 @@ private fun ModernTrackRow(
         ) {
             Text(
                 text = track.title,
-                color = if (isCurrent) Color(0xFFE50914) else Color.White,
+                color = if (isCurrent) rowAccent else Color.White,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,

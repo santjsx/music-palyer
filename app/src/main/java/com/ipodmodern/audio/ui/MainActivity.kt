@@ -39,6 +39,7 @@ import com.ipodmodern.audio.ui.screens.LyricsScreen
 import com.ipodmodern.audio.ui.screens.ModernHomeScreen
 import com.ipodmodern.audio.ui.screens.ModernLibraryScreen
 import com.ipodmodern.audio.ui.screens.ModernNowPlayingScreen
+import com.ipodmodern.audio.ui.screens.ModernSearchScreen
 import com.ipodmodern.audio.ui.screens.PlayingQueueScreen
 import com.ipodmodern.audio.ui.screens.PlaylistDetailScreen
 import com.ipodmodern.audio.ui.screens.PlaylistsScreen
@@ -143,6 +144,8 @@ fun ModernMusicAppContent(
             ScreenType.LYRICS -> activeScreen = ScreenType.NOW_PLAYING
             ScreenType.PLAYLIST_DETAIL -> activeScreen = ScreenType.PLAYLISTS
             ScreenType.SYNC_SERVER -> activeScreen = ScreenType.SETTINGS
+            ScreenType.SETTINGS -> activeScreen = ScreenType.MENU_MAIN
+            ScreenType.SEARCH -> activeScreen = ScreenType.MENU_MAIN
             else -> activeScreen = ScreenType.MENU_MAIN
         }
     }
@@ -173,7 +176,7 @@ fun ModernMusicAppContent(
                     onNavigateToArtists = { activeScreen = ScreenType.MENU_MUSIC },
                     onNavigateToPlaylists = { activeScreen = ScreenType.PLAYLISTS },
                     onNavigateToNowPlaying = { activeScreen = ScreenType.NOW_PLAYING },
-                    onOpenSyncHub = { activeScreen = ScreenType.SYNC_SERVER }
+                    onOpenSyncHub = { activeScreen = ScreenType.SETTINGS }
                 )
             }
             ScreenType.MENU_MUSIC,
@@ -195,7 +198,18 @@ fun ModernMusicAppContent(
                             playerViewModel.playTrack(playerState.allTracks.random())
                             activeScreen = ScreenType.NOW_PLAYING
                         }
-                    }
+                    },
+                    onOpenSettings = { activeScreen = ScreenType.SETTINGS }
+                )
+            }
+            ScreenType.SEARCH -> {
+                ModernSearchScreen(
+                    playerViewModel = playerViewModel,
+                    onTrackSelect = { track ->
+                        playerViewModel.playTrack(track)
+                        activeScreen = ScreenType.NOW_PLAYING
+                    },
+                    onOpenSettings = { activeScreen = ScreenType.SETTINGS }
                 )
             }
             ScreenType.NOW_PLAYING,
@@ -322,7 +336,7 @@ fun ModernMusicAppContent(
                                     ScreenType.MENU_MUSIC
                                 }
                             }
-                            ModernTab.SEARCH -> ScreenType.SETTINGS
+                            ModernTab.SEARCH -> ScreenType.SEARCH
                         }
                     }
                 )

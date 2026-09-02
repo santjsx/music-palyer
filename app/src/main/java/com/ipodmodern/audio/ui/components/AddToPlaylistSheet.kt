@@ -62,7 +62,7 @@ fun AddToPlaylistSheet(
     track: Track,
     playerViewModel: PlayerViewModel,
     onDismiss: () -> Unit,
-    onCreateNewPlaylistClick: () -> Unit
+    onCreateNewPlaylistClick: () -> Unit = {}
 ) {
     val playlists by playerViewModel.playlists.collectAsState()
     val view = LocalView.current

@@ -59,15 +59,16 @@ fun SyncServerScreen(
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
+    val palette = com.ipodmodern.audio.ui.theme.LocalThemePalette.current
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(ObsidianBg)
+            .background(palette.bg)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 12.dp)
-            .padding(bottom = 120.dp),
+            .padding(bottom = 180.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -84,7 +85,7 @@ fun SyncServerScreen(
                     text = "WI-FI SYNC & INGESTION",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MintAccent,
+                    color = palette.accent,
                     letterSpacing = 1.0.sp
                 )
                 Spacer(modifier = Modifier.height(2.dp))
@@ -92,21 +93,21 @@ fun SyncServerScreen(
                     text = "Sync Hub",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = palette.textPrimary
                 )
             }
 
             Box(
                 modifier = Modifier
                     .clip(RadiusFull)
-                    .background(if (serverState.isRunning) MintPillBg else ObsidianPill)
-                    .border(1.dp, if (serverState.isRunning) MintAccent else ObsidianBorder, RadiusFull)
+                    .background(if (serverState.isRunning) palette.pillBg else palette.pill)
+                    .border(1.dp, if (serverState.isRunning) palette.accent else palette.border, RadiusFull)
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = if (serverState.isRunning) "ONLINE" else "OFFLINE",
-                    color = if (serverState.isRunning) MintAccent else TextMuted,
+                    color = if (serverState.isRunning) palette.accent else palette.textMuted,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -115,7 +116,7 @@ fun SyncServerScreen(
 
         // Main Wi-Fi Instructions Card
         SleekCard(
-            backgroundColor = ObsidianSurface,
+            backgroundColor = palette.surface,
             shape = RadiusXl,
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -130,14 +131,14 @@ fun SyncServerScreen(
                     modifier = Modifier
                         .size(56.dp)
                         .clip(CircleShape)
-                        .background(MintGlow)
-                        .border(1.dp, MintAccent, CircleShape),
+                        .background(palette.accentGlow)
+                        .border(1.dp, palette.accent, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Wifi,
                         contentDescription = null,
-                        tint = MintAccent,
+                        tint = palette.accent,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -148,7 +149,7 @@ fun SyncServerScreen(
                     text = "WIRELESS AUDIO TRANSFER",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    color = palette.textPrimary,
                     letterSpacing = 0.5.sp
                 )
 
@@ -157,7 +158,7 @@ fun SyncServerScreen(
                 Text(
                     text = "Open this address in any browser on your computer connected to the same Wi-Fi network to transfer audio files directly:",
                     fontSize = 13.sp,
-                    color = TextSecondary,
+                    color = palette.textSecondary,
                     textAlign = TextAlign.Center,
                     lineHeight = 18.sp
                 )
@@ -169,8 +170,8 @@ fun SyncServerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RadiusMd)
-                        .background(ObsidianElevated)
-                        .border(1.dp, MintAccent, RadiusMd)
+                        .background(palette.elevated)
+                        .border(1.dp, palette.accent, RadiusMd)
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -178,7 +179,7 @@ fun SyncServerScreen(
                         text = if (serverState.isRunning) "http://${serverState.hostAddress}:${serverState.port}" else "Connecting to Wi-Fi...",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MintAccent,
+                        color = palette.accent,
                         fontFamily = FontFamily.Monospace,
                         textAlign = TextAlign.Center
                     )
@@ -201,7 +202,7 @@ fun SyncServerScreen(
                     Icon(
                         imageVector = Icons.Default.CloudUpload,
                         contentDescription = null,
-                        tint = MintAccent,
+                        tint = palette.accent,
                         modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -209,20 +210,20 @@ fun SyncServerScreen(
                         text = "${serverState.totalUploadedFiles}",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = palette.textPrimary
                     )
                     Text(
                         text = "FILES SYNCED",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextMuted
+                        color = palette.textMuted
                     )
                 }
             }
 
             // Rescan Button Card
             SleekCard(
-                backgroundColor = ObsidianElevated,
+                backgroundColor = palette.elevated,
                 shape = RadiusLg,
                 modifier = Modifier.weight(1f),
                 onClick = {
@@ -234,7 +235,7 @@ fun SyncServerScreen(
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = null,
-                        tint = MintAccent,
+                        tint = palette.accent,
                         modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))

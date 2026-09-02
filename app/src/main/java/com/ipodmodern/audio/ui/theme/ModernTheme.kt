@@ -110,14 +110,14 @@ fun buildThemePalette(baseName: String, accentName: String): ThemePalette {
             accentGlow = glow,
             pillBg = glow
         )
-        else -> ThemePalette( // Obsidian Dark (Default)
-            bg = Color(0xFF0D0F12),
-            surface = Color(0xFF16191E),
-            elevated = Color(0xFF1E2229),
-            pill = Color(0xFF242932),
-            trackBg = Color(0xFF2B313D),
-            border = Color(0x14FFFFFF),
-            borderSubtle = Color(0x0AFFFFFF),
+        else -> ThemePalette( // Flagship Pure OLED Black
+            bg = Color(0xFF000000),
+            surface = Color(0xFF0D0E11),
+            elevated = Color(0xFF16181D),
+            pill = Color(0xFF1E2128),
+            trackBg = Color(0xFF262626),
+            border = Color(0x1AFFFFFF),
+            borderSubtle = Color(0x0DFFFFFF),
             borderHighlight = Color(0x33FFFFFF),
             accent = accent,
             accentGlow = glow,

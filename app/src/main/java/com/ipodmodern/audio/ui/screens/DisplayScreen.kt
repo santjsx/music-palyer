@@ -52,7 +52,8 @@ enum class ScreenType {
     PLAYLIST_DETAIL,
     LYRICS,
     SYNC_SERVER,
-    SETTINGS
+    SETTINGS,
+    SEARCH
 }
 
 @Composable

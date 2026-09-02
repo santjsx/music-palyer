@@ -87,8 +87,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _uiState = MutableStateFlow(
         PlayerUiState(
-            themeBase = prefs.getString(KEY_THEME_BASE, "Obsidian Dark") ?: "Obsidian Dark",
-            accentColor = prefs.getString(KEY_ACCENT_COLOR, "Mint Green") ?: "Mint Green",
+            themeBase = prefs.getString(KEY_THEME_BASE, "Pure OLED Black") ?: "Pure OLED Black",
+            accentColor = prefs.getString(KEY_ACCENT_COLOR, "Apple Red") ?: "Apple Red",
             favoriteTrackIds = prefs.getStringSet(KEY_FAVORITES, emptySet())?.mapNotNull { it.toLongOrNull() }?.toSet() ?: emptySet()
         )
     )
@@ -108,6 +108,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var volumeDismissJob: Job? = null
 
     init {
+        // Automatically migrate any legacy discordant themes (e.g. Studio Slate / Electric Cyan) to flagship Pure OLED Black & Apple Red
+        val savedBase = prefs.getString(KEY_THEME_BASE, "Pure OLED Black") ?: "Pure OLED Black"
+        val savedAccent = prefs.getString(KEY_ACCENT_COLOR, "Apple Red") ?: "Apple Red"
+        if (savedBase == "Studio Slate" || savedBase == "Obsidian Dark" || savedAccent == "Electric Cyan" || savedAccent == "Mint Green") {
+            setThemeBase("Pure OLED Black")
+            setAccentColor("Apple Red")
+        }
         AudioPlaybackService.playbackActionListener = { action ->
             when (action) {
                 AudioPlaybackService.ACTION_PLAY -> if (!_uiState.value.isPlaying) togglePlayPause()

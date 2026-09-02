@@ -107,7 +107,7 @@ fun MiniPlayerBar(
                     modifier = Modifier
                         .fillMaxWidth(progress)
                         .fillMaxHeight()
-                        .background(Color(0xFFE50914))
+                        .background(com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent)
                 )
             }
 
