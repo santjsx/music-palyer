@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.ipodmodern.audio.ui.theme.RadiusFull
+import com.ipodmodern.audio.ui.theme.RadiusSm
 import com.ipodmodern.audio.ui.theme.RadiusLg
 import com.ipodmodern.audio.ui.theme.RadiusMd
 import com.ipodmodern.audio.ui.theme.RadiusXl
@@ -310,6 +311,46 @@ fun ModernNowPlayingScreen(
                             contentDescription = "Options",
                             tint = Color.White,
                             modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                // Apple Music / Tidal Grade Audio Quality Badge
+                if (currentTrack != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val isHiRes = currentTrack.isHiRes
+                        val badgeBg = if (isHiRes) Color(0xFF2C2411) else Color(0x33FFFFFF)
+                        val badgeBorder = if (isHiRes) Color(0xFFFFD159) else Color(0x44FFFFFF)
+                        val badgeTextColor = if (isHiRes) Color(0xFFFFD159) else Color.White
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RadiusSm)
+                                .background(badgeBg)
+                                .border(1.dp, badgeBorder, RadiusSm)
+                                .padding(horizontal = 7.dp, vertical = 2.5.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = currentTrack.displayBadge,
+                                color = badgeTextColor,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.6.sp
+                            )
+                        }
+
+                        Text(
+                            text = currentTrack.audioSpecText,
+                            color = Color.White.copy(alpha = 0.65f),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }

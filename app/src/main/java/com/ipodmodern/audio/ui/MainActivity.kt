@@ -135,6 +135,7 @@ fun ModernMusicAppContent(
 
     var activeScreen by remember { mutableStateOf(ScreenType.MENU_MAIN) }
     var selectedPlaylistId by remember { mutableStateOf<Long?>(null) }
+    var libraryCategory by remember { mutableStateOf(com.ipodmodern.audio.ui.screens.LibraryCategory.SONGS) }
 
     fun handleBack() {
         playerViewModel.hapticEngine.performClick()
@@ -171,12 +172,22 @@ fun ModernMusicAppContent(
             ScreenType.MENU_MAIN -> {
                 ModernHomeScreen(
                     playerViewModel = playerViewModel,
-                    onNavigateToSongs = { activeScreen = ScreenType.MENU_MUSIC },
-                    onNavigateToAlbums = { activeScreen = ScreenType.MENU_MUSIC },
-                    onNavigateToArtists = { activeScreen = ScreenType.MENU_MUSIC },
+                    onNavigateToSongs = {
+                        libraryCategory = com.ipodmodern.audio.ui.screens.LibraryCategory.SONGS
+                        activeScreen = ScreenType.MENU_MUSIC
+                    },
+                    onNavigateToAlbums = {
+                        libraryCategory = com.ipodmodern.audio.ui.screens.LibraryCategory.ALBUMS
+                        activeScreen = ScreenType.MENU_MUSIC
+                    },
+                    onNavigateToArtists = {
+                        libraryCategory = com.ipodmodern.audio.ui.screens.LibraryCategory.ARTISTS
+                        activeScreen = ScreenType.MENU_MUSIC
+                    },
                     onNavigateToPlaylists = { activeScreen = ScreenType.PLAYLISTS },
                     onNavigateToNowPlaying = { activeScreen = ScreenType.NOW_PLAYING },
-                    onOpenSyncHub = { activeScreen = ScreenType.SETTINGS }
+                    onOpenSyncHub = { activeScreen = ScreenType.SETTINGS },
+                    onNavigateToSearch = { activeScreen = ScreenType.SEARCH }
                 )
             }
             ScreenType.MENU_MUSIC,
@@ -199,7 +210,8 @@ fun ModernMusicAppContent(
                             activeScreen = ScreenType.NOW_PLAYING
                         }
                     },
-                    onOpenSettings = { activeScreen = ScreenType.SETTINGS }
+                    onOpenSettings = { activeScreen = ScreenType.SETTINGS },
+                    initialCategory = libraryCategory
                 )
             }
             ScreenType.SEARCH -> {
@@ -325,7 +337,10 @@ fun ModernMusicAppContent(
                         playerViewModel.hapticEngine.performClick()
                         activeScreen = when (tab) {
                             ModernTab.EXPLORE -> ScreenType.MENU_MAIN
-                            ModernTab.LIBRARY -> ScreenType.MENU_MUSIC
+                            ModernTab.LIBRARY -> {
+                                libraryCategory = com.ipodmodern.audio.ui.screens.LibraryCategory.SONGS
+                                ScreenType.MENU_MUSIC
+                            }
                             ModernTab.PLAY -> {
                                 if (playerState.currentTrack != null) {
                                     ScreenType.NOW_PLAYING

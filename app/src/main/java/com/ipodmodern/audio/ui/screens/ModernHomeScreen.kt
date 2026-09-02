@@ -90,6 +90,7 @@ fun ModernHomeScreen(
     onNavigateToPlaylists: () -> Unit,
     onNavigateToNowPlaying: () -> Unit,
     onOpenSyncHub: () -> Unit = {},
+    onNavigateToSearch: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by playerViewModel.uiState.collectAsState()
@@ -134,7 +135,7 @@ fun ModernHomeScreen(
 
                 SleekIconButton(
                     icon = Icons.Default.NotificationsNone,
-                    onClick = {},
+                    onClick = { onOpenSyncHub() },
                     size = 40.dp,
                     iconSize = 20.dp,
                     contentDescription = "Notifications"
@@ -163,8 +164,9 @@ fun ModernHomeScreen(
             }
         }
 
-        // 3. Search Bar
+        // 3. Search Bar Capsule -> Tapping opens dedicated real-time search
         item {
+            val homePalette = com.ipodmodern.audio.ui.theme.LocalThemePalette.current
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -172,6 +174,10 @@ fun ModernHomeScreen(
                     .clip(RadiusFull)
                     .background(ObsidianPill)
                     .border(1.dp, ObsidianBorder, RadiusFull)
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        onNavigateToSearch()
+                    }
                     .padding(horizontal = 16.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
@@ -186,27 +192,10 @@ fun ModernHomeScreen(
                         modifier = Modifier.size(20.dp)
                     )
 
-                    BasicTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        singleLine = true,
-                        textStyle = TextStyle(
-                            color = TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Normal
-                        ),
-                        cursorBrush = SolidColor(MintAccent),
-                        decorationBox = { innerTextField ->
-                            if (searchQuery.isEmpty()) {
-                                Text(
-                                    text = "Search songs, albums, artists...",
-                                    color = TextMuted,
-                                    fontSize = 14.sp
-                                )
-                            }
-                            innerTextField()
-                        },
-                        modifier = Modifier.fillMaxWidth()
+                    Text(
+                        text = "Search songs, albums, artists...",
+                        color = TextMuted,
+                        fontSize = 14.sp
                     )
                 }
             }
@@ -300,13 +289,36 @@ fun ModernHomeScreen(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                Text(
-                                    text = continueTrack.artist,
-                                    color = TextSecondary,
-                                    fontSize = 12.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = continueTrack.artist,
+                                        color = TextSecondary,
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
+
+                                    // Apple/Tidal Style Audio Quality Badge
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RadiusSm)
+                                            .background(if (continueTrack.isHiRes) Color(0xFF2C2411) else Color(0x33FFFFFF))
+                                            .border(0.5.dp, if (continueTrack.isHiRes) Color(0xFFFFD159) else Color(0x44FFFFFF), RadiusSm)
+                                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(
+                                            text = continueTrack.displayBadge,
+                                            color = if (continueTrack.isHiRes) Color(0xFFFFD159) else Color.White,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 0.5.sp
+                                        )
+                                    }
+                                }
                                 Spacer(modifier = Modifier.height(6.dp))
 
                                 // Progress Line + Time Text
@@ -432,7 +444,27 @@ fun ModernHomeScreen(
                                         )
                                     }
 
+                                    // Audio Quality Badge (Top Left of Card)
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopStart)
+                                            .padding(6.dp)
+                                            .clip(RadiusSm)
+                                            .background(Color(0xCC000000))
+                                            .border(0.5.dp, if (track.isHiRes) Color(0xFFFFD159) else Color(0x44FFFFFF), RadiusSm)
+                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = if (track.isHiRes) "HI-RES" else "LOSSLESS",
+                                            color = if (track.isHiRes) Color(0xFFFFD159) else Color.White,
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 0.5.sp
+                                        )
+                                    }
+
                                     // Play icon overlay pill
+                                    val cardAccent = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent
                                     Box(
                                         modifier = Modifier
                                             .align(Alignment.BottomEnd)
@@ -445,7 +477,7 @@ fun ModernHomeScreen(
                                         Icon(
                                             imageVector = Icons.Default.PlayArrow,
                                             contentDescription = "Play",
-                                            tint = MintAccent,
+                                            tint = cardAccent,
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }

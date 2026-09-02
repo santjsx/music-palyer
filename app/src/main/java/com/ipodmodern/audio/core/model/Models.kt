@@ -49,7 +49,40 @@ data class Track(
     val isCueSplit: Boolean = false,
     val cueStartMs: Long = 0L,
     val cueEndMs: Long = 0L
-)
+) {
+    val isHiRes: Boolean
+        get() = badgeText.contains("HI-RES", ignoreCase = true) || 
+                badgeText.contains("24-BIT", ignoreCase = true) || 
+                badgeText.contains("96.0", ignoreCase = true) || 
+                sampleRate > 48000 || bitDepth > 16
+
+    val isLossless: Boolean
+        get() = isHiRes || 
+                badgeText.contains("LOSSLESS", ignoreCase = true) ||
+                badgeText.contains("FLAC", ignoreCase = true) ||
+                badgeText.contains("ALAC", ignoreCase = true) ||
+                badgeText.contains("WAV", ignoreCase = true) ||
+                badgeText.contains("DSD", ignoreCase = true) ||
+                formatName.equals("FLAC", true) ||
+                formatName.equals("WAV", true) ||
+                formatName.equals("ALAC", true)
+
+    val displayBadge: String
+        get() = when {
+            isHiRes -> "HI-RES LOSSLESS"
+            isLossless -> "LOSSLESS"
+            badgeText.contains("320", ignoreCase = true) -> "320 KBPS"
+            formatName.isNotBlank() -> formatName.uppercase()
+            else -> "HIGH QUALITY"
+        }
+
+    val audioSpecText: String
+        get() = when {
+            isHiRes -> "${bitDepth}-Bit / ${(sampleRate / 1000.0f).toString().removeSuffix(".0")} kHz • ${formatName.uppercase()}"
+            isLossless -> "${bitDepth}-Bit / 44.1 kHz • ${formatName.uppercase()}"
+            else -> "${formatName.uppercase()} • High Quality"
+        }
+}
 
 @Serializable
 data class Album(

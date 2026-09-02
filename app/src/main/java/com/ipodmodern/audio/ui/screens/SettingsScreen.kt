@@ -209,7 +209,7 @@ fun SettingsScreen(
                 SettingsItemRow(
                     icon = Icons.Default.SystemUpdate,
                     title = "Software Updates",
-                    subtitle = "Version 2.4.0 • Check for OTA updates",
+                    subtitle = "Version 2.4.1 • Check for OTA updates",
                     onClick = { onCheckUpdates() }
                 )
 
@@ -219,7 +219,7 @@ fun SettingsScreen(
                 SettingsItemRow(
                     icon = Icons.Default.Info,
                     title = "About",
-                    subtitle = "Aether Lossless Engine v2.4.0 • Flagship Core",
+                    subtitle = "Aether Lossless Engine v2.4.1 • Flagship Core",
                     onClick = { activeSheet = SettingsSheetType.ABOUT }
                 )
             }
@@ -459,7 +459,7 @@ fun SettingsScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Version 2.4.0 • Flagship Edition",
+                                text = "Version 2.4.1 • Flagship Edition",
                                 color = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold
