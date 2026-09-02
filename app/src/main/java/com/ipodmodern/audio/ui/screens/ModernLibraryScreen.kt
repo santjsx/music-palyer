@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Folder
@@ -53,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -208,206 +210,351 @@ fun ModernLibraryScreen(
     }
 
     // MAIN LIBRARY HOME VIEW
-    LazyColumn(
+    var activeCategoryTab by remember { mutableStateOf(LibraryCategory.SONGS) }
+
+    Column(
         modifier = modifier
             .fillMaxSize()
-            .background(ObsidianBg)
+            .background(Color(0xFF000000))
             .statusBarsPadding()
-            .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(top = 16.dp, bottom = 120.dp)
+            .padding(horizontal = 16.dp)
     ) {
-        // 1. Top Bar: "Library" Title + Search + 3-Dots
-        item {
+        // 1. Top Bar: Back Arrow + Red Checkmark + Profile Avatar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp, bottom = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Library",
-                    color = TextPrimary,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
+                // Red Tick / Checkmark Action
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Select",
+                    tint = Color(0xFFE50914),
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        }
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SleekIconButton(
-                        icon = Icons.Default.Search,
-                        onClick = { isSearchActive = !isSearchActive },
-                        size = 38.dp,
-                        iconSize = 20.dp,
-                        contentDescription = "Search"
-                    )
-
-                    SleekIconButton(
-                        icon = Icons.Default.MoreVert,
-                        onClick = {},
-                        size = 38.dp,
-                        iconSize = 20.dp,
-                        contentDescription = "Options"
+                // User Profile Avatar
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF282A30)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Profile",
+                        tint = Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
         }
 
-        // Search Bar Dropdown
-        if (isSearchActive) {
-            item {
-                Box(
+        // 2. Search Box Pill: "Search this folder"
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .clip(RadiusFull)
+                .background(Color(0xFF16171B))
+                .border(1.dp, Color(0x1AFFFFFF), RadiusFull)
+                .padding(horizontal = 14.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = Color(0xFF8E8E93),
+                    modifier = Modifier.size(18.dp)
+                )
+                BasicTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    singleLine = true,
+                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                    cursorBrush = SolidColor(Color(0xFFE50914)),
+                    decorationBox = { inner ->
+                        if (searchQuery.isEmpty()) {
+                            Text(
+                                text = "Search this folder",
+                                color = Color(0xFF636366),
+                                fontSize = 14.sp
+                            )
+                        }
+                        inner()
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                if (searchQuery.isNotEmpty()) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = "Clear",
+                        tint = Color(0xFF8E8E93),
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable { searchQuery = "" }
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // 3. Category Filter Tabs (Songs, Artists, Albums, Folders)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val categories = listOf(
+                LibraryCategory.SONGS to "Songs",
+                LibraryCategory.ARTISTS to "Artists",
+                LibraryCategory.ALBUMS to "Albums",
+                LibraryCategory.FOLDERS to "Folders"
+            )
+
+            categories.forEach { (cat, title) ->
+                val isSelected = activeCategoryTab == cat
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(46.dp)
-                        .clip(RadiusFull)
-                        .background(ObsidianPill)
-                        .border(1.dp, ObsidianBorder, RadiusFull)
-                        .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.CenterStart
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            activeCategoryTab = cat
+                        }
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = null,
-                            tint = TextMuted,
-                            modifier = Modifier.size(18.dp)
+                            imageVector = cat.icon,
+                            contentDescription = title,
+                            tint = if (isSelected) Color(0xFFE50914) else Color(0xFF8E8E93),
+                            modifier = Modifier.size(16.dp)
                         )
-                        BasicTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            singleLine = true,
-                            textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp),
-                            cursorBrush = SolidColor(MintAccent),
-                            decorationBox = { inner ->
-                                if (searchQuery.isEmpty()) {
-                                    Text(
-                                        text = "Search tracks, artists, albums...",
-                                        color = TextMuted,
-                                        fontSize = 14.sp
-                                    )
-                                }
-                                inner()
-                            },
-                            modifier = Modifier.weight(1f)
+                        Text(
+                            text = title,
+                            color = if (isSelected) Color(0xFFE50914) else Color(0xFF8E8E93),
+                            fontSize = 14.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                         )
-                        if (searchQuery.isNotEmpty()) {
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Red underline indicator
+                    Box(
+                        modifier = Modifier
+                            .width(if (isSelected) 40.dp else 0.dp)
+                            .height(2.5.dp)
+                            .clip(RadiusFull)
+                            .background(if (isSelected) Color(0xFFE50914) else Color.Transparent)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // 4. Tab Content (Default: Songs list with counter & tracks)
+        when (activeCategoryTab) {
+            LibraryCategory.SONGS -> {
+                val filteredTracks = if (searchQuery.isEmpty()) {
+                    tracks
+                } else {
+                    tracks.filter {
+                        it.title.contains(searchQuery, ignoreCase = true) ||
+                                it.artist.contains(searchQuery, ignoreCase = true) ||
+                                it.album.contains(searchQuery, ignoreCase = true)
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 4.dp, bottom = 140.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Song Count Subheader
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear",
-                                tint = TextMuted,
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clickable { searchQuery = "" }
+                                imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                                contentDescription = null,
+                                tint = Color(0xFF8E8E93),
+                                modifier = Modifier.size(16.dp)
                             )
+                            Text(
+                                text = "${filteredTracks.size} songs",
+                                color = Color(0xFF8E8E93),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    items(items = filteredTracks, key = { it.id }) { track ->
+                        ModernTrackRow(
+                            track = track,
+                            isCurrent = track.id == activeTrack?.id,
+                            isPlaying = isPlaying,
+                            onClick = { onTrackSelect(track) }
+                        )
+                    }
+                }
+            }
+            LibraryCategory.ARTISTS -> {
+                val filteredArtists = if (searchQuery.isEmpty()) artists else artists.filter { it.name.contains(searchQuery, ignoreCase = true) }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 140.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(filteredArtists) { artist ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RadiusLg)
+                                .clickable { selectedArtist = artist }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF1E1F24)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Person, contentDescription = null, tint = Color(0xFFE50914), modifier = Modifier.size(24.dp))
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = artist.name, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                Text(text = "${artist.trackCount} tracks", color = Color(0xFF8E8E93), fontSize = 12.sp)
+                            }
+                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFF636366), modifier = Modifier.size(18.dp))
                         }
                     }
                 }
             }
-        }
-
-        // 2. Category List Rows (Songs, Albums, Artists, Genres, Folders)
-        item {
-            val folderCount = tracks.map { File(it.filePath).parentFile?.name ?: "Storage" }.distinct().size
-            val genreCount = tracks.map { it.genre.ifBlank { "Soundtrack" } }.distinct().size
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RadiusXl)
-                    .background(ObsidianSurface)
-                    .border(1.dp, ObsidianBorder, RadiusXl)
-                    .padding(vertical = 4.dp)
-            ) {
-                LibraryCategoryRow(
-                    icon = Icons.Default.MusicNote,
-                    title = "Songs",
-                    count = tracks.size,
-                    onClick = { selectedCategory = LibraryCategory.SONGS }
-                )
-
-                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp).background(ObsidianBorder))
-
-                LibraryCategoryRow(
-                    icon = Icons.Default.Album,
-                    title = "Albums",
-                    count = albums.size,
-                    onClick = { selectedCategory = LibraryCategory.ALBUMS }
-                )
-
-                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp).background(ObsidianBorder))
-
-                LibraryCategoryRow(
-                    icon = Icons.Default.Person,
-                    title = "Artists",
-                    count = artists.size,
-                    onClick = { selectedCategory = LibraryCategory.ARTISTS }
-                )
-
-                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp).background(ObsidianBorder))
-
-                LibraryCategoryRow(
-                    icon = Icons.Default.GraphicEq,
-                    title = "Genres",
-                    count = genreCount.coerceAtLeast(1),
-                    onClick = { selectedCategory = LibraryCategory.GENRES }
-                )
-
-                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp).background(ObsidianBorder))
-
-                LibraryCategoryRow(
-                    icon = Icons.Default.Folder,
-                    title = "Folders",
-                    count = folderCount.coerceAtLeast(1),
-                    onClick = { selectedCategory = LibraryCategory.FOLDERS }
-                )
+            LibraryCategory.ALBUMS -> {
+                val filteredAlbums = if (searchQuery.isEmpty()) albums else albums.filter { it.title.contains(searchQuery, ignoreCase = true) }
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 140.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(filteredAlbums) { album ->
+                        val albumArt = remember(album.artworkUri) { album.artworkUri?.let { File(it) } }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RadiusLg)
+                                .background(Color(0xFF121316))
+                                .clickable { selectedAlbum = album }
+                                .padding(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .clip(RadiusMd)
+                                    .background(Color(0xFF1C1D22)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (albumArt != null && albumArt.exists()) {
+                                    AsyncImage(model = albumArt, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                } else {
+                                    Icon(Icons.Default.Album, contentDescription = null, tint = Color(0xFFE50914), modifier = Modifier.size(36.dp))
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(text = album.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(text = album.artist, color = Color(0xFF8E8E93), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
             }
-        }
-
-        // 3. Recently Added Section Header
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Recently Added",
-                    color = TextPrimary,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = "See all",
-                    color = TextMuted,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.clickable { selectedCategory = LibraryCategory.SONGS }
-                )
+            LibraryCategory.FOLDERS -> {
+                val folders = tracks.groupBy { File(it.filePath).parentFile?.name ?: "Storage" }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 140.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(folders.keys.toList()) { folderName ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RadiusLg)
+                                .clickable { selectedFolder = folderName }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RadiusMd)
+                                    .background(Color(0xFF1E1F24)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Folder, contentDescription = null, tint = Color(0xFFE50914), modifier = Modifier.size(24.dp))
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = folderName, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                Text(text = "${folders[folderName]?.size ?: 0} tracks", color = Color(0xFF8E8E93), fontSize = 12.sp)
+                            }
+                            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFF636366), modifier = Modifier.size(18.dp))
+                        }
+                    }
+                }
             }
-        }
-
-        // Track items
-        val filteredTracks = if (searchQuery.isEmpty()) {
-            tracks.take(15)
-        } else {
-            tracks.filter {
-                it.title.contains(searchQuery, ignoreCase = true) ||
-                        it.artist.contains(searchQuery, ignoreCase = true) ||
-                        it.album.contains(searchQuery, ignoreCase = true)
-            }
-        }
-
-        items(filteredTracks) { track ->
-            ModernTrackRow(
-                track = track,
-                isCurrent = track.id == activeTrack?.id,
-                onClick = { onTrackSelect(track) }
-            )
+            else -> {}
         }
     }
 }
@@ -416,6 +563,7 @@ fun ModernLibraryScreen(
 private fun ModernTrackRow(
     track: Track,
     isCurrent: Boolean,
+    isPlaying: Boolean = false,
     onClick: () -> Unit
 ) {
     val view = LocalView.current
@@ -423,138 +571,95 @@ private fun ModernTrackRow(
         track.artworkUri?.let { File(it) }
     }
 
-    SleekCard(
-        modifier = Modifier.fillMaxWidth(),
-        backgroundColor = if (isCurrent) ObsidianElevated else ObsidianSurface,
-        shape = RadiusLg,
-        onClick = onClick
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Artwork Thumbnail
-            Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(RadiusMd)
-                    .background(ObsidianElevated),
-                contentAlignment = Alignment.Center
-            ) {
-                if (artworkFile != null && artworkFile.exists()) {
-                    AsyncImage(
-                        model = artworkFile,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = MintAccent,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
+    val durMin = (track.durationMs / 1000) / 60
+    val durSec = (track.durationMs / 1000) % 60
+    val durationText = String.format("%d:%02d", durMin, durSec)
 
-            // Title & Artist Column (Properly Constrained with maxLines=1 and ellipsis)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = track.title,
-                    color = if (isCurrent) MintAccent else TextPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = track.artist,
-                    color = TextSecondary,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            // Play Trigger
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(if (isCurrent) MintAccent else ObsidianElevated)
-                    .clickable {
-                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                        onClick()
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Play",
-                    tint = if (isCurrent) ObsidianBg else TextPrimary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LibraryCategoryRow(
-    icon: ImageVector,
-    title: String,
-    count: Int,
-    onClick: () -> Unit
-) {
-    val view = LocalView.current
+    var showMenu by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RadiusMd)
+            .background(if (isCurrent) Color(0xFF1C1417) else Color.Transparent)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onClick()
             }
-            .padding(horizontal = 16.dp, vertical = 13.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = title,
-            tint = MintAccent,
-            modifier = Modifier.size(20.dp)
-        )
+        // Artwork Thumbnail (Rounded square)
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RadiusMd)
+                .background(Color(0xFF1C1D22)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (artworkFile != null && artworkFile.exists()) {
+                AsyncImage(
+                    model = artworkFile,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.MusicNote,
+                    contentDescription = null,
+                    tint = Color(0xFFE50914),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
 
-        Text(
-            text = title,
-            color = TextPrimary,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1f)
-        )
+        // Title & Artist Column
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = track.title,
+                color = if (isCurrent) Color(0xFFE50914) else Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = track.artist.ifBlank { "Unknown Artist" },
+                color = Color(0xFF8E8E93),
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
 
+        // Duration (e.g. 6:48)
         Text(
-            text = count.toString(),
-            color = TextMuted,
+            text = durationText,
+            color = Color(0xFF8E8E93),
             fontSize = 13.sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Normal
         )
 
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = TextMuted,
-            modifier = Modifier.size(18.dp)
-        )
+        // 3-Dots Vertical Action Menu
+        Box {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "Options",
+                tint = Color(0xFF8E8E93),
+                modifier = Modifier
+                    .size(22.dp)
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        showMenu = true
+                    }
+            )
+        }
     }
 }
 

@@ -42,21 +42,23 @@ object ModernThemeTokens {
 
 fun getAccentColor(name: String): Color {
     return when (name) {
+        "Apple Red", "Red", "Crimson" -> Color(0xFFE50914)
         "Cyber Gold", "Cyber" -> Color(0xFFFFD159)
         "Electric Cyan", "Electric" -> Color(0xFF00E5FF)
         "Neon Rose", "Neon" -> Color(0xFFFF4081)
         "Ultra Violet", "Ultra" -> Color(0xFFB388FF)
-        else -> Color(0xFF7AE898) // Mint Green
+        else -> Color(0xFFE50914) // Default signature Red matching design
     }
 }
 
 fun getAccentGlow(name: String): Color {
     return when (name) {
+        "Apple Red", "Red", "Crimson" -> Color(0x33E50914)
         "Cyber Gold", "Cyber" -> Color(0x33FFD159)
         "Electric Cyan", "Electric" -> Color(0x3300E5FF)
         "Neon Rose", "Neon" -> Color(0x33FF4081)
         "Ultra Violet", "Ultra" -> Color(0x33B388FF)
-        else -> Color(0x337AE898)
+        else -> Color(0x33E50914)
     }
 }
 
@@ -125,21 +127,21 @@ fun buildThemePalette(baseName: String, accentName: String): ThemePalette {
 }
 
 // Global Static Token Defaults for direct references
-var ObsidianBg = Color(0xFF0D0F12)
-var ObsidianSurface = Color(0xFF16191E)
-var ObsidianElevated = Color(0xFF1E2229)
-var ObsidianPill = Color(0xFF242932)
+var ObsidianBg = Color(0xFF000000)
+var ObsidianSurface = Color(0xFF0D0E11)
+var ObsidianElevated = Color(0xFF16181D)
+var ObsidianPill = Color(0xFF1E2128)
 var ObsidianTrackBg = Color(0xFF2B313D)
 
-val ObsidianBorder = Color(0x14FFFFFF)
-val ObsidianBorderSubtle = Color(0x0AFFFFFF)
+val ObsidianBorder = Color(0x1AFFFFFF)
+val ObsidianBorderSubtle = Color(0x0DFFFFFF)
 val ObsidianBorderHighlight = Color(0x33FFFFFF)
 
-var MintAccent = Color(0xFF7AE898)
-var MintAccentLight = Color(0xFFA3F2B8)
-var MintAccentDark = Color(0xFF3EA35E)
-var MintGlow = Color(0x337AE898)
-var MintPillBg = Color(0x247AE898)
+var MintAccent = Color(0xFFE50914)
+var MintAccentLight = Color(0xFFFF4D5E)
+var MintAccentDark = Color(0xFFB80710)
+var MintGlow = Color(0x33E50914)
+var MintPillBg = Color(0x2EE50914)
 
 val TextPrimary = Color(0xFFFFFFFF)
 val TextSecondary = Color(0xFF9299A8)

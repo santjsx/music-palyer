@@ -17,10 +17,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -49,11 +52,10 @@ import com.ipodmodern.audio.ui.theme.TextPrimary
 import com.ipodmodern.audio.ui.theme.TextSecondary
 
 enum class ModernTab(val title: String, val icon: ImageVector) {
-    HOME("Home", Icons.Default.Home),
+    PLAY("Play", Icons.Default.PlayArrow),
+    EXPLORE("Explore", Icons.Default.Explore),
     LIBRARY("Library", Icons.AutoMirrored.Filled.QueueMusic),
-    PLAYER("Player", Icons.Default.PlayCircleOutline),
-    PLAYLISTS("Playlists", Icons.Default.LibraryMusic),
-    SETTINGS("Settings", Icons.Default.Settings)
+    SEARCH("Search", Icons.Default.Search)
 }
 
 @Composable
@@ -65,63 +67,73 @@ fun ModernBottomNavIsland(
     val view = LocalView.current
 
     val activeTab = when (currentScreen) {
-        ScreenType.MENU_MAIN -> ModernTab.HOME
-        ScreenType.MENU_MUSIC, ScreenType.MENU_SONGS, ScreenType.MENU_ALBUMS, ScreenType.MENU_ARTISTS -> ModernTab.LIBRARY
-        ScreenType.NOW_PLAYING, ScreenType.COVER_FLOW -> ModernTab.PLAYER
-        ScreenType.SETTINGS -> ModernTab.SETTINGS
-        else -> ModernTab.HOME
+        ScreenType.MENU_MAIN -> ModernTab.EXPLORE
+        ScreenType.MENU_MUSIC, ScreenType.MENU_SONGS, ScreenType.MENU_ALBUMS, ScreenType.MENU_ARTISTS, ScreenType.PLAYLISTS, ScreenType.PLAYLIST_DETAIL -> ModernTab.LIBRARY
+        ScreenType.NOW_PLAYING, ScreenType.COVER_FLOW -> ModernTab.PLAY
+        ScreenType.SETTINGS, ScreenType.SYNC_SERVER -> ModernTab.SEARCH
+        else -> ModernTab.LIBRARY
     }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-            .clip(RadiusXl)
-            .background(ObsidianSurface)
-            .border(1.dp, ObsidianBorder, RadiusXl)
-            .padding(vertical = 6.dp, horizontal = 4.dp)
+            .padding(horizontal = 24.dp, vertical = 6.dp)
+            .clip(RadiusFull)
+            .background(Color(0xFF101114).copy(alpha = 0.95f))
+            .border(1.dp, Color(0x22FFFFFF), RadiusFull)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             ModernTab.values().forEach { tab ->
                 val isSelected = tab == activeTab
 
                 val scale by animateFloatAsState(
-                    targetValue = if (isSelected) 1.08f else 1.0f,
-                    animationSpec = spring(dampingRatio = 0.65f, stiffness = 1600f),
+                    targetValue = if (isSelected) 1.05f else 1.0f,
+                    animationSpec = spring(dampingRatio = 0.7f, stiffness = 1400f),
                     label = "tab_scale"
                 )
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                val pillBg = if (isSelected) Color(0xFF381216) else Color.Transparent
+                val pillBorder = if (isSelected) Color(0x44E50914) else Color.Transparent
+
+                Box(
                     modifier = Modifier
                         .graphicsLayer {
                             scaleX = scale
                             scaleY = scale
                         }
                         .clip(RadiusFull)
+                        .background(pillBg)
+                        .border(1.dp, pillBorder, RadiusFull)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             onTabSelected(tab)
                         }
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .padding(horizontal = if (isSelected) 20.dp else 16.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = tab.icon,
-                        contentDescription = tab.title,
-                        tint = if (isSelected) MintAccent else TextMuted,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = tab.title,
-                        color = if (isSelected) MintAccent else TextMuted,
-                        fontSize = 10.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = tab.icon,
+                            contentDescription = tab.title,
+                            tint = if (isSelected) Color(0xFFE50914) else Color(0xFF8E8E93),
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = tab.title,
+                            color = if (isSelected) Color(0xFFE50914) else Color(0xFF8E8E93),
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                        )
+                    }
                 }
             }
         }

@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -49,8 +50,10 @@ import com.ipodmodern.audio.ui.theme.ObsidianBorder
 import com.ipodmodern.audio.ui.theme.ObsidianElevated
 import com.ipodmodern.audio.ui.theme.ObsidianSurface
 import com.ipodmodern.audio.ui.theme.ObsidianTrackBg
+import com.ipodmodern.audio.ui.theme.RadiusFull
 import com.ipodmodern.audio.ui.theme.RadiusLg
 import com.ipodmodern.audio.ui.theme.RadiusMd
+import com.ipodmodern.audio.ui.theme.RadiusXl
 import com.ipodmodern.audio.ui.theme.TextMuted
 import com.ipodmodern.audio.ui.theme.TextPrimary
 import com.ipodmodern.audio.ui.theme.TextSecondary
@@ -83,28 +86,28 @@ fun MiniPlayerBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 2.dp)
-            .clip(RadiusLg)
-            .background(ObsidianElevated)
-            .border(1.dp, ObsidianBorder, RadiusLg)
+            .padding(horizontal = 14.dp, vertical = 4.dp)
+            .clip(RadiusXl)
+            .background(Color(0xFF141519).copy(alpha = 0.96f))
+            .border(1.dp, Color(0x24FFFFFF), RadiusXl)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onBarClick()
             }
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Smooth progress indicator along the top edge
+            // Subtle top progress bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(2.5.dp)
-                    .background(ObsidianTrackBg)
+                    .height(2.dp)
+                    .background(Color(0x22FFFFFF))
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(progress)
                         .fillMaxHeight()
-                        .background(MintAccent)
+                        .background(Color(0xFFE50914))
                 )
             }
 
@@ -113,15 +116,14 @@ fun MiniPlayerBar(
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Album Art Thumbnail (120fps AsyncImage)
+                // Album Art Thumbnail
                 Box(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(RadiusMd)
-                        .background(ObsidianSurface)
-                        .border(1.dp, ObsidianBorder, RadiusMd),
+                        .background(Color(0xFF22242B)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (artworkFile != null && artworkFile.exists()) {
@@ -135,8 +137,8 @@ fun MiniPlayerBar(
                         Icon(
                             imageVector = Icons.Default.MusicNote,
                             contentDescription = null,
-                            tint = MintAccent,
-                            modifier = Modifier.size(20.dp)
+                            tint = Color.White.copy(alpha = 0.8f),
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
@@ -153,48 +155,28 @@ fun MiniPlayerBar(
                     ) { targetTitle ->
                         Text(
                             text = targetTitle,
-                            color = TextPrimary,
+                            color = Color.White,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
+                            fontSize = 14.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = track.artist,
-                        color = TextSecondary,
-                        fontSize = 11.sp,
+                        text = track.artist.ifBlank { "Unknown Artist" },
+                        color = Color(0xFF9E9EA4),
+                        fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Favorite Heart
+                // Play / Pause Icon Button (Solid White)
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
-                        .clickable {
-                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            onFavoriteClick()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = "Favorite",
-                        tint = if (isFavorite) MintAccent else TextMuted,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                // Hero Play / Pause Circle
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(MintAccent)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             onPlayPauseClick()
@@ -204,15 +186,15 @@ fun MiniPlayerBar(
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = ObsidianBg,
-                        modifier = Modifier.size(22.dp)
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
                     )
                 }
 
-                // Next Track Button
+                // Next Track Icon Button
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
@@ -223,8 +205,8 @@ fun MiniPlayerBar(
                     Icon(
                         imageVector = Icons.Default.SkipNext,
                         contentDescription = "Next",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(22.dp)
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }

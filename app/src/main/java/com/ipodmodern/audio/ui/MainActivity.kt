@@ -26,7 +26,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import com.ipodmodern.audio.core.ota.OtaUpdateManager
+import com.ipodmodern.audio.ui.components.InAppUpdateSheet
 import com.ipodmodern.audio.ui.components.MiniPlayerBar
 import com.ipodmodern.audio.ui.components.ModernBottomNavIsland
 import com.ipodmodern.audio.ui.components.ModernTab
@@ -120,6 +123,14 @@ fun ModernMusicAppContent(
 ) {
     val playerState by playerViewModel.uiState.collectAsState()
     val syncServerState by syncViewModel.serverState.collectAsState()
+
+    val context = LocalContext.current
+    val otaManager = remember { OtaUpdateManager.getInstance(context) }
+    val otaState by otaManager.updateState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        otaManager.checkForUpdates(isManualCheck = false)
+    }
 
     var activeScreen by remember { mutableStateOf(ScreenType.MENU_MAIN) }
     var selectedPlaylistId by remember { mutableStateOf<Long?>(null) }
@@ -218,7 +229,8 @@ fun ModernMusicAppContent(
                     playerViewModel = playerViewModel,
                     onOpenEqualizer = { activeScreen = ScreenType.EQUALIZER },
                     onOpenEffects = { activeScreen = ScreenType.EFFECTS },
-                    onOpenSyncHub = { activeScreen = ScreenType.SYNC_SERVER }
+                    onOpenSyncHub = { activeScreen = ScreenType.SYNC_SERVER },
+                    onCheckUpdates = { otaManager.checkForUpdates(isManualCheck = true) }
                 )
             }
             ScreenType.EQUALIZER -> {
@@ -298,15 +310,30 @@ fun ModernMusicAppContent(
                     onTabSelected = { tab ->
                         playerViewModel.hapticEngine.performClick()
                         activeScreen = when (tab) {
-                            ModernTab.HOME -> ScreenType.MENU_MAIN
+                            ModernTab.EXPLORE -> ScreenType.MENU_MAIN
                             ModernTab.LIBRARY -> ScreenType.MENU_MUSIC
-                            ModernTab.PLAYER -> ScreenType.NOW_PLAYING
-                            ModernTab.PLAYLISTS -> ScreenType.PLAYLISTS
-                            ModernTab.SETTINGS -> ScreenType.SETTINGS
+                            ModernTab.PLAY -> {
+                                if (playerState.currentTrack != null) {
+                                    ScreenType.NOW_PLAYING
+                                } else if (playerState.allTracks.isNotEmpty()) {
+                                    playerViewModel.playTrack(playerState.allTracks.first())
+                                    ScreenType.NOW_PLAYING
+                                } else {
+                                    ScreenType.MENU_MUSIC
+                                }
+                            }
+                            ModernTab.SEARCH -> ScreenType.SETTINGS
                         }
                     }
                 )
             }
         }
+
+        // MARK: - Play Store Level In-App OTA Update Modal Sheet
+        InAppUpdateSheet(
+            updateStatus = otaState,
+            updateManager = otaManager,
+            onDismiss = { otaManager.dismissUpdate() }
+        )
     }
 }

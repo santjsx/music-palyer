@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -93,6 +94,7 @@ fun SettingsScreen(
     onOpenEqualizer: () -> Unit,
     onOpenEffects: () -> Unit,
     onOpenSyncHub: () -> Unit,
+    onCheckUpdates: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
@@ -203,13 +205,21 @@ fun SettingsScreen(
                     onClick = { activeSheet = SettingsSheetType.NOTIFICATIONS }
                 )
 
+                // Software Updates
+                SettingsItemRow(
+                    icon = Icons.Default.SystemUpdate,
+                    title = "Software Updates",
+                    subtitle = "Version 2.3.0 • Check for OTA updates",
+                    onClick = { onCheckUpdates() }
+                )
+
                 Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(1.dp).background(ObsidianBorder))
 
                 // About
                 SettingsItemRow(
                     icon = Icons.Default.Info,
                     title = "About",
-                    subtitle = "Aether Lossless Engine v1.2.2 • Audiophile Core",
+                    subtitle = "Aether Lossless Engine v2.3.0 • Flagship Core",
                     onClick = { activeSheet = SettingsSheetType.ABOUT }
                 )
             }
@@ -448,7 +458,7 @@ fun SettingsScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Version 1.2.2 • Flagship Edition",
+                                text = "Version 2.3.0 • Flagship Edition",
                                 color = MintAccent,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold
@@ -472,24 +482,50 @@ fun SettingsScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RadiusFull)
-                                    .background(MintAccent)
-                                    .clickable {
-                                        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/santjsx/music-palyer"))
-                                        context.startActivity(browserIntent)
-                                    }
-                                    .padding(vertical = 12.dp),
-                                contentAlignment = Alignment.Center
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Text(
-                                    text = "View on GitHub",
-                                    color = ObsidianBg,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RadiusFull)
+                                        .background(ObsidianElevated)
+                                        .border(1.dp, ObsidianBorder, RadiusFull)
+                                        .clickable {
+                                            activeSheet = null
+                                            onCheckUpdates()
+                                        }
+                                        .padding(vertical = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Check Updates",
+                                        color = TextPrimary,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RadiusFull)
+                                        .background(MintAccent)
+                                        .clickable {
+                                            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/santjsx/music-palyer"))
+                                            context.startActivity(browserIntent)
+                                        }
+                                        .padding(vertical = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "GitHub",
+                                        color = ObsidianBg,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }

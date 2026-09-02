@@ -2,21 +2,12 @@ package com.ipodmodern.audio.ui.screens
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,68 +18,76 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.AllInclusive
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.VolumeDown
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.ipodmodern.audio.ui.theme.ModernThemeTokens
+import com.ipodmodern.audio.ui.theme.RadiusFull
+import com.ipodmodern.audio.ui.theme.RadiusLg
+import com.ipodmodern.audio.ui.theme.RadiusMd
+import com.ipodmodern.audio.ui.theme.RadiusXl
 import com.ipodmodern.audio.ui.viewmodel.PlayerViewModel
 import java.io.File
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
- * Flagship Luxury Audiophile Player Screen:
- * - Perfectly integrated with the app's dynamic theme palette & dynamic blurred album art
- * - Grand 320dp Circular Chronograph Vinyl Wheel with laser-etched perimeter ticks, flat progress arc, speed chips, and inside jump controls
- * - Slowly spinning central vinyl disc with embedded album artwork
- * - Anchored Full-Bleed Glassmorphic Audio Deck with 3-line synchronized lyrics & high-end transport controls
+ * Flagship Now Playing Screen directly inspired by reference Screenshot 1:
+ * - Dynamic ambient mesh backdrop derived from the album art
+ * - Immersive top album artwork display with rounded corners
+ * - Bold track title & subtitle with circular glassmorphic 3-dots menu button
+ * - Live synchronized lyrics snippet preview bar with trailing '>' chevron
+ * - Minimalist progress scrubber with '0:00' elapsed and '-0:00' remaining time
+ * - Centered playback controls (Prev, large Play/Pause, Next)
+ * - Integrated volume slider with speaker low & high icons
+ * - Bottom utility toolbar: Shuffle, Repeat, Infinity / Autoplay toggle, Queue
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModernNowPlayingScreen(
     playerViewModel: PlayerViewModel,
@@ -100,87 +99,60 @@ fun ModernNowPlayingScreen(
 ) {
     val uiState by playerViewModel.uiState.collectAsState()
     val progressState by playerViewModel.playbackProgress.collectAsState()
-    val palette = ModernThemeTokens.palette
     val view = LocalView.current
 
     val currentTrack = uiState.currentTrack
-
     val durationMs = if (progressState.durationMs > 0) progressState.durationMs else (currentTrack?.durationMs ?: 0L)
     val positionMs = progressState.positionMs.coerceIn(0L, durationMs.coerceAtLeast(0L))
 
-    val progress = if (durationMs > 0) {
-        (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
-    } else 0f
+    // Format timestamps
+    val elapsedMin = (positionMs / 1000) / 60
+    val elapsedSec = (positionMs / 1000) % 60
+    val elapsedText = String.format("%d:%02d", elapsedMin, elapsedSec)
 
-    val posMin = (positionMs / 1000) / 60
-    val posSec = (positionMs / 1000) % 60
-    val elapsedText = String.format("%02d:%02d", posMin, posSec)
+    val remainingMs = (durationMs - positionMs).coerceAtLeast(0L)
+    val remMin = (remainingMs / 1000) / 60
+    val remSec = (remainingMs / 1000) % 60
+    val remainingText = String.format("-%d:%02d", remMin, remSec)
 
-    val isCurrentFav = currentTrack?.let { uiState.favoriteTrackIds.contains(it.id) } == true
-
-    // Artwork file resolution
     val artworkFile = remember(currentTrack?.artworkUri) {
         currentTrack?.artworkUri?.let { File(it) }
     }
 
-    // Vinyl Rotation Animation (when playing)
-    val infiniteTransition = rememberInfiniteTransition(label = "vinyl_rotation")
-    val vinylRotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 20000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "vinyl_angle"
-    )
-
-    // Dynamic Lyrics Extraction (Previous, Active, Next)
+    // Dynamic Lyrics preview
     val lyrics = uiState.lyrics
     val activeIdx = progressState.activeLyricIndex
-    val hasRealLyrics = lyrics.isNotEmpty()
-
-    val prevLyric = remember(lyrics, activeIdx) {
-        if (hasRealLyrics && activeIdx > 0 && activeIdx <= lyrics.size) {
-            lyrics.getOrNull(activeIdx - 1)?.text
-        } else null
-    }
-    val currentLyric = remember(lyrics, activeIdx, progressState.currentLyricText) {
-        if (hasRealLyrics) {
-            progressState.currentLyricText ?: lyrics.getOrNull(activeIdx.coerceAtLeast(0))?.text
-        } else null
-    }
-    val nextLyric = remember(lyrics, activeIdx) {
-        if (hasRealLyrics && activeIdx >= 0 && activeIdx + 1 < lyrics.size) {
-            lyrics.getOrNull(activeIdx + 1)?.text
-        } else null
-    }
-
-    // Top pill title
-    val pillTitle = remember(isCurrentFav, currentTrack) {
-        if (isCurrentFav) {
-            "Playlist: «My Favourite»"
+    val liveLyricSnippet = remember(lyrics, activeIdx, progressState.currentLyricText) {
+        if (lyrics.isNotEmpty() && activeIdx >= 0 && activeIdx < lyrics.size) {
+            progressState.currentLyricText ?: lyrics[activeIdx].text
         } else {
-            val alb = currentTrack?.album
-            if (!alb.isNullOrBlank()) "Album: «$alb»" else "Playing from Library"
+            "తొలకరిలో తడిసిన హొయా" // Fallback / sample regional snippet
         }
     }
 
-    // Harmonized Theme Colors for the Screen & Deck
-    val deckGradient = remember(palette.accent) {
-        listOf(
-            Color(0xFF256BFE),
-            Color(0xFF144DC8),
-            Color(0xFF0A2E8A)
-        )
-    }
+    // Scrubber dragging state
+    var isDraggingSlider by remember { mutableStateOf(false) }
+    var dragSliderValue by remember { mutableFloatStateOf(0f) }
+
+    val currentProgressFraction = if (durationMs > 0) {
+        (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+    } else 0f
+
+    val sliderProgress = if (isDraggingSlider) dragSliderValue else currentProgressFraction
+
+    // Options Modal Sheet
+    var showOptionsMenu by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+
+    // Autoplay / Infinity toggle state
+    var isInfinityAutoplay by remember { mutableStateOf(true) }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(palette.bg)
+            .background(Color(0xFF14130F))
     ) {
-        // LAYER 0: Ambient Blurred Album Art Backdrop
+        // LAYER 0: Ambient Blurred Backdrop from Album Art
         if (artworkFile != null && artworkFile.exists()) {
             AsyncImage(
                 model = artworkFile,
@@ -188,46 +160,48 @@ fun ModernNowPlayingScreen(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .blur(50.dp)
+                    .blur(60.dp)
             )
         }
 
-        // LAYER 1: Atmospheric Gradient & Dark Vignette Overlay
+        // LAYER 1: Warm Olive / Dynamic Scrim Overlay
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(
-                            palette.bg.copy(alpha = 0.78f),
-                            palette.bg.copy(alpha = 0.88f),
-                            Color(0xFF030509).copy(alpha = 0.95f)
+                        listOf(
+                            Color(0x55000000),
+                            Color(0x882A2518),
+                            Color(0xDD201C12),
+                            Color(0xFF14120C)
                         )
                     )
                 )
         )
 
-        // LAYER 2: Main Layout (Top Navigation Header + Grand Chronograph Stage + Anchored Audio Deck)
+        // LAYER 2: Main Interactive Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 1. TOP NAVIGATION HEADER
+            // 1. Top Bar: Down Arrow Dismiss
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(top = 4.dp),
+                horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Sleek Glass Back Arrow
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             onBackClick()
@@ -235,601 +209,416 @@ fun ModernNowPlayingScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-                        contentDescription = "Back",
-                        tint = Color.White,
-                        modifier = Modifier
-                            .size(16.dp)
-                            .offset(x = 2.dp)
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Dismiss",
+                        tint = Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier.size(32.dp)
                     )
                 }
+            }
 
-                // Center Floating Pill
-                Box(
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .padding(horizontal = 10.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.10f))
-                        .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
-                        .padding(horizontal = 16.dp, vertical = 7.dp),
-                    contentAlignment = Alignment.Center
+            // 2. Center Album Artwork Container
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .aspectRatio(1f)
+                    .clip(RadiusXl)
+                    .shadow(16.dp, RadiusXl)
+                    .background(Color(0x33000000)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (artworkFile != null && artworkFile.exists()) {
+                    AsyncImage(
+                        model = artworkFile,
+                        contentDescription = currentTrack?.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.size(90.dp)
+                    )
+                }
+            }
+
+            // 3. Track Title, Artist & 3-Dots Action Button
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = pillTitle,
-                        color = Color.White.copy(alpha = 0.95f),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center
-                    )
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        AnimatedContent(
+                            targetState = currentTrack?.title ?: "Dil Se",
+                            transitionSpec = { fadeIn() togetherWith fadeOut() },
+                            label = "np_title"
+                        ) { title ->
+                            Text(
+                                text = title,
+                                color = Color.White,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = currentTrack?.artist?.ifBlank { "Karthik, Shweta Mohan" } ?: "Karthik, Shweta Mohan",
+                            color = Color(0xFFD4D4D8).copy(alpha = 0.85f),
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    // 3-Dots Action Button (Circular glassmorphic button)
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color(0x33FFFFFF))
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                showOptionsMenu = true
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreHoriz,
+                            contentDescription = "Options",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
 
-                // Right Options Menu (Equalizer / Queue)
-                Box(
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // 4. Live Lyrics Preview Pill
+                Row(
                     modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
+                        .clip(RadiusFull)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            onOpenEqualizer()
+                            onOpenLyrics()
+                        }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = liveLyricSnippet,
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "View Lyrics",
+                        tint = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 5. Scrubber Bar with Elapsed & Remaining Time
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Slider(
+                        value = sliderProgress,
+                        onValueChange = { newValue ->
+                            isDraggingSlider = true
+                            dragSliderValue = newValue
+                        },
+                        onValueChangeFinished = {
+                            isDraggingSlider = false
+                            val targetMs = (dragSliderValue * durationMs).toLong()
+                            playerViewModel.seekTo(targetMs)
+                        },
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color.White,
+                            activeTrackColor = Color.White.copy(alpha = 0.85f),
+                            inactiveTrackColor = Color.White.copy(alpha = 0.25f)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(20.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = elapsedText,
+                            color = Color.White.copy(alpha = 0.75f),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                        Text(
+                            text = remainingText,
+                            color = Color.White.copy(alpha = 0.75f),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal
+                        )
+                    }
+                }
+            }
+
+            // 6. Central Playback Transport Controls
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Skip Previous
+                Box(
+                    modifier = Modifier
+                        .size(54.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            playerViewModel.prevTrack()
                         },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu",
+                        imageVector = Icons.Default.SkipPrevious,
+                        contentDescription = "Previous",
                         tint = Color.White,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(36.dp)
                     )
                 }
-            }
 
-            // 2. GRAND CHRONOGRAPH VINYL WHEEL STAGE (Weight = 1.2f)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1.2f)
-                    .padding(horizontal = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
+                // Main Play / Pause Button (Large Solid White)
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(0.92f)
-                        .widthIn(max = 330.dp)
-                        .aspectRatio(1f),
+                        .size(68.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            playerViewModel.togglePlayPause()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    // 2.1 Ambient Radial Glow Backdrop
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.radialGradient(
-                                    colors = listOf(
-                                        Color(0xFF2870FF).copy(alpha = 0.42f),
-                                        Color(0xFF1440C0).copy(alpha = 0.18f),
-                                        Color.Transparent
-                                    )
-                                )
-                            )
+                    Icon(
+                        imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (uiState.isPlaying) "Pause" else "Play",
+                        tint = Color.White,
+                        modifier = Modifier.size(46.dp)
                     )
+                }
 
-                    // 2.2 Background Canvas (Outer Precision Ticks, Dark Vinyl Body, Grooves & Progress Arc)
-                    Canvas(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .pointerInput(durationMs) {
-                                detectDragGestures { change, _ ->
-                                    change.consume()
-                                    val centerX = size.width / 2f
-                                    val centerY = size.height / 2f
-                                    val angleRad = atan2(change.position.y - centerY, change.position.x - centerX)
-                                    var angleDeg = Math.toDegrees(angleRad.toDouble()).toFloat() + 90f
-                                    if (angleDeg < 0) angleDeg += 360f
-                                    val pct = (angleDeg / 360f).coerceIn(0f, 1f)
-                                    val targetMs = (pct * durationMs).toLong()
-                                    playerViewModel.seekTo(targetMs)
-                                }
-                            }
-                            .pointerInput(durationMs) {
-                                detectTapGestures { offset ->
-                                    val centerX = size.width / 2f
-                                    val centerY = size.height / 2f
-                                    val angleRad = atan2(offset.y - centerY, offset.x - centerX)
-                                    var angleDeg = Math.toDegrees(angleRad.toDouble()).toFloat() + 90f
-                                    if (angleDeg < 0) angleDeg += 360f
-                                    val pct = (angleDeg / 360f).coerceIn(0f, 1f)
-                                    val targetMs = (pct * durationMs).toLong()
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    playerViewModel.seekTo(targetMs)
-                                }
-                            }
-                    ) {
-                        val canvasCenter = Offset(size.width / 2f, size.height / 2f)
-                        val arcStrokeWidth = 7.5.dp.toPx()
-                        val outerRadius = size.minDimension / 2f - (arcStrokeWidth / 2f)
-                        val vinylRadius = outerRadius - 2.5.dp.toPx()
-
-                        // Draw 72 Perimeter Laser Ticks
-                        val tickCount = 72
-                        for (i in 0 until tickCount) {
-                            val tickAngleDeg = (i.toFloat() / tickCount) * 360f - 90f
-                            val tickAngleRad = Math.toRadians(tickAngleDeg.toDouble())
-                            val isMajor = i % 6 == 0
-
-                            val tickInnerR = outerRadius - (if (isMajor) 12.dp.toPx() else 6.5.dp.toPx())
-                            val tickOuterR = outerRadius + 2.dp.toPx()
-
-                            val startX = canvasCenter.x + (tickInnerR * cos(tickAngleRad)).toFloat()
-                            val startY = canvasCenter.y + (tickInnerR * sin(tickAngleRad)).toFloat()
-                            val endX = canvasCenter.x + (tickOuterR * cos(tickAngleRad)).toFloat()
-                            val endY = canvasCenter.y + (tickOuterR * sin(tickAngleRad)).toFloat()
-
-                            drawLine(
-                                color = Color.White.copy(alpha = if (isMajor) 0.45f else 0.16f),
-                                start = Offset(startX, startY),
-                                end = Offset(endX, endY),
-                                strokeWidth = if (isMajor) 2.dp.toPx() else 1.dp.toPx()
-                            )
-                        }
-
-                        // Draw Dark Machined Vinyl Body
-                        drawCircle(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    Color(0xFF1E2128),
-                                    Color(0xFF13151A),
-                                    Color(0xFF090A0E)
-                                ),
-                                center = canvasCenter,
-                                radius = vinylRadius
-                            ),
-                            radius = vinylRadius,
-                            center = canvasCenter
-                        )
-
-                        // 3 Concentric Physical Grooves
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.06f),
-                            radius = vinylRadius * 0.78f,
-                            center = canvasCenter,
-                            style = Stroke(width = 1.dp.toPx())
-                        )
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.05f),
-                            radius = vinylRadius * 0.60f,
-                            center = canvasCenter,
-                            style = Stroke(width = 1.dp.toPx())
-                        )
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.04f),
-                            radius = vinylRadius * 0.44f,
-                            center = canvasCenter,
-                            style = Stroke(width = 1.dp.toPx())
-                        )
-
-                        // Sweeping Solid White Progress Arc with flat precision ends
-                        if (progress > 0.005f) {
-                            val arcSweepAngle = 360f * progress
-                            drawArc(
-                                color = Color.White,
-                                startAngle = -90f,
-                                sweepAngle = arcSweepAngle,
-                                useCenter = false,
-                                topLeft = Offset(canvasCenter.x - outerRadius, canvasCenter.y - outerRadius),
-                                size = Size(outerRadius * 2, outerRadius * 2),
-                                style = Stroke(width = arcStrokeWidth, cap = StrokeCap.Butt)
-                            )
-                        }
-                    }
-
-                    // 2.3 Inside Speed Chips [x0.5, x1, x2]
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = 42.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.10f))
-                            .border(0.8.dp, Color.White.copy(alpha = 0.14f), CircleShape)
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val currentSpeed = uiState.playbackSpeed
-                        listOf(0.5f to "x0.5", 1.0f to "x1", 2.0f to "x2").forEach { (spd, label) ->
-                            val isSelected = currentSpeed == spd
-                            Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(if (isSelected) Color.White.copy(alpha = 0.22f) else Color.Transparent)
-                                    .clickable {
-                                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                        playerViewModel.setPlaybackSpeed(spd)
-                                    }
-                                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = label,
-                                    color = if (isSelected) Color.White else Color.White.copy(alpha = 0.50f),
-                                    fontSize = 11.5.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-
-                    // 2.4 Inside Jump Buttons & Spinning Vinyl Core
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth(0.68f)
-                            .align(Alignment.Center),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // -10s Rewind Button
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.09f))
-                                .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    playerViewModel.seekBackward10s()
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "⟲10",
-                                color = Color.White.copy(alpha = 0.88f),
-                                fontSize = 9.5.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        // Center Spinning Vinyl Core (~84dp)
-                        Box(
-                            modifier = Modifier
-                                .size(84.dp)
-                                .rotate(if (uiState.isPlaying) vinylRotation else 0f)
-                                .clip(CircleShape)
-                                .background(Color.Black)
-                                .border(2.dp, Color.White.copy(alpha = 0.35f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (artworkFile != null && artworkFile.exists()) {
-                                AsyncImage(
-                                    model = artworkFile,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.MusicNote,
-                                    contentDescription = null,
-                                    tint = palette.accent,
-                                    modifier = Modifier.size(40.dp)
-                                )
-                            }
-
-                            // Tiny Center Spindle Pin
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White)
-                                    .border(1.dp, Color.Black.copy(alpha = 0.5f), CircleShape)
-                            )
-                        }
-
-                        // +10s Fast Forward Button
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.09f))
-                                .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    playerViewModel.seekForward10s()
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "10⟳",
-                                color = Color.White.copy(alpha = 0.88f),
-                                fontSize = 9.5.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    // 2.5 Monospaced Timestamp & Subtle Dots
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 26.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = elapsedText,
-                            color = Color.White.copy(alpha = 0.92f),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "•••",
-                            color = Color.White.copy(alpha = 0.35f),
-                            fontSize = 8.sp,
-                            letterSpacing = 2.sp
-                        )
-                    }
+                // Skip Next
+                Box(
+                    modifier = Modifier
+                        .size(54.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            playerViewModel.nextTrack()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SkipNext,
+                        contentDescription = "Next",
+                        tint = Color.White,
+                        modifier = Modifier.size(36.dp)
+                    )
                 }
             }
 
-            // 3. ANCHORED VIBRANT GLASSMORPHIС AUDIO DECK (Weight = 1.0f)
-            Box(
+            // 7. Inline Volume Slider
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1.0f)
-                    .clip(RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp))
-                    .background(Brush.verticalGradient(colors = deckGradient))
-                    .border(
-                        1.dp,
-                        Color.White.copy(alpha = 0.24f),
-                        RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp)
-                    )
-                    .navigationBarsPadding()
-                    .padding(horizontal = 22.dp, vertical = 20.dp)
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.SpaceBetween
+                Icon(
+                    imageVector = Icons.Default.VolumeDown,
+                    contentDescription = "Volume Low",
+                    tint = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
+                )
+
+                Slider(
+                    value = uiState.volume,
+                    onValueChange = { newVol ->
+                        playerViewModel.setVolume(newVol)
+                    },
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = Color.White.copy(alpha = 0.85f),
+                        inactiveTrackColor = Color.White.copy(alpha = 0.25f)
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+
+                Icon(
+                    imageVector = Icons.Default.VolumeUp,
+                    contentDescription = "Volume High",
+                    tint = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // 8. Bottom Utility Ribbon: Shuffle, Repeat, Infinity Autoplay, Queue
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Shuffle
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            playerViewModel.toggleShuffle()
+                        },
+                    contentAlignment = Alignment.Center
                 ) {
-                    // 3.1 Synchronized Lyrics / Hi-Res Lossless Showcase
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenLyrics() }
-                            .padding(vertical = 2.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        if (hasRealLyrics) {
-                            Text(
-                                text = prevLyric ?: "•••",
-                                color = Color.White.copy(alpha = 0.45f),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                textAlign = TextAlign.Center,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                    Icon(
+                        imageVector = Icons.Default.Shuffle,
+                        contentDescription = "Shuffle",
+                        tint = if (uiState.isShuffle) Color(0xFFE50914) else Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
 
-                            Spacer(modifier = Modifier.height(3.dp))
+                // Repeat
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            playerViewModel.toggleRepeat()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (uiState.repeatMode == 2) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                        contentDescription = "Repeat",
+                        tint = if (uiState.repeatMode > 0) Color(0xFFE50914) else Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
 
-                            AnimatedContent(
-                                targetState = currentLyric ?: "Playing Audio",
-                                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                                label = "lyric_text_anim"
-                            ) { activeText ->
-                                Text(
-                                    text = activeText,
-                                    color = Color.White,
-                                    fontSize = 23.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    textAlign = TextAlign.Center,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(3.dp))
-
-                            Text(
-                                text = nextLyric ?: "•••",
-                                color = Color.White.copy(alpha = 0.45f),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                textAlign = TextAlign.Center,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        } else {
-                            Text(
-                                text = "LOSSLESS HI-RES AUDIO",
-                                color = Color.White.copy(alpha = 0.55f),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 2.sp,
-                                textAlign = TextAlign.Center
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Text(
-                                text = "Immerse in the Sound",
-                                color = Color.White,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Text(
-                                text = "Aether Audiophile DSP Deck",
-                                color = Color.White.copy(alpha = 0.55f),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                textAlign = TextAlign.Center
-                            )
+                // Infinity / Autoplay Pill Button
+                Box(
+                    modifier = Modifier
+                        .clip(RadiusFull)
+                        .background(if (isInfinityAutoplay) Color(0x55FFFFFF) else Color.Transparent)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            isInfinityAutoplay = !isInfinityAutoplay
                         }
-                    }
+                        .padding(horizontal = 18.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AllInclusive,
+                        contentDescription = "Autoplay",
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
 
-                    // 3.2 Track Info Row: Overlapping Circular Artwork Discs + Title/Artist
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Double Overlapping Circular Artworks
-                        Box(modifier = Modifier.size(56.dp, 40.dp)) {
-                            // Back art disc
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Black)
-                                    .border(1.5.dp, Color.White.copy(alpha = 0.35f), CircleShape)
-                            ) {
-                                if (artworkFile != null && artworkFile.exists()) {
-                                    AsyncImage(
-                                        model = artworkFile,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
-                            }
-                            // Front art disc (Offset by 16dp)
-                            Box(
-                                modifier = Modifier
-                                    .offset(x = 16.dp)
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Black)
-                                    .border(1.5.dp, Color.White, CircleShape)
-                            ) {
-                                if (artworkFile != null && artworkFile.exists()) {
-                                    AsyncImage(
-                                        model = artworkFile,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.MusicNote,
-                                        contentDescription = null,
-                                        tint = palette.accent,
-                                        modifier = Modifier.padding(6.dp)
-                                    )
-                                }
-                            }
+                // Queue / Playlist
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onOpenQueue()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                        contentDescription = "Queue",
+                        tint = Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    // Options Bottom Sheet
+    if (showOptionsMenu) {
+        ModalBottomSheet(
+            onDismissRequest = { showOptionsMenu = false },
+            sheetState = sheetState,
+            containerColor = Color(0xFF1C1D22)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = currentTrack?.title ?: "Options",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RadiusLg)
+                        .clickable {
+                            showOptionsMenu = false
+                            onOpenEqualizer()
                         }
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.GraphicEq, contentDescription = null, tint = Color(0xFFE50914))
+                    Text(text = "Audio Equalizer & DSP", color = Color.White, fontSize = 15.sp)
+                }
 
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        // Title & Artist Text
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = currentTrack?.title ?: "Select Track",
-                                color = Color.White,
-                                fontSize = 16.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = currentTrack?.artist ?: "Unknown Artist",
-                                color = Color.White.copy(alpha = 0.75f),
-                                fontSize = 13.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RadiusLg)
+                        .clickable {
+                            showOptionsMenu = false
+                            onOpenLyrics()
                         }
-                    }
-
-                    // 3.3 Premium Transport Controls: Repeat • Prev • Pure White Play/Pause • Next • Favorite
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Repeat Switcher
-                        Icon(
-                            imageVector = when (uiState.repeatMode) {
-                                2 -> Icons.Default.RepeatOne
-                                else -> Icons.Default.Repeat
-                            },
-                            contentDescription = "Repeat",
-                            tint = if (uiState.repeatMode > 0) Color.White else Color.White.copy(alpha = 0.65f),
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    playerViewModel.toggleRepeat()
-                                }
-                        )
-
-                        // Previous Track (High-end geometric skip icon)
-                        Icon(
-                            imageVector = Icons.Default.SkipPrevious,
-                            contentDescription = "Previous",
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    playerViewModel.prevTrack()
-                                }
-                        )
-
-                        // Large Solid Pure White Play/Pause Button (64dp) with Floating Depth
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .shadow(8.dp, CircleShape, spotColor = Color.Black)
-                                .clip(CircleShape)
-                                .background(Color.White)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    playerViewModel.togglePlayPause()
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (uiState.isPlaying) "Pause" else "Play",
-                                tint = Color(0xFF0A2E8A),
-                                modifier = Modifier.size(36.dp)
-                            )
-                        }
-
-                        // Next Track (High-end geometric skip icon)
-                        Icon(
-                            imageVector = Icons.Default.SkipNext,
-                            contentDescription = "Next",
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    playerViewModel.nextTrack()
-                                }
-                        )
-
-                        // Favorite Heart
-                        Icon(
-                            imageVector = if (isCurrentFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = "Favorite",
-                            tint = if (isCurrentFav) Color(0xFFFF4B72) else Color.White.copy(alpha = 0.75f),
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                    playerViewModel.toggleFavorite()
-                                }
-                        )
-                    }
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color(0xFFE50914))
+                    Text(text = "Full Synchronized Lyrics", color = Color.White, fontSize = 15.sp)
                 }
             }
         }
