@@ -39,7 +39,7 @@ class OtaUpdateManager(private val context: Context) {
         private const val GITHUB_REPO_OWNER = "santjsx"
         private const val GITHUB_REPO_NAME = "music-palyer"
         private const val LATEST_RELEASE_URL = "https://api.github.com/repos/$GITHUB_REPO_OWNER/$GITHUB_REPO_NAME/releases/latest"
-        const val CURRENT_APP_VERSION = "2.7.0"
+        const val CURRENT_APP_VERSION = "2.8.0"
 
         @Volatile
         private var instance: OtaUpdateManager? = null
