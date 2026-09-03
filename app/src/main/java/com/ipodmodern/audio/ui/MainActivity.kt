@@ -10,6 +10,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -167,29 +173,38 @@ fun ModernMusicAppContent(
             .fillMaxSize()
             .background(ObsidianBg)
     ) {
-        // MARK: - Screen Router
-        when (activeScreen) {
-            ScreenType.MENU_MAIN -> {
-                ModernHomeScreen(
-                    playerViewModel = playerViewModel,
-                    onNavigateToSongs = {
-                        libraryCategory = com.ipodmodern.audio.ui.screens.LibraryCategory.SONGS
-                        activeScreen = ScreenType.MENU_MUSIC
-                    },
-                    onNavigateToAlbums = {
-                        libraryCategory = com.ipodmodern.audio.ui.screens.LibraryCategory.ALBUMS
-                        activeScreen = ScreenType.MENU_MUSIC
-                    },
-                    onNavigateToArtists = {
-                        libraryCategory = com.ipodmodern.audio.ui.screens.LibraryCategory.ARTISTS
-                        activeScreen = ScreenType.MENU_MUSIC
-                    },
-                    onNavigateToPlaylists = { activeScreen = ScreenType.PLAYLISTS },
-                    onNavigateToNowPlaying = { activeScreen = ScreenType.NOW_PLAYING },
-                    onOpenSyncHub = { activeScreen = ScreenType.SETTINGS },
-                    onNavigateToSearch = { activeScreen = ScreenType.SEARCH }
-                )
-            }
+        // MARK: - Screen Router with Physics-Based Transitions
+        AnimatedContent(
+            targetState = activeScreen,
+            transitionSpec = {
+                val springSpec = spring<Float>(dampingRatio = 0.85f, stiffness = 450f)
+                (fadeIn(animationSpec = springSpec) + slideInVertically(animationSpec = spring(dampingRatio = 0.85f, stiffness = 450f)) { it / 10 })
+                    .togetherWith(fadeOut(animationSpec = springSpec))
+            },
+            label = "screen_router_transition"
+        ) { targetScreen ->
+            when (targetScreen) {
+                ScreenType.MENU_MAIN -> {
+                    ModernHomeScreen(
+                        playerViewModel = playerViewModel,
+                        onNavigateToSongs = {
+                            libraryCategory = com.ipodmodern.audio.ui.screens.LibraryCategory.SONGS
+                            activeScreen = ScreenType.MENU_MUSIC
+                        },
+                        onNavigateToAlbums = {
+                            libraryCategory = com.ipodmodern.audio.ui.screens.LibraryCategory.ALBUMS
+                            activeScreen = ScreenType.MENU_MUSIC
+                        },
+                        onNavigateToArtists = {
+                            libraryCategory = com.ipodmodern.audio.ui.screens.LibraryCategory.ARTISTS
+                            activeScreen = ScreenType.MENU_MUSIC
+                        },
+                        onNavigateToPlaylists = { activeScreen = ScreenType.PLAYLISTS },
+                        onNavigateToNowPlaying = { activeScreen = ScreenType.NOW_PLAYING },
+                        onOpenSyncHub = { activeScreen = ScreenType.SETTINGS },
+                        onNavigateToSearch = { activeScreen = ScreenType.SEARCH }
+                    )
+                }
             ScreenType.MENU_MUSIC,
             ScreenType.MENU_SONGS,
             ScreenType.MENU_ALBUMS,
@@ -303,6 +318,7 @@ fun ModernMusicAppContent(
                 )
             }
         }
+    }
 
         // MARK: - Floating Bottom Elements (Mini Player & Nav Island)
         if (!isFullScreenModal) {
@@ -313,12 +329,10 @@ fun ModernMusicAppContent(
                     .navigationBarsPadding()
             ) {
                 if (playerState.currentTrack != null) {
-                    val progress by playerViewModel.playbackProgress.collectAsState()
                     MiniPlayerBar(
                         track = playerState.currentTrack,
                         isPlaying = playerState.isPlaying,
-                        positionMs = progress.positionMs,
-                        durationMs = progress.durationMs,
+                        progressFlow = playerViewModel.playbackProgress,
                         isFavorite = playerState.currentTrack?.let { playerState.favoriteTrackIds.contains(it.id) } == true,
                         onBarClick = { activeScreen = ScreenType.NOW_PLAYING },
                         onPlayPauseClick = { playerViewModel.togglePlayPause() },

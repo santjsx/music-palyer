@@ -134,6 +134,7 @@ data class PlaylistTrackCrossRef(
     val orderIndex: Int = 0
 )
 
+@androidx.compose.runtime.Immutable
 data class PlaylistWithTracks(
     @androidx.room.Embedded val playlist: PlaylistEntity,
     @androidx.room.Relation(

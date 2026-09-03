@@ -31,19 +31,25 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.ipodmodern.audio.core.model.Track
+import com.ipodmodern.audio.ui.viewmodel.PlaybackProgress
+import kotlinx.coroutines.flow.StateFlow
 import com.ipodmodern.audio.ui.theme.MintAccent
 import com.ipodmodern.audio.ui.theme.ObsidianBg
 import com.ipodmodern.audio.ui.theme.ObsidianBorder
@@ -63,8 +69,9 @@ import java.io.File
 fun MiniPlayerBar(
     track: Track?,
     isPlaying: Boolean,
-    positionMs: Long,
-    durationMs: Long,
+    positionMs: Long = 0L,
+    durationMs: Long = 0L,
+    progressFlow: StateFlow<PlaybackProgress>? = null,
     isFavorite: Boolean = false,
     onBarClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
@@ -77,10 +84,19 @@ fun MiniPlayerBar(
     if (track == null) return
 
     val view = LocalView.current
-    val progress = if (durationMs > 0) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+    val context = LocalContext.current
 
     val artworkFile = remember(track.artworkUri) {
         track.artworkUri?.let { File(it) }
+    }
+    val artworkRequest = remember(artworkFile) {
+        artworkFile?.let {
+            ImageRequest.Builder(context)
+                .data(it)
+                .size(132)
+                .crossfade(true)
+                .build()
+        }
     }
 
     Box(
@@ -96,20 +112,12 @@ fun MiniPlayerBar(
             }
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Subtle top progress bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .background(Color(0x22FFFFFF))
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(progress)
-                        .fillMaxHeight()
-                        .background(com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent)
-                )
-            }
+            // Subtle top progress bar isolated to avoid full-bar recomposition
+            MiniPlayerProgressBar(
+                progressFlow = progressFlow,
+                fallbackPos = positionMs,
+                fallbackDur = if (durationMs > 0) durationMs else track.durationMs
+            )
 
             Row(
                 modifier = Modifier
@@ -126,9 +134,9 @@ fun MiniPlayerBar(
                         .background(Color(0xFF22242B)),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (artworkFile != null) {
+                    if (artworkRequest != null) {
                         AsyncImage(
-                            model = artworkFile,
+                            model = artworkRequest,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
@@ -211,5 +219,34 @@ fun MiniPlayerBar(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MiniPlayerProgressBar(
+    progressFlow: StateFlow<PlaybackProgress>?,
+    fallbackPos: Long,
+    fallbackDur: Long
+) {
+    val fraction = if (progressFlow != null) {
+        val state by progressFlow.collectAsState()
+        val dur = if (state.durationMs > 0) state.durationMs else fallbackDur
+        if (dur > 0) (state.positionMs.toFloat() / dur.toFloat()).coerceIn(0f, 1f) else 0f
+    } else {
+        if (fallbackDur > 0) (fallbackPos.toFloat() / fallbackDur.toFloat()).coerceIn(0f, 1f) else 0f
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(2.dp)
+            .background(Color(0x22FFFFFF))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction)
+                .fillMaxHeight()
+                .background(com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent)
+        )
     }
 }

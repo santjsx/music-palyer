@@ -72,12 +72,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.ipodmodern.audio.core.model.LyricLine
 import com.ipodmodern.audio.ui.theme.RadiusFull
 import com.ipodmodern.audio.ui.theme.RadiusSm
 import com.ipodmodern.audio.ui.theme.RadiusLg
 import com.ipodmodern.audio.ui.theme.RadiusMd
 import com.ipodmodern.audio.ui.theme.RadiusXl
+import com.ipodmodern.audio.ui.viewmodel.PlaybackProgress
 import com.ipodmodern.audio.ui.viewmodel.PlayerViewModel
+import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 
 /**
@@ -102,56 +105,12 @@ fun ModernNowPlayingScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by playerViewModel.uiState.collectAsState()
-    val progressState by playerViewModel.playbackProgress.collectAsState()
     val view = LocalView.current
 
     val currentTrack = uiState.currentTrack
-    val durationMs = if (progressState.durationMs > 0) progressState.durationMs else (currentTrack?.durationMs ?: 0L)
-    val positionMs = progressState.positionMs.coerceIn(0L, durationMs.coerceAtLeast(0L))
-
-    // Format timestamps
-    val elapsedMin = (positionMs / 1000) / 60
-    val elapsedSec = (positionMs / 1000) % 60
-    val elapsedText = String.format("%d:%02d", elapsedMin, elapsedSec)
-
-    val remainingMs = (durationMs - positionMs).coerceAtLeast(0L)
-    val remMin = (remainingMs / 1000) / 60
-    val remSec = (remainingMs / 1000) % 60
-    val remainingText = String.format("-%d:%02d", remMin, remSec)
-
     val artworkFile = remember(currentTrack?.artworkUri) {
         currentTrack?.artworkUri?.let { File(it) }
     }
-
-    // Dynamic Real Synchronized Lyrics preview
-    val lyrics = uiState.lyrics
-    val activeIdx = progressState.activeLyricIndex
-    val liveLyricSnippet = remember(lyrics, activeIdx, progressState.currentLyricText, progressState.positionMs) {
-        val current = progressState.currentLyricText
-        if (!current.isNullOrBlank()) {
-            current
-        } else if (lyrics.isNotEmpty()) {
-            if (activeIdx >= 0 && activeIdx < lyrics.size) {
-                lyrics[activeIdx].text
-            } else if (progressState.positionMs < (lyrics.firstOrNull()?.timeMs ?: 0L)) {
-                "♪ ♪ ♪" // Instrumental prelude before first line
-            } else {
-                lyrics.lastOrNull()?.text ?: "♪ ♪ ♪"
-            }
-        } else {
-            "Lyrics not available"
-        }
-    }
-
-    // Scrubber dragging state
-    var isDraggingSlider by remember { mutableStateOf(false) }
-    var dragSliderValue by remember { mutableFloatStateOf(0f) }
-
-    val currentProgressFraction = if (durationMs > 0) {
-        (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
-    } else 0f
-
-    val sliderProgress = if (isDraggingSlider) dragSliderValue else currentProgressFraction
 
     // Options Modal Sheet
     var showOptionsMenu by remember { mutableStateOf(false) }
@@ -357,93 +316,21 @@ fun ModernNowPlayingScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // 4. Live Lyrics Preview directly over the Scrubber Progress Bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RadiusFull)
-                        .clickable {
-                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            onOpenLyrics()
-                        }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    AnimatedContent(
-                        targetState = liveLyricSnippet,
-                        transitionSpec = {
-                            (fadeIn(animationSpec = tween(220)) + slideInVertically { it / 3 })
-                                .togetherWith(fadeOut(animationSpec = tween(180)) + slideOutVertically { -it / 3 })
-                        },
-                        modifier = Modifier.weight(1f, fill = false),
-                        label = "live_lyric_anim"
-                    ) { targetSnippet ->
-                        Text(
-                            text = targetSnippet,
-                            color = if (lyrics.isNotEmpty()) Color.White.copy(alpha = 0.95f) else Color.White.copy(alpha = 0.5f),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = "View Lyrics",
-                        tint = Color.White.copy(alpha = 0.65f),
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                // 4. Live Lyrics Preview directly over the Scrubber Progress Bar (Isolated State Flow)
+                NowPlayingLiveLyricsRow(
+                    progressFlow = playerViewModel.playbackProgress,
+                    lyrics = uiState.lyrics,
+                    onOpenLyrics = onOpenLyrics
+                )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // 5. Scrubber Bar with Elapsed & Remaining Time
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Slider(
-                        value = sliderProgress,
-                        onValueChange = { newValue ->
-                            isDraggingSlider = true
-                            dragSliderValue = newValue
-                        },
-                        onValueChangeFinished = {
-                            isDraggingSlider = false
-                            val targetMs = (dragSliderValue * durationMs).toLong()
-                            playerViewModel.seekTo(targetMs)
-                        },
-                        colors = SliderDefaults.colors(
-                            thumbColor = Color.White,
-                            activeTrackColor = Color.White.copy(alpha = 0.85f),
-                            inactiveTrackColor = Color.White.copy(alpha = 0.25f)
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(20.dp)
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 2.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = elapsedText,
-                            color = Color.White.copy(alpha = 0.75f),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Normal
-                        )
-                        Text(
-                            text = remainingText,
-                            color = Color.White.copy(alpha = 0.75f),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Normal
-                        )
-                    }
-                }
+                // 5. Scrubber Bar with Elapsed & Remaining Time (Isolated State Flow)
+                NowPlayingScrubberBar(
+                    progressFlow = playerViewModel.playbackProgress,
+                    fallbackDurationMs = currentTrack?.durationMs ?: 0L,
+                    onSeek = { targetMs -> playerViewModel.seekTo(targetMs) }
+                )
             }
 
             // 6. Central Playback Transport Controls
@@ -688,6 +575,148 @@ fun ModernNowPlayingScreen(
                     Text(text = "Full Synchronized Lyrics", color = Color.White, fontSize = 15.sp)
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun NowPlayingLiveLyricsRow(
+    progressFlow: StateFlow<PlaybackProgress>,
+    lyrics: List<LyricLine>,
+    onOpenLyrics: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val progressState by progressFlow.collectAsState()
+    val view = LocalView.current
+    val activeIdx = progressState.activeLyricIndex
+    val liveLyricSnippet = remember(lyrics, activeIdx, progressState.currentLyricText, progressState.positionMs) {
+        val current = progressState.currentLyricText
+        if (!current.isNullOrBlank()) {
+            current
+        } else if (lyrics.isNotEmpty()) {
+            if (activeIdx >= 0 && activeIdx < lyrics.size) {
+                lyrics[activeIdx].text
+            } else if (progressState.positionMs < (lyrics.firstOrNull()?.timeMs ?: 0L)) {
+                "♪ ♪ ♪"
+            } else {
+                lyrics.lastOrNull()?.text ?: "♪ ♪ ♪"
+            }
+        } else {
+            "Lyrics not available"
+        }
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RadiusFull)
+            .clickable {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onOpenLyrics()
+            }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start
+    ) {
+        AnimatedContent(
+            targetState = liveLyricSnippet,
+            transitionSpec = {
+                (fadeIn(animationSpec = tween(220)) + slideInVertically { it / 3 })
+                    .togetherWith(fadeOut(animationSpec = tween(180)) + slideOutVertically { -it / 3 })
+            },
+            modifier = Modifier.weight(1f, fill = false),
+            label = "live_lyric_anim"
+        ) { targetSnippet ->
+            Text(
+                text = targetSnippet,
+                color = if (lyrics.isNotEmpty()) Color.White.copy(alpha = 0.95f) else Color.White.copy(alpha = 0.5f),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = "View Lyrics",
+            tint = Color.White.copy(alpha = 0.65f),
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+@Composable
+private fun NowPlayingScrubberBar(
+    progressFlow: StateFlow<PlaybackProgress>,
+    fallbackDurationMs: Long,
+    onSeek: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val progressState by progressFlow.collectAsState()
+    val durationMs = if (progressState.durationMs > 0) progressState.durationMs else fallbackDurationMs
+    val positionMs = progressState.positionMs.coerceIn(0L, durationMs.coerceAtLeast(0L))
+
+    val elapsedMin = (positionMs / 1000) / 60
+    val elapsedSec = (positionMs / 1000) % 60
+    val elapsedText = String.format("%d:%02d", elapsedMin, elapsedSec)
+
+    val remainingMs = (durationMs - positionMs).coerceAtLeast(0L)
+    val remMin = (remainingMs / 1000) / 60
+    val remSec = (remainingMs / 1000) % 60
+    val remainingText = String.format("-%d:%02d", remMin, remSec)
+
+    var isDraggingSlider by remember { mutableStateOf(false) }
+    var dragSliderValue by remember { mutableFloatStateOf(0f) }
+
+    val currentProgressFraction = if (durationMs > 0) {
+        (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+    } else 0f
+
+    val sliderProgress = if (isDraggingSlider) dragSliderValue else currentProgressFraction
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Slider(
+            value = sliderProgress,
+            onValueChange = { newValue ->
+                isDraggingSlider = true
+                dragSliderValue = newValue
+            },
+            onValueChangeFinished = {
+                isDraggingSlider = false
+                val targetMs = (dragSliderValue * durationMs).toLong()
+                onSeek(targetMs)
+            },
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.White.copy(alpha = 0.85f),
+                inactiveTrackColor = Color.White.copy(alpha = 0.25f)
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(20.dp)
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = elapsedText,
+                color = Color.White.copy(alpha = 0.75f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal
+            )
+            Text(
+                text = remainingText,
+                color = Color.White.copy(alpha = 0.75f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Normal
+            )
         }
     }
 }

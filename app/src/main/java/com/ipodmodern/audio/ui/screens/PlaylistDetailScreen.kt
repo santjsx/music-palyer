@@ -45,12 +45,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.ipodmodern.audio.core.model.Track
 import com.ipodmodern.audio.ui.components.SleekCard
 import com.ipodmodern.audio.ui.theme.ModernThemeTokens
@@ -361,9 +363,23 @@ fun PlaylistDetailScreen(
                 }
             }
         } else {
-            itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
+            itemsIndexed(
+                items = tracks,
+                key = { _, track -> track.id },
+                contentType = { _, _ -> "playlist_track" }
+            ) { index, track ->
                 val isCurrentPlaying = playerState.currentTrack?.id == track.id
+                val context = LocalContext.current
                 val artFile = remember(track.artworkUri) { track.artworkUri?.let { File(it) } }
+                val artRequest = remember(artFile) {
+                    artFile?.let {
+                        ImageRequest.Builder(context)
+                            .data(it)
+                            .size(132)
+                            .crossfade(true)
+                            .build()
+                    }
+                }
 
                 SleekCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -388,9 +404,9 @@ fun PlaylistDetailScreen(
                                 .background(Color.Black),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (artFile != null) {
+                            if (artRequest != null) {
                                 AsyncImage(
-                                    model = artFile,
+                                    model = artRequest,
                                     contentDescription = null,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()

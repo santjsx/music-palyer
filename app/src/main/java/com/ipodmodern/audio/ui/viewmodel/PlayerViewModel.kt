@@ -17,6 +17,7 @@ import com.ipodmodern.audio.core.model.LyricLine
 import com.ipodmodern.audio.core.model.Track
 import com.ipodmodern.audio.core.parser.LocalMusicScanner
 import com.ipodmodern.audio.core.parser.LyricsParser
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -29,6 +30,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@Immutable
 data class PlaybackProgress(
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
@@ -36,6 +38,7 @@ data class PlaybackProgress(
     val currentLyricText: String? = null
 )
 
+@Immutable
 data class PlayerUiState(
     val currentTrack: Track? = null,
     val allTracks: List<Track> = emptyList(),

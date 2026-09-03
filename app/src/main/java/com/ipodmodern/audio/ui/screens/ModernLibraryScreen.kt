@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +66,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.ipodmodern.audio.core.model.Album
 import com.ipodmodern.audio.core.model.Artist
 import com.ipodmodern.audio.core.model.Track
@@ -403,13 +405,15 @@ fun ModernLibraryScreen(
         // 4. Tab Content (Default: Songs list with counter & tracks)
         when (activeCategoryTab) {
             LibraryCategory.SONGS -> {
-                val filteredTracks = if (searchQuery.isEmpty()) {
-                    tracks
-                } else {
-                    tracks.filter {
-                        it.title.contains(searchQuery, ignoreCase = true) ||
-                                it.artist.contains(searchQuery, ignoreCase = true) ||
-                                it.album.contains(searchQuery, ignoreCase = true)
+                val filteredTracks = remember(tracks, searchQuery) {
+                    if (searchQuery.isEmpty()) {
+                        tracks
+                    } else {
+                        tracks.filter {
+                            it.title.contains(searchQuery, ignoreCase = true) ||
+                                    it.artist.contains(searchQuery, ignoreCase = true) ||
+                                    it.album.contains(searchQuery, ignoreCase = true)
+                        }
                     }
                 }
 
@@ -442,7 +446,11 @@ fun ModernLibraryScreen(
                         }
                     }
 
-                    items(items = filteredTracks, key = { it.id }) { track ->
+                    items(
+                        items = filteredTracks,
+                        key = { it.id },
+                        contentType = { "track_row" }
+                    ) { track ->
                         ModernTrackRow(
                             track = track,
                             isCurrent = track.id == activeTrack?.id,
@@ -453,13 +461,19 @@ fun ModernLibraryScreen(
                 }
             }
             LibraryCategory.ARTISTS -> {
-                val filteredArtists = if (searchQuery.isEmpty()) artists else artists.filter { it.name.contains(searchQuery, ignoreCase = true) }
+                val filteredArtists = remember(artists, searchQuery) {
+                    if (searchQuery.isEmpty()) artists else artists.filter { it.name.contains(searchQuery, ignoreCase = true) }
+                }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(top = 8.dp, bottom = 140.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(filteredArtists) { artist ->
+                    items(
+                        items = filteredArtists,
+                        key = { it.id },
+                        contentType = { "artist_row" }
+                    ) { artist ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -488,7 +502,9 @@ fun ModernLibraryScreen(
                 }
             }
             LibraryCategory.ALBUMS -> {
-                val filteredAlbums = if (searchQuery.isEmpty()) albums else albums.filter { it.title.contains(searchQuery, ignoreCase = true) }
+                val filteredAlbums = remember(albums, searchQuery) {
+                    if (searchQuery.isEmpty()) albums else albums.filter { it.title.contains(searchQuery, ignoreCase = true) || it.artist.contains(searchQuery, ignoreCase = true) }
+                }
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
@@ -496,8 +512,22 @@ fun ModernLibraryScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(items = filteredAlbums, key = { it.id }) { album ->
+                    items(
+                        items = filteredAlbums,
+                        key = { it.id },
+                        contentType = { "album_card" }
+                    ) { album ->
+                        val context = LocalContext.current
                         val albumArt = remember(album.artworkUri) { album.artworkUri?.let { File(it) } }
+                        val albumArtRequest = remember(albumArt) {
+                            albumArt?.let {
+                                ImageRequest.Builder(context)
+                                    .data(it)
+                                    .size(360)
+                                    .crossfade(true)
+                                    .build()
+                            }
+                        }
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -514,8 +544,8 @@ fun ModernLibraryScreen(
                                     .background(Color(0xFF1C1D22)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (albumArt != null) {
-                                    AsyncImage(model = albumArt, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                if (albumArtRequest != null) {
+                                    AsyncImage(model = albumArtRequest, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                 } else {
                                     Icon(Icons.Default.Album, contentDescription = null, tint = Color(0xFFE50914), modifier = Modifier.size(36.dp))
                                 }
@@ -575,8 +605,18 @@ private fun ModernTrackRow(
     onClick: () -> Unit
 ) {
     val view = LocalView.current
+    val context = LocalContext.current
     val artworkFile = remember(track.artworkUri) {
         track.artworkUri?.let { File(it) }
+    }
+    val artworkRequest = remember(artworkFile) {
+        artworkFile?.let {
+            ImageRequest.Builder(context)
+                .data(it)
+                .size(144)
+                .crossfade(true)
+                .build()
+        }
     }
 
     val durMin = (track.durationMs / 1000) / 60
@@ -607,9 +647,9 @@ private fun ModernTrackRow(
                 .background(Color(0xFF1C1D22)),
             contentAlignment = Alignment.Center
         ) {
-            if (artworkFile != null) {
+            if (artworkRequest != null) {
                 AsyncImage(
-                    model = artworkFile,
+                    model = artworkRequest,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()

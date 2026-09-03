@@ -13,8 +13,8 @@ android {
         applicationId = "com.ipodmodern.audio"
         minSdk = 29
         targetSdk = 35
-        versionCode = 105
-        versionName = "2.4.1"
+        versionCode = 106
+        versionName = "2.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -37,7 +37,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

@@ -1,9 +1,11 @@
 package com.ipodmodern.audio.core.model
 
 import androidx.annotation.Keep
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
 @Keep
+@Immutable
 @Serializable
 data class NativeAudioMetadata(
     val formatName: String,
@@ -30,6 +32,7 @@ enum class AudioQuality {
     HI_RES_LOSSLESS
 }
 
+@Immutable
 @Serializable
 data class Track(
     val id: Long = 0,
@@ -84,6 +87,7 @@ data class Track(
         }
 }
 
+@Immutable
 @Serializable
 data class Album(
     val id: Long = 0,
@@ -95,6 +99,7 @@ data class Album(
     val isHiRes: Boolean = false
 )
 
+@Immutable
 @Serializable
 data class Artist(
     val id: Long = 0,
@@ -103,6 +108,7 @@ data class Artist(
     val trackCount: Int
 )
 
+@Immutable
 @Serializable
 data class Playlist(
     val id: Long = 0,
@@ -110,6 +116,7 @@ data class Playlist(
     val trackIds: List<Long> = emptyList()
 )
 
+@Immutable
 data class CueTrack(
     val trackNumber: Int,
     val title: String,
@@ -118,6 +125,7 @@ data class CueTrack(
     val endMs: Long? = null
 )
 
+@Immutable
 data class CueSheet(
     val title: String,
     val performer: String,
@@ -125,11 +133,13 @@ data class CueSheet(
     val tracks: List<CueTrack>
 )
 
+@Immutable
 data class LyricLine(
     val timeMs: Long,
     val text: String
 )
 
+@Immutable
 data class EqualizerPreset(
     val name: String,
     val bandGains: FloatArray // 10 bands: 31.25Hz to 16kHz
