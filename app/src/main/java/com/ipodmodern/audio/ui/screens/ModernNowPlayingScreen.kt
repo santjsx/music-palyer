@@ -659,14 +659,19 @@ private fun NowPlayingScrubberBar(
     val durationMs = if (progressState.durationMs > 0) progressState.durationMs else fallbackDurationMs
     val positionMs = progressState.positionMs.coerceIn(0L, durationMs.coerceAtLeast(0L))
 
-    val elapsedMin = (positionMs / 1000) / 60
-    val elapsedSec = (positionMs / 1000) % 60
-    val elapsedText = String.format("%d:%02d", elapsedMin, elapsedSec)
+    val elapsedSeconds = positionMs / 1000
+    val elapsedText = remember(elapsedSeconds) {
+        val elapsedMin = elapsedSeconds / 60
+        val elapsedSec = elapsedSeconds % 60
+        String.format("%d:%02d", elapsedMin, elapsedSec)
+    }
 
-    val remainingMs = (durationMs - positionMs).coerceAtLeast(0L)
-    val remMin = (remainingMs / 1000) / 60
-    val remSec = (remainingMs / 1000) % 60
-    val remainingText = String.format("-%d:%02d", remMin, remSec)
+    val remainingSeconds = (durationMs - positionMs).coerceAtLeast(0L) / 1000
+    val remainingText = remember(remainingSeconds) {
+        val remMin = remainingSeconds / 60
+        val remSec = remainingSeconds % 60
+        String.format("-%d:%02d", remMin, remSec)
+    }
 
     var isDraggingSlider by remember { mutableStateOf(false) }
     var dragSliderValue by remember { mutableFloatStateOf(0f) }

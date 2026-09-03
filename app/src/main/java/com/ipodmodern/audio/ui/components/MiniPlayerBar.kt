@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -236,17 +237,20 @@ private fun MiniPlayerProgressBar(
         if (fallbackDur > 0) (fallbackPos.toFloat() / fallbackDur.toFloat()).coerceIn(0f, 1f) else 0f
     }
 
-    Box(
+    val accent = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent
+    Spacer(
         modifier = Modifier
             .fillMaxWidth()
             .height(2.dp)
             .background(Color(0x22FFFFFF))
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(fraction)
-                .fillMaxHeight()
-                .background(com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent)
-        )
-    }
+            .drawBehind {
+                drawRect(
+                    color = accent,
+                    size = androidx.compose.ui.geometry.Size(
+                        width = fraction * size.width,
+                        height = size.height
+                    )
+                )
+            }
+    )
 }
