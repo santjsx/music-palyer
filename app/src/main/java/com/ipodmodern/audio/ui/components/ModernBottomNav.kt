@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -78,11 +79,12 @@ fun ModernBottomNavIsland(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 6.dp)
+            .padding(start = 24.dp, end = 24.dp, bottom = 16.dp)
+            .shadow(18.dp, RadiusFull, spotColor = Color(0x77000000))
             .clip(RadiusFull)
-            .background(Color(0xFF101114).copy(alpha = 0.95f))
+            .background(Color(0xFF141519).copy(alpha = 0.85f))
             .border(1.dp, Color(0x22FFFFFF), RadiusFull)
-            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

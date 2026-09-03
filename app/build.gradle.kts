@@ -13,8 +13,8 @@ android {
         applicationId = "com.ipodmodern.audio"
         minSdk = 29
         targetSdk = 35
-        versionCode = 109
-        versionName = "2.8.0"
+        versionCode = 110
+        versionName = "2.9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -124,6 +124,9 @@ dependencies {
 
     // Coil Image Loader
     implementation(libs.coil.compose)
+
+    // AndroidX Palette for Dynamic Color Extraction
+    implementation("androidx.palette:palette-ktx:1.0.0")
 
     // Testing
     testImplementation(libs.junit)

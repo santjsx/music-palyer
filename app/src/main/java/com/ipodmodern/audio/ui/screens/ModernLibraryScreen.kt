@@ -449,7 +449,7 @@ fun ModernLibraryScreen(
                     items(
                         items = filteredTracks,
                         key = { it.id },
-                        contentType = { "track_row" }
+                        contentType = { "library_song_item_row" }
                     ) { track ->
                         ModernTrackRow(
                             track = track,
@@ -618,7 +618,7 @@ private fun ModernTrackRow(
         artworkFile?.let {
             ImageRequest.Builder(context)
                 .data(it)
-                .size(144)
+                .size(120) // PRD 3.3.3: Hard-capped to 120px max bounds
                 .crossfade(true)
                 .allowHardware(true)
                 .build()
@@ -668,14 +668,14 @@ private fun ModernTrackRow(
             }
         }
 
-        // Title & Artist Column
+        // Title & Artist Column (PRD 3.3.1 Architectural Text Hierarchy)
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = track.title,
-                color = if (isCurrent) rowAccent else Color.White,
+                color = if (isCurrent) rowAccent else Color(0xFFFFFFFF),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -683,17 +683,17 @@ private fun ModernTrackRow(
             )
             Text(
                 text = track.artist.ifBlank { "Unknown Artist" },
-                color = Color(0xFF8E8E93),
+                color = Color.White.copy(alpha = 0.5f),
                 fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
 
-        // Duration (e.g. 6:48)
+        // Duration (PRD 3.3.1: 13.sp with Color.White.copy(alpha = 0.5f))
         Text(
             text = durationText,
-            color = Color(0xFF8E8E93),
+            color = Color.White.copy(alpha = 0.5f),
             fontSize = 13.sp,
             fontWeight = FontWeight.Normal
         )
@@ -770,7 +770,7 @@ fun CategorySubScreen(
                     items(
                         items = tracks,
                         key = { it.id },
-                        contentType = { "track_row" }
+                        contentType = { "library_song_item_row" }
                     ) { track ->
                         ModernTrackRow(
                             track = track,

@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
@@ -109,10 +110,15 @@ fun ModernHomeScreen(
         }
     }
 
+    // PRD 3.2.1 & 3.2.2 Standardized Surface & Geometry
+    val ScreenCanvasBg = Color(0xFF000000)
+    val CardContainerBg = Color(0xFF161618)
+    val CardShape = RoundedCornerShape(12.dp)
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(ObsidianBg)
+            .background(ScreenCanvasBg)
             .statusBarsPadding()
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -172,8 +178,8 @@ fun ModernHomeScreen(
                     .fillMaxWidth()
                     .height(48.dp)
                     .clip(RadiusFull)
-                    .background(ObsidianPill)
-                    .border(1.dp, ObsidianBorder, RadiusFull)
+                    .background(CardContainerBg)
+                    .border(1.dp, Color(0x18FFFFFF), RadiusFull)
                     .clickable {
                         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         onNavigateToSearch()
@@ -235,10 +241,12 @@ fun ModernHomeScreen(
 
                     val isTrackActive = uiState.currentTrack?.id == continueTrack.id && uiState.isPlaying
 
+                    // Borderless Content Container (PRD 3.2.1 & 3.2.2)
                     SleekCard(
                         modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = ObsidianSurface,
-                        shape = RadiusLg,
+                        backgroundColor = CardContainerBg,
+                        borderColor = Color.Transparent,
+                        shape = CardShape,
                         onClick = {
                             if (!uiState.isPlaying) {
                                 playerViewModel.resumeContinueListening()
@@ -257,8 +265,8 @@ fun ModernHomeScreen(
                             Box(
                                 modifier = Modifier
                                     .size(54.dp)
-                                    .clip(RadiusMd)
-                                    .background(ObsidianElevated),
+                                    .clip(CardShape)
+                                    .background(Color(0xFF22242B)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (artworkFile != null) {
@@ -393,19 +401,18 @@ fun ModernHomeScreen(
                             Column(
                                 modifier = Modifier
                                     .width(110.dp)
-                                    .clip(RadiusMd)
+                                    .clip(CardShape)
                                     .clickable {
                                         playerViewModel.playTrack(track)
                                         onNavigateToNowPlaying()
                                     }
                             ) {
-                                // Square Card with Play Overlay
+                                // Borderless Square Card with Play Overlay (PRD 3.2.1 & 3.2.2)
                                 Box(
                                     modifier = Modifier
                                         .size(110.dp)
-                                        .clip(RadiusLg)
-                                        .background(ObsidianSurface)
-                                        .border(1.dp, ObsidianBorder, RadiusLg),
+                                        .clip(CardShape)
+                                        .background(CardContainerBg),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (trackArt != null) {
@@ -525,11 +532,14 @@ private fun LibraryShortcutItem(
     onClick: () -> Unit
 ) {
     val view = LocalView.current
+    val CardShape = RoundedCornerShape(12.dp)
+    val CardContainerBg = Color(0xFF161618)
 
     SleekCard(
         modifier = modifier.height(78.dp),
-        backgroundColor = ObsidianSurface,
-        shape = RadiusLg,
+        backgroundColor = CardContainerBg,
+        borderColor = Color.Transparent,
+        shape = CardShape,
         onClick = {
             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             onClick()

@@ -2,6 +2,7 @@ package com.ipodmodern.audio.ui.viewmodel
 
 import android.app.Application
 import android.content.Context
+import android.graphics.BitmapFactory
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ipodmodern.audio.core.audio.AudioPlaybackService
@@ -33,6 +34,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+@Immutable
+data class DynamicGlowColors(
+    val primaryColor: Long = 0xFFE50914,
+    val secondaryColor: Long = 0xFFD97706
+)
 
 @Immutable
 data class PlaybackProgress(
@@ -106,6 +113,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _currentTrackSpecs = MutableStateFlow(AudioTrackSpecs())
     val currentTrackSpecs: StateFlow<AudioTrackSpecs> = _currentTrackSpecs.asStateFlow()
+
+    private val _dynamicGlowColors = MutableStateFlow(DynamicGlowColors())
+    val dynamicGlowColors: StateFlow<DynamicGlowColors> = _dynamicGlowColors.asStateFlow()
 
     val playlists: StateFlow<List<com.ipodmodern.audio.core.database.entity.PlaylistWithTracks>> = db.playlistDao()
         .getAllPlaylistsWithTracks()
@@ -466,6 +476,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             codec = track.formatName
         )
 
+        // Asynchronously extract dynamic Palette colors from album art for background mesh
+        extractPaletteGlow(track.artworkUri)
+
         // Asynchronously detect and verify the true OG audio format for the active track
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -509,6 +522,40 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
         persistLastPlayback(track.id, 0L)
         updateForegroundNotification(track, startPlaying)
+    }
+
+    private fun extractPaletteGlow(artworkUri: String?) {
+        if (artworkUri == null) {
+            _dynamicGlowColors.value = DynamicGlowColors()
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val file = java.io.File(artworkUri)
+                if (file.exists()) {
+                    val opts = BitmapFactory.Options().apply {
+                        inSampleSize = 4 // Downscale to ~80px for sub-millisecond extraction
+                    }
+                    val bitmap = BitmapFactory.decodeFile(file.absolutePath, opts)
+                    if (bitmap != null) {
+                        val palette = androidx.palette.graphics.Palette.from(bitmap).generate()
+                        val primary = palette.getVibrantColor(
+                            palette.getDominantColor(0xFFE50914.toInt())
+                        ).toLong() and 0xFFFFFFFFL
+                        val secondary = palette.getDarkVibrantColor(
+                            palette.getMutedColor(0xFFD97706.toInt())
+                        ).toLong() and 0xFFFFFFFFL
+                        _dynamicGlowColors.value = DynamicGlowColors(
+                            primaryColor = primary or 0xFF000000L,
+                            secondaryColor = secondary or 0xFF000000L
+                        )
+                        bitmap.recycle()
+                    }
+                }
+            } catch (_: Exception) {
+                // Keep graceful fallback defaults
+            }
+        }
     }
 
     fun resumeContinueListening() {

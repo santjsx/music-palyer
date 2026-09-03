@@ -4,6 +4,7 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -15,6 +16,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -70,11 +73,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -131,7 +138,10 @@ fun ModernNowPlayingScreen(
     // Autoplay / Infinity toggle state
     var isInfinityAutoplay by remember { mutableStateOf(true) }
 
-    // Elastic Album Art Scaling (Playback Feedback directly on GPU layer)
+    // Dynamic vibrant Palette color nodes from album art
+    val glowColors by playerViewModel.dynamicGlowColors.collectAsState()
+
+    // Elastic Album Art Scaling & 24.dp Ambient Drop Shadow (PRD 3.1.2)
     val isPlaying = uiState.isPlaying
     val albumArtScale by animateFloatAsState(
         targetValue = if (isPlaying) 1.0f else 0.88f,
@@ -140,6 +150,14 @@ fun ModernNowPlayingScreen(
             dampingRatio = Spring.DampingRatioLowBouncy
         ),
         label = "album_art_scale"
+    )
+    val albumArtShadow by animateDpAsState(
+        targetValue = if (isPlaying) 24.dp else 0.dp,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessLow,
+            dampingRatio = Spring.DampingRatioLowBouncy
+        ),
+        label = "album_art_shadow"
     )
     val albumArtDim by animateFloatAsState(
         targetValue = if (isPlaying) 1.0f else 0.78f,
@@ -150,7 +168,7 @@ fun ModernNowPlayingScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0E0E10))
+            .background(Color(0xFF000000))
     ) {
         // LAYER 0: Ambient Liquid Glow Canvas Backdrop (Hardware-Accelerated)
         if (artworkFile != null) {
@@ -163,43 +181,43 @@ fun ModernNowPlayingScreen(
                     .graphicsLayer {
                         scaleX = 1.35f
                         scaleY = 1.35f
-                        alpha = 0.55f
+                        alpha = 0.50f
                     }
-                    .blur(70.dp)
+                    .blur(60.dp)
             )
         }
 
-        // LAYER 1: Multi-Radial Hardware-Accelerated Glow Mesh
+        // LAYER 1: Multi-Radial Hardware-Accelerated Dynamic Palette Glow Mesh (PRD 3.1.1)
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .blur(80.dp)
+                .blur(60.dp)
         ) {
             val w = size.width
             val h = size.height
 
-            // Top-left ambient orb
+            // Top-left primary vibrant node
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(Color(0x55E50914), Color.Transparent),
+                    colors = listOf(Color(glowColors.primaryColor).copy(alpha = 0.55f), Color.Transparent),
                     center = Offset(w * 0.25f, h * 0.22f),
-                    radius = w * 0.65f
+                    radius = w * 0.70f
                 )
             )
 
-            // Center-right ambient orb
+            // Center-right secondary vibrant/muted node
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(Color(0x44D97706), Color.Transparent),
+                    colors = listOf(Color(glowColors.secondaryColor).copy(alpha = 0.45f), Color.Transparent),
                     center = Offset(w * 0.8f, h * 0.42f),
                     radius = w * 0.75f
                 )
             )
 
-            // Bottom ambient depth orb
+            // Bottom ambient depth field
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(Color(0x77000000), Color.Transparent),
+                    colors = listOf(Color(0x88000000), Color.Transparent),
                     center = Offset(w * 0.5f, h * 0.85f),
                     radius = w * 0.85f
                 )
@@ -216,7 +234,7 @@ fun ModernNowPlayingScreen(
                             Color(0x44000000),
                             Color(0x660A0A0C),
                             Color(0xDD0D0D0E),
-                            Color(0xFF0B0B0C)
+                            Color(0xFF000000)
                         )
                     )
                 )
@@ -259,7 +277,8 @@ fun ModernNowPlayingScreen(
                 }
             }
 
-            // 2. Center Album Artwork Container (Elastic Playback Spring Feedback)
+            // 2. Center Album Artwork Container (Elastic 24.dp Drop Shadow & Scale)
+            val density = LocalDensity.current
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.92f)
@@ -267,8 +286,8 @@ fun ModernNowPlayingScreen(
                     .graphicsLayer {
                         scaleX = albumArtScale
                         scaleY = albumArtScale
-                        shadowElevation = (albumArtScale - 0.88f) * 120f
-                        shape = RoundedCornerShape(18.dp)
+                        shadowElevation = with(density) { albumArtShadow.toPx() }
+                        shape = RoundedCornerShape(16.dp)
                         clip = true
                         alpha = albumArtDim
                     }
@@ -774,52 +793,99 @@ private fun NowPlayingScrubberBar(
         if (s < 10) "-$m:0$s" else "-$m:$s"
     }
 
-    var isDraggingSlider by remember { mutableStateOf(false) }
-    var dragSliderValue by remember { mutableFloatStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+    var dragFraction by remember { mutableFloatStateOf(0f) }
 
-    val currentProgressFraction = if (durationMs > 0) {
+    val currentFraction = if (durationMs > 0) {
         (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
     } else 0f
 
-    val sliderProgress = if (isDraggingSlider) dragSliderValue else currentProgressFraction
+    val displayFraction = if (isDragging) dragFraction else currentFraction
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Slider(
-            value = sliderProgress,
-            onValueChange = { newValue ->
-                isDraggingSlider = true
-                dragSliderValue = newValue
-            },
-            onValueChangeFinished = {
-                isDraggingSlider = false
-                val targetMs = (dragSliderValue * durationMs).toLong()
-                onSeek(targetMs)
-            },
-            colors = SliderDefaults.colors(
-                thumbColor = Color.White,
-                activeTrackColor = Color.White.copy(alpha = 0.85f),
-                inactiveTrackColor = Color.White.copy(alpha = 0.25f)
-            ),
+        // Isolated 3.dp Sleek Micro-Timeline Scrubber (PRD 3.1.3)
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(20.dp)
-        )
+                .height(26.dp)
+                .pointerInput(durationMs) {
+                    detectTapGestures { offset ->
+                        val fraction = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        onSeek((fraction * durationMs).toLong())
+                    }
+                }
+                .pointerInput(durationMs) {
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            isDragging = true
+                            dragFraction = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            dragFraction = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        },
+                        onDragEnd = {
+                            isDragging = false
+                            onSeek((dragFraction * durationMs).toLong())
+                        },
+                        onDragCancel = {
+                            isDragging = false
+                        }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(26.dp)
+            ) {
+                val w = size.width
+                val trackH = 3.dp.toPx() // 3.dp Footprint
+                val cy = size.height / 2f
+                val activeW = w * displayFraction
+
+                // Inactive Background Track
+                drawRoundRect(
+                    color = Color.White.copy(alpha = 0.20f),
+                    topLeft = Offset(0f, cy - trackH / 2f),
+                    size = Size(w, trackH),
+                    cornerRadius = CornerRadius(trackH / 2f, trackH / 2f)
+                )
+
+                // Active Progress Track
+                drawRoundRect(
+                    color = Color.White.copy(alpha = 0.90f),
+                    topLeft = Offset(0f, cy - trackH / 2f),
+                    size = Size(activeW, trackH),
+                    cornerRadius = CornerRadius(trackH / 2f, trackH / 2f)
+                )
+
+                // Tactile Micro Thumb
+                val thumbR = if (isDragging) 6.5.dp.toPx() else 4.5.dp.toPx()
+                drawCircle(
+                    color = Color.White,
+                    radius = thumbR,
+                    center = Offset(activeW, cy)
+                )
+            }
+        }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 2.dp),
+                .padding(top = 1.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = elapsedText,
-                color = Color.White.copy(alpha = 0.75f),
+                color = Color.White.copy(alpha = 0.60f),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Normal
             )
             Text(
                 text = remainingText,
-                color = Color.White.copy(alpha = 0.75f),
+                color = Color.White.copy(alpha = 0.60f),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Normal
             )

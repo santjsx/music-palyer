@@ -1,0 +1,20 @@
+# Horizon Audio Engine (PRD-2026-HZ01) Baseline Profile
+# Critical startup and rendering paths pre-compiled to native machine code
+
+Lcom/ipodmodern/audio/ui/MainActivity;
+Lcom/ipodmodern/audio/ui/MainActivityKt;
+Lcom/ipodmodern/audio/ui/screens/ModernNowPlayingScreenKt;
+Lcom/ipodmodern/audio/ui/screens/ModernHomeScreenKt;
+Lcom/ipodmodern/audio/ui/screens/ModernLibraryScreenKt;
+Lcom/ipodmodern/audio/ui/screens/LyricsScreenKt;
+Lcom/ipodmodern/audio/ui/components/ModernBottomNavKt;
+Lcom/ipodmodern/audio/ui/components/MiniPlayerBarKt;
+Lcom/ipodmodern/audio/ui/components/NeoComponentsKt;
+Lcom/ipodmodern/audio/ui/viewmodel/PlayerViewModel;
+Lcom/ipodmodern/audio/ui/viewmodel/PlayerViewModelKt;
+Lcom/ipodmodern/audio/core/player/AudioPlayer;
+Lcom/ipodmodern/audio/core/player/ExoAudioPlayer;
+Lcom/ipodmodern/audio/core/model/Track;
+Lcom/ipodmodern/audio/core/model/AudioTrackSpecs;
+Lcom/ipodmodern/audio/core/model/PlaybackProgress;
+Lcom/ipodmodern/audio/core/audio/AudioFormatDetector;
