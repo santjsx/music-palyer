@@ -459,7 +459,7 @@ fun SettingsScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Version 2.5.0 • Flagship 120Hz Edition",
+                                text = "Version 2.6.0 • Flagship 120Hz Edition",
                                 color = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold
