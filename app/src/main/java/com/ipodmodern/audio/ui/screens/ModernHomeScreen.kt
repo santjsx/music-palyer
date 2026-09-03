@@ -230,9 +230,8 @@ fun ModernHomeScreen(
 
                     val posMin = (currentPos / 1000) / 60
                     val posSec = (currentPos / 1000) % 60
-                    val durMin = (currentDur / 1000) / 60
-                    val durSec = (currentDur / 1000) % 60
-                    val timeFormatted = String.format("%d:%02d / %d:%02d", posMin, posSec, durMin, durSec)
+                    val posStr = if (posSec < 10) "$posMin:0$posSec" else "$posMin:$posSec"
+                    val timeFormatted = "$posStr / ${continueTrack.formattedDuration}"
 
                     val isTrackActive = uiState.currentTrack?.id == continueTrack.id && uiState.isPlaying
 
@@ -382,7 +381,11 @@ fun ModernHomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = PaddingValues(horizontal = 2.dp)
                     ) {
-                        items(items = allSongs.take(8), key = { it.id }) { track ->
+                        items(
+                            items = allSongs.take(8),
+                            key = { it.id },
+                            contentType = { "recent_track_card" }
+                        ) { track ->
                             val trackArt = remember(track.artworkUri) {
                                 track.artworkUri?.let { File(it) }
                             }

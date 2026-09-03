@@ -525,6 +525,7 @@ fun ModernLibraryScreen(
                                     .data(it)
                                     .size(360)
                                     .crossfade(true)
+                                    .allowHardware(true)
                                     .build()
                             }
                         }
@@ -564,7 +565,11 @@ fun ModernLibraryScreen(
                     contentPadding = PaddingValues(top = 8.dp, bottom = 180.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(folders.keys.toList()) { folderName ->
+                    items(
+                        items = folders.keys.toList(),
+                        key = { it },
+                        contentType = { "folder_row" }
+                    ) { folderName ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -615,13 +620,12 @@ private fun ModernTrackRow(
                 .data(it)
                 .size(144)
                 .crossfade(true)
+                .allowHardware(true)
                 .build()
         }
     }
 
-    val durMin = (track.durationMs / 1000) / 60
-    val durSec = (track.durationMs / 1000) % 60
-    val durationText = String.format("%d:%02d", durMin, durSec)
+    val durationText = track.formattedDuration
 
     var showMenu by remember { mutableStateOf(false) }
 
@@ -763,7 +767,11 @@ fun CategorySubScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
-                    items(items = tracks, key = { it.id }) { track ->
+                    items(
+                        items = tracks,
+                        key = { it.id },
+                        contentType = { "track_row" }
+                    ) { track ->
                         ModernTrackRow(
                             track = track,
                             isCurrent = track.id == activeTrack?.id,
@@ -842,7 +850,11 @@ fun CategorySubScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
-                    items(items = artists, key = { it.name }) { artist ->
+                    items(
+                        items = artists,
+                        key = { it.name },
+                        contentType = { "artist_card" }
+                    ) { artist ->
                         SleekCard(
                             modifier = Modifier.fillMaxWidth(),
                             backgroundColor = ObsidianSurface,
@@ -905,7 +917,11 @@ fun CategorySubScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
-                    items(items = folderGroups.entries.toList(), key = { it.key }) { (folderName, folderTracks) ->
+                    items(
+                        items = folderGroups.entries.toList(),
+                        key = { it.key },
+                        contentType = { "folder_card" }
+                    ) { (folderName, folderTracks) ->
                         SleekCard(
                             modifier = Modifier.fillMaxWidth(),
                             backgroundColor = ObsidianSurface,
@@ -968,7 +984,11 @@ fun CategorySubScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(bottom = 120.dp)
                 ) {
-                    items(items = genreGroups.entries.toList(), key = { it.key }) { (genreName, genreTracks) ->
+                    items(
+                        items = genreGroups.entries.toList(),
+                        key = { it.key },
+                        contentType = { "genre_card" }
+                    ) { (genreName, genreTracks) ->
                         SleekCard(
                             modifier = Modifier.fillMaxWidth(),
                             backgroundColor = ObsidianSurface,

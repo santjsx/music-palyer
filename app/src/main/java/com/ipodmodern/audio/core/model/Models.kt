@@ -88,6 +88,14 @@ data class Track(
     val cueStartMs: Long = 0L,
     val cueEndMs: Long = 0L
 ) {
+    val formattedDuration: String
+        get() {
+            val totalSec = durationMs / 1000
+            val m = totalSec / 60
+            val s = totalSec % 60
+            return if (s < 10) "$m:0$s" else "$m:$s"
+        }
+
     val isHiRes: Boolean
         get() {
             if (isLossyFormat(formatName)) return false
