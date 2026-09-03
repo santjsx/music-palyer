@@ -116,8 +116,8 @@ class LocalMusicScanner(private val context: Context) {
                     // Resolve album artwork
                     val artworkUri = getArtworkUri(albumId, rawPath, contentUri)
 
-                    // Compute audio quality badge
-                    val badge = computeQualityBadge(fileExt, mimeType, rawPath)
+                    // Compute real audio quality specs
+                    val (sampleRate, bitDepth, badge) = inspectTrackAudioSpecs(rawPath, fileExt, mimeType)
 
                     val track = Track(
                         id = id,
@@ -131,8 +131,8 @@ class LocalMusicScanner(private val context: Context) {
                         year = if (year > 0) year else 2026,
                         genre = "Music",
                         formatName = fileExt.uppercase(),
-                        sampleRate = if (badge.contains("96.0", true) || badge.contains("192", true)) 96000 else 44100,
-                        bitDepth = if (badge.contains("24-BIT", true)) 24 else 16,
+                        sampleRate = sampleRate,
+                        bitDepth = bitDepth,
                         badgeText = badge
                     )
 
@@ -244,7 +244,7 @@ class LocalMusicScanner(private val context: Context) {
             }
 
             val ext = file.extension.lowercase()
-            val badge = computeQualityBadge(ext, "", file.absolutePath)
+            val (sampleRate, bitDepth, badge) = inspectTrackAudioSpecs(file.absolutePath, ext, "")
 
             Track(
                 title = title,
@@ -257,8 +257,8 @@ class LocalMusicScanner(private val context: Context) {
                 year = year,
                 genre = "Music",
                 formatName = ext.uppercase(),
-                sampleRate = if (badge.contains("96.0", true)) 96000 else 44100,
-                bitDepth = if (badge.contains("24-BIT", true)) 24 else 16,
+                sampleRate = sampleRate,
+                bitDepth = bitDepth,
                 badgeText = badge
             )
         } catch (e: Exception) {
@@ -318,17 +318,28 @@ class LocalMusicScanner(private val context: Context) {
         return null
     }
 
-    private fun computeQualityBadge(ext: String, mimeType: String, filePath: String?): String {
-        return when (ext) {
-            "flac" -> "FLAC LOSSLESS 24-BIT / 96.0kHz"
-            "wav" -> "WAV PCM 24-BIT / 96.0kHz"
-            "dsf", "dff" -> "DSD DIRECT STREAM DIGITAL 2.8MHz"
-            "m4a", "alac" -> "ALAC LOSSLESS 24-BIT / 48.0kHz"
-            "mp3" -> "MP3 320 KBPS HIGH BITRATE"
-            "aac" -> "AAC 256 KBPS VBR"
-            "ogg", "opus" -> "OPUS AUDIO 16-BIT / 48.0kHz"
-            "ape" -> "MONKEY'S AUDIO LOSSLESS"
-            else -> if (mimeType.contains("flac", true)) "FLAC LOSSLESS" else "DIGITAL AUDIO"
+    private fun inspectTrackAudioSpecs(filePath: String?, ext: String, mimeType: String): Triple<Int, Int, String> {
+        if (!filePath.isNullOrBlank()) {
+            val f = File(filePath)
+            if (f.exists() && (ext == "flac" || ext == "wav" || ext == "dsd" || ext == "dsf" || ext == "dff")) {
+                try {
+                    val meta = com.ipodmodern.audio.core.audio.NativeAudioBridge.inspectFileMetadata(filePath)
+                    if (meta != null && meta.sampleRate > 0 && meta.formatName != "UNKNOWN") {
+                        return Triple(meta.sampleRate, meta.bitDepth, meta.badgeText)
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+
+        val isLossless = when (ext) {
+            "flac", "wav", "alac", "dsf", "dff", "ape", "aiff" -> true
+            else -> mimeType.contains("flac", true) || mimeType.contains("wav", true)
+        }
+
+        return if (isLossless) {
+            Triple(44100, 16, "LOSSLESS 16-BIT / 44.1kHz")
+        } else {
+            Triple(44100, 16, ext.uppercase().ifBlank { "AUDIO" })
         }
     }
 

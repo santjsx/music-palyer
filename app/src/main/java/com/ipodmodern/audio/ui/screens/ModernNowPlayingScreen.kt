@@ -276,16 +276,28 @@ fun ModernNowPlayingScreen(
 
                 // Apple Music / Tidal Grade Audio Quality Badge
                 if (currentTrack != null) {
+                    val isHiRes = currentTrack.isHiRes
+                    val isLossless = currentTrack.isLossless
+                    val badgeBg = when {
+                        isHiRes -> Color(0xFF2C2411)
+                        isLossless -> Color(0x2EFFFFFF)
+                        else -> Color(0x22FFFFFF)
+                    }
+                    val badgeBorder = when {
+                        isHiRes -> Color(0xFFFFD159)
+                        isLossless -> Color(0x55FFFFFF)
+                        else -> Color(0x33FFFFFF)
+                    }
+                    val badgeTextColor = when {
+                        isHiRes -> Color(0xFFFFD159)
+                        else -> Color.White
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        val isHiRes = currentTrack.isHiRes
-                        val badgeBg = if (isHiRes) Color(0xFF2C2411) else Color(0x33FFFFFF)
-                        val badgeBorder = if (isHiRes) Color(0xFFFFD159) else Color(0x44FFFFFF)
-                        val badgeTextColor = if (isHiRes) Color(0xFFFFD159) else Color.White
-
                         Box(
                             modifier = Modifier
                                 .clip(RadiusSm)

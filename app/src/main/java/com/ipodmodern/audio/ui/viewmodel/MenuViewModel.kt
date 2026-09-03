@@ -82,7 +82,7 @@ class MenuViewModel(application: Application) : AndroidViewModel(application) {
                     cachedAlbums.filter { it.artist.equals(currentFilterArtist, ignoreCase = true) }
                 } else cachedAlbums
                 _navState.value = _navState.value.copy(
-                    items = albums.map { MenuItem(it.title, it.title, it.artist, badge = if (it.isHiRes) "HI-RES" else null) }
+                    items = albums.map { MenuItem(it.title, it.title, it.artist) }
                 )
             }
             ScreenType.MENU_ARTISTS -> {
@@ -159,10 +159,10 @@ class MenuViewModel(application: Application) : AndroidViewModel(application) {
                         MenuItem(it.name, it.name, "${it.albumCount} Albums • ${it.trackCount} Tracks")
                     })
                     "albums" -> navigateTo(ScreenType.MENU_ALBUMS, "Albums", cachedAlbums.map {
-                        MenuItem(it.title, it.title, it.artist, badge = if (it.isHiRes) "HI-RES" else null)
+                        MenuItem(it.title, it.title, it.artist)
                     })
                     "songs" -> navigateTo(ScreenType.MENU_SONGS, "Songs", cachedTracks.mapIndexed { idx, t ->
-                        MenuItem(t.id.toString(), t.title, "${t.artist} • ${t.badgeText}", hasSubMenu = false)
+                        MenuItem(t.id.toString(), t.title, t.artist, hasSubMenu = false)
                     })
                     "rescan" -> {
                         onRescan?.invoke()
@@ -173,7 +173,7 @@ class MenuViewModel(application: Application) : AndroidViewModel(application) {
                 currentFilterArtist = item.id
                 val artistAlbums = cachedAlbums.filter { it.artist.equals(item.id, ignoreCase = true) }
                 navigateTo(ScreenType.MENU_ALBUMS, item.title, artistAlbums.map {
-                    MenuItem(it.title, it.title, it.artist, badge = if (it.isHiRes) "HI-RES" else null)
+                    MenuItem(it.title, it.title, it.artist)
                 })
             }
             ScreenType.MENU_ALBUMS -> {

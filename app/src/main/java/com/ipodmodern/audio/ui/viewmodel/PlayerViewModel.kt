@@ -445,6 +445,32 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
 
+        // Asynchronously detect and verify the true OG audio format for the active track
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val detected = com.ipodmodern.audio.core.audio.AudioFormatDetector.detect(
+                    context = getApplication(),
+                    uri = android.net.Uri.parse(track.filePath),
+                    fallbackPath = track.filePath
+                )
+                if (detected.sampleRate > 0) {
+                    withContext(Dispatchers.Main) {
+                        if (_uiState.value.currentTrack?.id == track.id) {
+                            val verifiedTrack = _uiState.value.currentTrack?.copy(
+                                formatName = detected.formatName,
+                                sampleRate = detected.sampleRate,
+                                bitDepth = detected.bitDepth,
+                                badgeText = detected.badgeText
+                            )
+                            if (verifiedTrack != null) {
+                                _uiState.value = _uiState.value.copy(currentTrack = verifiedTrack)
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
         persistLastPlayback(track.id, 0L)
         updateForegroundNotification(track, startPlaying)
     }

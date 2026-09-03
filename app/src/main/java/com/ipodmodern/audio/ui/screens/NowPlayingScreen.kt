@@ -119,11 +119,11 @@ fun NowPlayingScreen(
             )
             AudioQualityBadge(
                 quality = when {
-                    track.sampleRate > 48000 || track.bitDepth > 16 -> AudioQuality.HI_RES_LOSSLESS
-                    track.formatName == "MP3" || track.formatName == "AAC" -> AudioQuality.LOSSY
-                    else -> AudioQuality.LOSSLESS
+                    track.isHiRes -> AudioQuality.HI_RES_LOSSLESS
+                    track.isLossless -> AudioQuality.LOSSLESS
+                    else -> AudioQuality.LOSSY
                 },
-                badgeText = track.badgeText
+                badgeText = track.displayBadge
             )
         }
 

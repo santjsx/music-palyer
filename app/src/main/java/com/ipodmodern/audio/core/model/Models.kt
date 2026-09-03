@@ -54,37 +54,48 @@ data class Track(
     val cueEndMs: Long = 0L
 ) {
     val isHiRes: Boolean
-        get() = badgeText.contains("HI-RES", ignoreCase = true) || 
-                badgeText.contains("24-BIT", ignoreCase = true) || 
-                badgeText.contains("96.0", ignoreCase = true) || 
-                sampleRate > 48000 || bitDepth > 16
+        get() {
+            if (isLossyFormat(formatName)) return false
+            return sampleRate > 48000 || (bitDepth > 16 && sampleRate >= 48000) || formatName.equals("DSD", true)
+        }
 
     val isLossless: Boolean
-        get() = isHiRes || 
-                badgeText.contains("LOSSLESS", ignoreCase = true) ||
-                badgeText.contains("FLAC", ignoreCase = true) ||
-                badgeText.contains("ALAC", ignoreCase = true) ||
-                badgeText.contains("WAV", ignoreCase = true) ||
-                badgeText.contains("DSD", ignoreCase = true) ||
-                formatName.equals("FLAC", true) ||
-                formatName.equals("WAV", true) ||
-                formatName.equals("ALAC", true)
+        get() {
+            if (isLossyFormat(formatName)) return false
+            return isLosslessFormat(formatName)
+        }
 
     val displayBadge: String
         get() = when {
             isHiRes -> "HI-RES LOSSLESS"
             isLossless -> "LOSSLESS"
-            badgeText.contains("320", ignoreCase = true) -> "320 KBPS"
-            formatName.isNotBlank() -> formatName.uppercase()
-            else -> "HIGH QUALITY"
+            else -> formatName.uppercase()
         }
 
     val audioSpecText: String
-        get() = when {
-            isHiRes -> "${bitDepth}-Bit / ${(sampleRate / 1000.0f).toString().removeSuffix(".0")} kHz • ${formatName.uppercase()}"
-            isLossless -> "${bitDepth}-Bit / 44.1 kHz • ${formatName.uppercase()}"
-            else -> "${formatName.uppercase()} • High Quality"
+        get() {
+            val rateText = if (sampleRate > 0) {
+                val khz = sampleRate / 1000.0f
+                if (khz == khz.toInt().toFloat()) "${khz.toInt()} kHz" else String.format(java.util.Locale.US, "%.1f kHz", khz)
+            } else "44.1 kHz"
+
+            return when {
+                isHiRes && formatName.equals("DSD", true) -> "DSD • 2.8 MHz"
+                isHiRes -> "${bitDepth}-Bit / $rateText • ${formatName.uppercase()}"
+                isLossless -> "${bitDepth}-Bit / $rateText • ${formatName.uppercase()}"
+                else -> "${formatName.uppercase()} • Compressed Audio"
+            }
         }
+}
+
+fun isLossyFormat(format: String): Boolean {
+    val f = format.lowercase().trim()
+    return f == "mp3" || f == "aac" || f == "m4a" || f == "ogg" || f == "opus" || f == "wma"
+}
+
+fun isLosslessFormat(format: String): Boolean {
+    val f = format.lowercase().trim()
+    return f == "flac" || f == "wav" || f == "alac" || f == "aiff" || f == "ape" || f == "dsd" || f == "dsf" || f == "dff"
 }
 
 @Immutable

@@ -677,36 +677,13 @@ private fun ModernTrackRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = track.artist.ifBlank { "Unknown Artist" },
-                    color = Color(0xFF8E8E93),
-                    fontSize = 13.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-
-                // Lossless audio badge
-                Box(
-                    modifier = Modifier
-                        .clip(RadiusSm)
-                        .background(if (track.isHiRes) Color(0xFF2C2411) else Color(0x2EFFFFFF))
-                        .border(0.5.dp, if (track.isHiRes) Color(0xFFFFD159) else Color(0x44FFFFFF), RadiusSm)
-                        .padding(horizontal = 4.dp, vertical = 1.dp)
-                ) {
-                    Text(
-                        text = if (track.isHiRes) "HI-RES" else "LOSSLESS",
-                        color = if (track.isHiRes) Color(0xFFFFD159) else Color.White,
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
-                    )
-                }
-            }
+            Text(
+                text = track.artist.ifBlank { "Unknown Artist" },
+                color = Color(0xFF8E8E93),
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
 
         // Duration (e.g. 6:48)

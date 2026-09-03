@@ -289,36 +289,13 @@ fun ModernHomeScreen(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Text(
-                                        text = continueTrack.artist,
-                                        color = TextSecondary,
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f, fill = false)
-                                    )
-
-                                    // Apple/Tidal Style Audio Quality Badge
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RadiusSm)
-                                            .background(if (continueTrack.isHiRes) Color(0xFF2C2411) else Color(0x33FFFFFF))
-                                            .border(0.5.dp, if (continueTrack.isHiRes) Color(0xFFFFD159) else Color(0x44FFFFFF), RadiusSm)
-                                            .padding(horizontal = 5.dp, vertical = 1.dp)
-                                    ) {
-                                        Text(
-                                            text = continueTrack.displayBadge,
-                                            color = if (continueTrack.isHiRes) Color(0xFFFFD159) else Color.White,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            letterSpacing = 0.5.sp
-                                        )
-                                    }
-                                }
+                                Text(
+                                    text = continueTrack.artist,
+                                    color = TextSecondary,
+                                    fontSize = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                                 Spacer(modifier = Modifier.height(6.dp))
 
                                 // Progress Line + Time Text
@@ -444,24 +421,7 @@ fun ModernHomeScreen(
                                         )
                                     }
 
-                                    // Audio Quality Badge (Top Left of Card)
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.TopStart)
-                                            .padding(6.dp)
-                                            .clip(RadiusSm)
-                                            .background(Color(0xCC000000))
-                                            .border(0.5.dp, if (track.isHiRes) Color(0xFFFFD159) else Color(0x44FFFFFF), RadiusSm)
-                                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                                    ) {
-                                        Text(
-                                            text = if (track.isHiRes) "HI-RES" else "LOSSLESS",
-                                            color = if (track.isHiRes) Color(0xFFFFD159) else Color.White,
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            letterSpacing = 0.5.sp
-                                        )
-                                    }
+
 
                                     // Play icon overlay pill
                                     val cardAccent = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent

@@ -16,23 +16,35 @@ AudioMetadataInfo NativeTagInspector::inspectFile(const std::string& filePath) {
     info.qualityCategory = AudioQualityCategory::LOSSLESS;
     info.badgeText = "LOSSLESS";
 
-    std::ifstream file(filePath, std::ios::binary);
-    if (!file.is_open()) {
-        return info;
+    std::string ext = "";
+    auto dotPos = filePath.find_last_of('.');
+    if (dotPos != std::string::npos) {
+        ext = filePath.substr(dotPos + 1);
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
     }
 
-    char magic[4] = {0};
-    file.read(magic, 4);
-
-    if (std::memcmp(magic, "fLaC", 4) == 0) {
-        inspectFlac(filePath, info);
-    } else if (std::memcmp(magic, "RIFF", 4) == 0) {
-        inspectWav(filePath, info);
-    } else if (std::memcmp(magic, "DSD ", 4) == 0) {
-        inspectDsd(filePath, info);
-    } else {
-        // Fallback inspect MP3 or ID3 header
+    if (ext == "flac" || ext.empty()) {
+        if (inspectFlac(filePath, info)) {
+            categorizeQuality(info);
+            return info;
+        }
+    }
+    if (ext == "wav" || ext.empty()) {
+        if (inspectWav(filePath, info)) {
+            categorizeQuality(info);
+            return info;
+        }
+    }
+    if (ext == "dsf" || ext == "dff" || ext == "dsd") {
+        if (inspectDsd(filePath, info)) {
+            categorizeQuality(info);
+            return info;
+        }
+    }
+    if (ext == "mp3") {
         inspectMp3(filePath, info);
+        categorizeQuality(info);
+        return info;
     }
 
     categorizeQuality(info);
@@ -45,6 +57,19 @@ bool NativeTagInspector::inspectFlac(const std::string& path, AudioMetadataInfo&
 
     char header[4];
     file.read(header, 4);
+
+    // If file has an ID3v2 tag prefix, skip it to reach fLaC stream
+    if (std::memcmp(header, "ID3", 3) == 0) {
+        char id3Rest[6];
+        file.read(id3Rest, 6);
+        uint32_t tagSize = ((id3Rest[2] & 0x7F) << 21) |
+                           ((id3Rest[3] & 0x7F) << 14) |
+                           ((id3Rest[4] & 0x7F) << 7) |
+                           (id3Rest[5] & 0x7F);
+        file.seekg(tagSize, std::ios::cur);
+        file.read(header, 4);
+    }
+
     if (std::memcmp(header, "fLaC", 4) != 0) return false;
 
     // STREAMINFO block header (4 bytes) + block data (34 bytes)
@@ -142,13 +167,13 @@ bool NativeTagInspector::inspectMp3(const std::string& path, AudioMetadataInfo& 
 }
 
 void NativeTagInspector::categorizeQuality(AudioMetadataInfo& info) {
-    if (info.formatName == "MP3" || info.formatName == "AAC" || info.formatName == "OGG") {
+    if (info.formatName == "MP3" || info.formatName == "AAC" || info.formatName == "OGG" || info.formatName == "OPUS") {
         info.qualityCategory = AudioQualityCategory::LOSSY;
         std::ostringstream ss;
-        ss << "LOSSY " << info.formatName;
+        ss << info.formatName;
         if (info.bitRateKbps > 0) ss << " " << info.bitRateKbps << "k";
         info.badgeText = ss.str();
-    } else if (info.sampleRate > 48000 || info.bitDepth > 16 || info.formatName == "DSD") {
+    } else if (info.sampleRate > 48000 || (info.bitDepth > 16 && info.sampleRate >= 48000) || info.formatName == "DSD") {
         info.qualityCategory = AudioQualityCategory::HI_RES_LOSSLESS;
         std::ostringstream ss;
         if (info.formatName == "DSD") {
