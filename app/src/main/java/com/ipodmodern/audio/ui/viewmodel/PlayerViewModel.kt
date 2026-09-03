@@ -12,9 +12,13 @@ import com.ipodmodern.audio.core.database.entity.ArtistEntity
 import com.ipodmodern.audio.core.database.entity.TrackEntity
 import com.ipodmodern.audio.core.haptics.HapticEngine
 import com.ipodmodern.audio.core.lyrics.LyricsRepository
+import com.ipodmodern.audio.core.model.AudioQualityType
+import com.ipodmodern.audio.core.model.AudioTrackSpecs
 import com.ipodmodern.audio.core.model.EqualizerPreset
 import com.ipodmodern.audio.core.model.LyricLine
 import com.ipodmodern.audio.core.model.Track
+import com.ipodmodern.audio.core.model.isLosslessFormat
+import com.ipodmodern.audio.core.model.isLossyFormat
 import com.ipodmodern.audio.core.parser.LocalMusicScanner
 import com.ipodmodern.audio.core.parser.LyricsParser
 import androidx.compose.runtime.Immutable
@@ -99,6 +103,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _playbackProgress = MutableStateFlow(PlaybackProgress())
     val playbackProgress: StateFlow<PlaybackProgress> = _playbackProgress.asStateFlow()
+
+    private val _currentTrackSpecs = MutableStateFlow(AudioTrackSpecs())
+    val currentTrackSpecs: StateFlow<AudioTrackSpecs> = _currentTrackSpecs.asStateFlow()
 
     val playlists: StateFlow<List<com.ipodmodern.audio.core.database.entity.PlaylistWithTracks>> = db.playlistDao()
         .getAllPlaylistsWithTracks()
@@ -445,6 +452,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
 
+        // Initial track specs
+        val initialIsLossless = isLosslessFormat(track.formatName)
+        val initialIsHiRes = initialIsLossless && (track.sampleRate > 48000 || track.bitDepth > 16 || track.formatName.equals("DSD", true))
+        _currentTrackSpecs.value = AudioTrackSpecs(
+            qualityType = when {
+                initialIsHiRes -> AudioQualityType.HI_RES
+                initialIsLossless -> AudioQualityType.LOSSLESS
+                else -> AudioQualityType.LOSSY
+            },
+            sampleRateKhz = if (track.sampleRate > 0) track.sampleRate / 1000f else 44.1f,
+            bitDepth = track.bitDepth,
+            codec = track.formatName
+        )
+
         // Asynchronously detect and verify the true OG audio format for the active track
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -454,8 +475,23 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     fallbackPath = track.filePath
                 )
                 if (detected.sampleRate > 0) {
+                    val isLossless = isLosslessFormat(detected.formatName)
+                    val isHiRes = isLossless && (detected.sampleRate > 48000 || detected.bitDepth > 16 || detected.formatName.equals("DSD", true))
+                    val qualityType = when {
+                        isHiRes -> AudioQualityType.HI_RES
+                        isLossless -> AudioQualityType.LOSSLESS
+                        else -> AudioQualityType.LOSSY
+                    }
+                    val specs = AudioTrackSpecs(
+                        qualityType = qualityType,
+                        sampleRateKhz = if (detected.sampleRate > 0) detected.sampleRate / 1000f else 44.1f,
+                        bitDepth = detected.bitDepth,
+                        codec = detected.formatName
+                    )
+
                     withContext(Dispatchers.Main) {
                         if (_uiState.value.currentTrack?.id == track.id) {
+                            _currentTrackSpecs.value = specs
                             val verifiedTrack = _uiState.value.currentTrack?.copy(
                                 formatName = detected.formatName,
                                 sampleRate = detected.sampleRate,

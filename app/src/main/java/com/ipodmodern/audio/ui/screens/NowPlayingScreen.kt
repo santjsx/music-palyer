@@ -117,14 +117,12 @@ fun NowPlayingScreen(
                 color = Color.Gray,
                 fontFamily = FontFamily.Monospace
             )
-            AudioQualityBadge(
-                quality = when {
-                    track.isHiRes -> AudioQuality.HI_RES_LOSSLESS
-                    track.isLossless -> AudioQuality.LOSSLESS
-                    else -> AudioQuality.LOSSY
-                },
-                badgeText = track.displayBadge
-            )
+            if (track.isLossless) {
+                AudioQualityBadge(
+                    quality = if (track.isHiRes) AudioQuality.HI_RES_LOSSLESS else AudioQuality.LOSSLESS,
+                    badgeText = track.displayBadge
+                )
+            }
         }
 
         // Center Album Artwork with Glass Bevel & Glow

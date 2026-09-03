@@ -32,6 +32,41 @@ enum class AudioQuality {
     HI_RES_LOSSLESS
 }
 
+enum class AudioQualityType {
+    LOSSY,
+    LOSSLESS,
+    HI_RES
+}
+
+@Keep
+@Immutable
+@Serializable
+data class AudioTrackSpecs(
+    val qualityType: AudioQualityType = AudioQualityType.LOSSY,
+    val sampleRateKhz: Float = 0f,
+    val bitDepth: Int = 0,
+    val codec: String = ""
+) {
+    val isHiRes: Boolean get() = qualityType == AudioQualityType.HI_RES
+    val isLossless: Boolean get() = qualityType == AudioQualityType.LOSSLESS || qualityType == AudioQualityType.HI_RES
+    val badgeText: String get() = when (qualityType) {
+        AudioQualityType.HI_RES -> "HI-RES LOSSLESS"
+        AudioQualityType.LOSSLESS -> "LOSSLESS"
+        AudioQualityType.LOSSY -> codec.uppercase()
+    }
+    val specDetailsText: String get() {
+        val rateStr = if (sampleRateKhz > 0f) {
+            if (sampleRateKhz == sampleRateKhz.toInt().toFloat()) "${sampleRateKhz.toInt()} kHz" else String.format(java.util.Locale.US, "%.1f kHz", sampleRateKhz)
+        } else "44.1 kHz"
+        return when {
+            codec.equals("DSD", true) -> "DSD • 2.8 MHz"
+            qualityType == AudioQualityType.HI_RES -> "${bitDepth}-Bit / $rateStr • ${codec.uppercase()}"
+            qualityType == AudioQualityType.LOSSLESS -> "${bitDepth}-Bit / $rateStr • ${codec.uppercase()}"
+            else -> "${codec.uppercase()} • Compressed Audio"
+        }
+    }
+}
+
 @Immutable
 @Serializable
 data class Track(

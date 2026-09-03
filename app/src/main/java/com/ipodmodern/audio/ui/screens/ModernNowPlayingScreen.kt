@@ -2,6 +2,7 @@ package com.ipodmodern.audio.ui.screens
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -72,6 +73,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.ipodmodern.audio.core.model.AudioQualityType
+import com.ipodmodern.audio.core.model.AudioTrackSpecs
 import com.ipodmodern.audio.core.model.LyricLine
 import com.ipodmodern.audio.ui.theme.RadiusFull
 import com.ipodmodern.audio.ui.theme.RadiusSm
@@ -275,56 +278,7 @@ fun ModernNowPlayingScreen(
                 }
 
                 // Apple Music / Tidal Grade Audio Quality Badge
-                if (currentTrack != null) {
-                    val isHiRes = currentTrack.isHiRes
-                    val isLossless = currentTrack.isLossless
-                    val badgeBg = when {
-                        isHiRes -> Color(0xFF2C2411)
-                        isLossless -> Color(0x2EFFFFFF)
-                        else -> Color(0x22FFFFFF)
-                    }
-                    val badgeBorder = when {
-                        isHiRes -> Color(0xFFFFD159)
-                        isLossless -> Color(0x55FFFFFF)
-                        else -> Color(0x33FFFFFF)
-                    }
-                    val badgeTextColor = when {
-                        isHiRes -> Color(0xFFFFD159)
-                        else -> Color.White
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RadiusSm)
-                                .background(badgeBg)
-                                .border(1.dp, badgeBorder, RadiusSm)
-                                .padding(horizontal = 7.dp, vertical = 2.5.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = currentTrack.displayBadge,
-                                color = badgeTextColor,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.6.sp
-                            )
-                        }
-
-                        Text(
-                            text = currentTrack.audioSpecText,
-                            color = Color.White.copy(alpha = 0.65f),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
+                AudioQualityDisplay(specsFlow = playerViewModel.currentTrackSpecs)
 
                 Spacer(modifier = Modifier.height(14.dp))
 
@@ -586,6 +540,59 @@ fun ModernNowPlayingScreen(
                     Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color(0xFFE50914))
                     Text(text = "Full Synchronized Lyrics", color = Color.White, fontSize = 15.sp)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun AudioQualityDisplay(
+    specsFlow: StateFlow<AudioTrackSpecs>,
+    modifier: Modifier = Modifier
+) {
+    val specs by specsFlow.collectAsState()
+
+    AnimatedVisibility(
+        visible = specs.qualityType != AudioQualityType.LOSSY,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        val isHiRes = specs.qualityType == AudioQualityType.HI_RES
+        val badgeBg = if (isHiRes) Color(0xFF2C2411) else Color(0x2EFFFFFF)
+        val badgeBorder = if (isHiRes) Color(0xFFFFD159) else Color(0x55FFFFFF)
+        val badgeTextColor = if (isHiRes) Color(0xFFFFD159) else Color.White
+
+        Row(
+            modifier = modifier.padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RadiusSm)
+                    .background(badgeBg)
+                    .border(1.dp, badgeBorder, RadiusSm)
+                    .padding(horizontal = 7.dp, vertical = 2.5.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (isHiRes) "HI-RES LOSSLESS" else "LOSSLESS",
+                    color = badgeTextColor,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.6.sp
+                )
+            }
+
+            if (specs.sampleRateKhz > 0f) {
+                Text(
+                    text = specs.specDetailsText,
+                    color = Color.White.copy(alpha = 0.65f),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
