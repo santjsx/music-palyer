@@ -2,8 +2,14 @@ package com.ipodmodern.audio.ui.components
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,7 +44,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -100,13 +108,20 @@ fun MiniPlayerBar(
         }
     }
 
+    val miniArtScale by animateFloatAsState(
+        targetValue = if (isPlaying) 1.0f else 0.88f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "mini_art_scale"
+    )
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 4.dp)
-            .clip(RadiusXl)
-            .background(Color(0xFF141519).copy(alpha = 0.96f))
-            .border(1.dp, Color(0x24FFFFFF), RadiusXl)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .shadow(16.dp, RadiusLg, spotColor = Color(0x66000000))
+            .clip(RadiusLg)
+            .background(Color(0xFF16171B))
+            .border(1.dp, Color(0x1FFFFFFF), RadiusLg)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onBarClick()
@@ -127,10 +142,14 @@ fun MiniPlayerBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Album Art Thumbnail
+                // Album Art Thumbnail (Elastic Playback Spring Feedback)
                 Box(
                     modifier = Modifier
                         .size(44.dp)
+                        .graphicsLayer {
+                            scaleX = miniArtScale
+                            scaleY = miniArtScale
+                        }
                         .clip(RadiusMd)
                         .background(Color(0xFF22242B)),
                     contentAlignment = Alignment.Center
@@ -181,7 +200,7 @@ fun MiniPlayerBar(
                     )
                 }
 
-                // Play / Pause Icon Button (Solid White)
+                // Play / Pause Icon Button (Solid White with Smooth Scale/Fade)
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -192,12 +211,21 @@ fun MiniPlayerBar(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
+                    AnimatedContent(
+                        targetState = isPlaying,
+                        transitionSpec = {
+                            (scaleIn(initialScale = 0.75f, animationSpec = tween(200)) + fadeIn(animationSpec = tween(200)))
+                                .togetherWith(scaleOut(targetScale = 0.75f, animationSpec = tween(200)) + fadeOut(animationSpec = tween(200)))
+                        },
+                        label = "mini_play_pause"
+                    ) { playing ->
+                        Icon(
+                            imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (playing) "Pause" else "Play",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
 
                 // Next Track Icon Button

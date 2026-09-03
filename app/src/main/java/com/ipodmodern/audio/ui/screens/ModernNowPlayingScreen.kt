@@ -3,12 +3,18 @@ package com.ipodmodern.audio.ui.screens
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -64,8 +70,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -120,14 +128,31 @@ fun ModernNowPlayingScreen(
     val sheetState = rememberModalBottomSheetState()
 
     // Autoplay / Infinity toggle state
+    // Autoplay / Infinity toggle state
     var isInfinityAutoplay by remember { mutableStateOf(true) }
+
+    // Elastic Album Art Scaling (Playback Feedback directly on GPU layer)
+    val isPlaying = uiState.isPlaying
+    val albumArtScale by animateFloatAsState(
+        targetValue = if (isPlaying) 1.0f else 0.88f,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessLow,
+            dampingRatio = Spring.DampingRatioLowBouncy
+        ),
+        label = "album_art_scale"
+    )
+    val albumArtDim by animateFloatAsState(
+        targetValue = if (isPlaying) 1.0f else 0.78f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "album_art_dim"
+    )
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF14130F))
+            .background(Color(0xFF0E0E10))
     ) {
-        // LAYER 0: Ambient Blurred Backdrop from Album Art
+        // LAYER 0: Ambient Liquid Glow Canvas Backdrop (Hardware-Accelerated)
         if (artworkFile != null) {
             AsyncImage(
                 model = artworkFile,
@@ -135,27 +160,69 @@ fun ModernNowPlayingScreen(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .blur(60.dp)
+                    .graphicsLayer {
+                        scaleX = 1.35f
+                        scaleY = 1.35f
+                        alpha = 0.55f
+                    }
+                    .blur(70.dp)
             )
         }
 
-        // LAYER 1: Warm Olive / Dynamic Scrim Overlay
+        // LAYER 1: Multi-Radial Hardware-Accelerated Glow Mesh
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(80.dp)
+        ) {
+            val w = size.width
+            val h = size.height
+
+            // Top-left ambient orb
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(Color(0x55E50914), Color.Transparent),
+                    center = Offset(w * 0.25f, h * 0.22f),
+                    radius = w * 0.65f
+                )
+            )
+
+            // Center-right ambient orb
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(Color(0x44D97706), Color.Transparent),
+                    center = Offset(w * 0.8f, h * 0.42f),
+                    radius = w * 0.75f
+                )
+            )
+
+            // Bottom ambient depth orb
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(Color(0x77000000), Color.Transparent),
+                    center = Offset(w * 0.5f, h * 0.85f),
+                    radius = w * 0.85f
+                )
+            )
+        }
+
+        // LAYER 2: Warm Studio / OLED Glass Scrim
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(
-                            Color(0x55000000),
-                            Color(0x882A2518),
-                            Color(0xDD201C12),
-                            Color(0xFF14120C)
+                        colors = listOf(
+                            Color(0x44000000),
+                            Color(0x660A0A0C),
+                            Color(0xDD0D0D0E),
+                            Color(0xFF0B0B0C)
                         )
                     )
                 )
         )
 
-        // LAYER 2: Main Interactive Content
+        // LAYER 3: Main Interactive Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -192,13 +259,19 @@ fun ModernNowPlayingScreen(
                 }
             }
 
-            // 2. Center Album Artwork Container
+            // 2. Center Album Artwork Container (Elastic Playback Spring Feedback)
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.92f)
                     .aspectRatio(1f)
-                    .clip(RadiusXl)
-                    .shadow(16.dp, RadiusXl)
+                    .graphicsLayer {
+                        scaleX = albumArtScale
+                        scaleY = albumArtScale
+                        shadowElevation = (albumArtScale - 0.88f) * 120f
+                        shape = RoundedCornerShape(18.dp)
+                        clip = true
+                        alpha = albumArtDim
+                    }
                     .background(Color(0x33000000)),
                 contentAlignment = Alignment.Center
             ) {
@@ -326,7 +399,7 @@ fun ModernNowPlayingScreen(
                     )
                 }
 
-                // Main Play / Pause Button (Large Solid White)
+                // Main Play / Pause Button with Smooth Scale & Fade Transitions
                 Box(
                     modifier = Modifier
                         .size(68.dp)
@@ -337,12 +410,21 @@ fun ModernNowPlayingScreen(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (uiState.isPlaying) "Pause" else "Play",
-                        tint = Color.White,
-                        modifier = Modifier.size(46.dp)
-                    )
+                    AnimatedContent(
+                        targetState = uiState.isPlaying,
+                        transitionSpec = {
+                            (scaleIn(initialScale = 0.75f, animationSpec = tween(220)) + fadeIn(animationSpec = tween(220)))
+                                .togetherWith(scaleOut(targetScale = 0.75f, animationSpec = tween(220)) + fadeOut(animationSpec = tween(220)))
+                        },
+                        label = "np_play_pause"
+                    ) { isPlayingNow ->
+                        Icon(
+                            imageVector = if (isPlayingNow) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (isPlayingNow) "Pause" else "Play",
+                            tint = Color.White,
+                            modifier = Modifier.size(46.dp)
+                        )
+                    }
                 }
 
                 // Skip Next

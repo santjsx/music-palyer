@@ -2,6 +2,7 @@ package com.ipodmodern.audio.ui.screens
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -34,9 +35,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -60,8 +61,10 @@ fun LyricsScreen(
 
     LaunchedEffect(activeLyricIndex) {
         if (lyrics.isNotEmpty() && activeLyricIndex >= 0) {
+            // Smoothly slide and center the active line with physics spring feel
             listState.animateScrollToItem(
-                (activeLyricIndex - 2).coerceAtLeast(0)
+                index = activeLyricIndex,
+                scrollOffset = -280
             )
         }
     }
@@ -182,14 +185,17 @@ fun LyricsScreen(
                     val isActive = index == activeLyricIndex
 
                     val textColor by animateColorAsState(
-                        targetValue = if (isActive) Color.White else Color(0xFF636366),
-                        animationSpec = tween(220),
+                        targetValue = if (isActive) Color.White else Color(0x55FFFFFF),
+                        animationSpec = tween(280),
                         label = "lyric_color"
                     )
 
                     val scale by animateFloatAsState(
-                        targetValue = if (isActive) 1.03f else 1.0f,
-                        animationSpec = spring(stiffness = 500f),
+                        targetValue = if (isActive) 1.05f else 0.96f,
+                        animationSpec = spring(
+                            stiffness = Spring.StiffnessLow,
+                            dampingRatio = Spring.DampingRatioLowBouncy
+                        ),
                         label = "lyric_scale"
                     )
 
@@ -198,10 +204,14 @@ fun LyricsScreen(
                         fontSize = if (isActive) 24.sp else 19.sp,
                         fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
                         color = textColor,
-                        lineHeight = if (isActive) 32.sp else 26.sp,
+                        lineHeight = if (isActive) 34.sp else 28.sp,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .scale(scale)
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                                alpha = if (isActive) 1.0f else 0.5f
+                            }
                             .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                 onSeekTo?.invoke(line.timeMs)
