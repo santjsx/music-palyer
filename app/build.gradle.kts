@@ -41,11 +41,11 @@ val lastfmSecret: String = (
     ).trim()
 
 android {
-    namespace = "com.music.bitchord"
+    namespace = "com.tunehive.audio"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.music.bitchord"
+        applicationId = "com.tunehive.audio"
         // 26 keeps reach wide; real-time blur (RenderEffect) kicks in on API 31+,
         // Haze falls back to a translucent scrim below that.
         minSdk = 26
@@ -85,7 +85,7 @@ android {
     productFlavors {
         create("dev") {
             dimension = "env"
-            applicationId = "com.dev.bitchord"
+            applicationId = "com.tunehive.audio.dev"
             resValue("string", "app_name", "TuneHive Dev")
         }
         create("prod") {

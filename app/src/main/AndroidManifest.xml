@@ -39,7 +39,7 @@
         android:maxSdkVersion="28" />
 
     <application
-        android:name=".BitChordApplication"
+        android:name=".TuneHiveApplication"
         android:allowBackup="true"
         android:usesCleartextTraffic="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -49,7 +49,7 @@
         android:localeConfig="@xml/locales_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.BitChord"
+        android:theme="@style/Theme.TuneHive"
         tools:targetApi="34">
 
         <!--
@@ -81,7 +81,7 @@
             android:exported="true"
             android:launchMode="singleTask"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.BitChord">
+            android:theme="@style/Theme.TuneHive">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
