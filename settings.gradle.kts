@@ -10,8 +10,11 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // NewPipeExtractor is published via JitPack.
+        maven("https://jitpack.io")
     }
 }
 
-rootProject.name = "iPod Modern"
+rootProject.name = "TuneHive"
 include(":app")
+ 

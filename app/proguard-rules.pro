@@ -1,52 +1,21 @@
-# ProGuard & R8 optimization rules for com.ipodmodern.audio
-# -----------------------------------------------------------
+# Add project specific ProGuard rules here.
+# You can control the set of applied configuration files using the
+# proguardFiles setting in build.gradle.
+#
+# For more details, see
+#   http://developer.android.com/guide/developing/tools/proguard.html
 
-# 1. Native JNI Methods & Audio Engine Bridge
--keepclasseswithmembernames class * {
-    native <methods>;
-}
+# If your project uses WebView with JS, uncomment the following
+# and specify the fully qualified class name to the JavaScript interface
+# class:
+#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
+#   public *;
+#}
 
--keep class com.ipodmodern.audio.core.audio.NativeAudioBridge { *; }
--keepclassmembers class com.ipodmodern.audio.core.audio.NativeAudioBridge {
-    public static <methods>;
-}
+# Uncomment this to preserve the line number information for
+# debugging stack traces.
+#-keepattributes SourceFile,LineNumberTable
 
-# Keep C++ native callback targets
--keep class com.ipodmodern.audio.core.audio.** { *; }
-
-# 2. Kotlinx Serialization
--keepattributes *Annotation*, InnerClasses
--dontnote kotlinx.serialization.SerializationKt
--keepclassmembers class * {
-    *** Companion;
-}
--keepclasseswithmembers class * {
-    kotlinx.serialization.KSerializer serializer(...);
-}
--keep,allowobfuscation,allowshrinking class * {
-    <fields>;
-}
-
-# 3. AndroidX Room Database & Entities
--keep class androidx.room.** { *; }
--dontwarn androidx.room.paging.**
--keep class * extends androidx.room.RoomDatabase
--keep class com.ipodmodern.audio.core.database.entity.** { *; }
--keep interface com.ipodmodern.audio.core.database.dao.** { *; }
-
-# 4. Data Models & Metadata
--keep class com.ipodmodern.audio.core.model.** { *; }
-
-# 5. Coil Image Loader
--keep class coil.** { *; }
--dontwarn coil.**
-
-# 6. Embedded Ktor Server for Wi-Fi Sync
--keep class io.ktor.** { *; }
--dontwarn io.ktor.**
--dontwarn io.netty.**
--dontwarn org.slf4j.**
-
-# 7. Media3 & ExoPlayer
--keep class androidx.media3.** { *; }
--dontwarn androidx.media3.**
+# If you keep the line number information, uncomment this to
+# hide the original source file name.
+#-renamesourcefileattribute SourceFile

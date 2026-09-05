@@ -1,107 +1,97 @@
-# 🎧 iPod Modern (Android Edition)
+<div align="center">
 
-> **Audiophile-Grade Local Music Player with Hardware Skeuomorphism & AAudio HAL Direct Exclusive Stream**
+<br/>
+<br/>
 
-![iPod Modern Badge](https://img.shields.io/badge/Platform-Android%2010%20to%2016-blue.svg)
-![NDK C++20](https://img.shields.io/badge/Engine-C%2B%2B20%20%2F%20Oboe-red.svg)
-![DSP](https://img.shields.io/badge/DSP-10--Band%20Cascaded%20Biquad-green.svg)
-![UI](https://img.shields.io/badge/UI-Jetpack%20Compose-purple.svg)
+<img src="Logo.png" alt="TuneHive app icon" width="200" />
 
----
+# TuneHive
 
-## 📖 Overview
+### Aesthetic YouTube Music & Hi-Res Lossless Audio Client
 
-**iPod Modern** is an uncompromising, hyper-realistic tribute to the definitive era of portable hardware audio, engineered exclusively for modern Android devices.
+<br/>
 
-By bypassing Android's software mixing frameworks (`AudioFlinger`), the player delivers **bit-perfect audio directly to external USB DACs or headphones** via `AAudio SharingMode::Exclusive`. It pairs this with a zero-latency hardware click wheel kinematics engine, Linear Resonant Actuator (LRA) haptic primitives, spatial 3D Cover Flow 2.0, an embedded Ktor Wi-Fi music sync portal, and a 10-band Direct Form II Cascaded Biquad IIR Parametric Equalizer with dynamic headroom regulation.
+[![Latest release](https://img.shields.io/github/v/release/santjsx/music-palyer?style=for-the-badge&labelColor=0d1117)](https://github.com/santjsx/music-palyer/releases)
+[![License](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge&labelColor=0d1117)](LICENSE)
 
----
+<br/>
 
-## 🛠️ Key Architectural Pillars
+[**Download**](#download) · [**Features**](#features) · [**Disclaimer**](#disclaimer)
 
-### 1. 🕹️ Hardware Skeuomorph & Polar Kinematics
-- **Continuous Orbit Tracking**: Polar coordinate equations ($\theta = \text{atan2}(y - y_0, x - x_0)$) with multi-quadrant phase unwrapping.
-- **LRA Haptic Primitives**: $15^\circ$ discrete step triggers mapping to `VibrationEffect.Composition.PRIMITIVE_TICK` (Android 12+) and `PRIMITIVE_CLICK` on center action.
-- **Zero-Latency Native Sound Click**: Injected directly into the native C++ audio stream buffer with microsecond precision.
-- **Hold Switch Interlock**: Sliding physical top switch deactivates touch events to prevent pocket misfires.
+</div>
 
-### 2. 🔊 Audiophile Native C++ Audio Engine (Oboe / AAudio)
-- **Direct HAL Bypass**: Runs stream in `SharingMode::Exclusive` and `PerformanceMode::LowLatency` (`SCHED_FIFO` real-time scheduling).
-- **Bit-Perfect Lossless Playback**: Native stream locks to the loaded audio's native clock rate (up to 32-bit/384kHz, DSD over PCM / DoP).
-- **Zero-Phase Distortion 10-Band Biquad IIR DSP**:
-  - 10 Anchor Nodes: `31.25Hz`, `62.5Hz`, `125Hz`, `250Hz`, `500Hz`, `1kHz`, `2kHz`, `4kHz`, `8kHz`, `16kHz`.
-  - **Dynamic Headroom Regulator**: Automatically calculates peak band boost and scales pre-cut digital attenuation to guarantee 0dBFS inter-sample safety.
-
-### 3. 💿 Cover Flow 2.0 3D Spatial Layout
-- **Dynamic 3D Camera Projection**: Perspective matrix transformation in Jetpack Compose (`graphicsLayer { cameraDistance = 16f, rotationY = ±55° }`).
-- **Dynamic Mirror Floor Reflection**: Inverted vertical alpha-gradient mirror floor fading naturally into dark stadium staging.
-
-### 4. 🌐 Embedded Wi-Fi Sync Server & CUE Sheet Splitting
-- **Embedded Ktor CIO HTTP Server**: Host `http://<device-ip>:8080` locally for drag-and-drop file ingestion from any desktop browser without cords or companion software.
-- **CUE Sheet Frame Parser**: Automatic conversion of Red Book CD frames ($1\text{ frame} = 1000/75\text{ ms}$) into virtual track partitions for single-file vinyl or CD image transfers.
-- **Synchronized Lyrics**: Sub-second scrolling USLT/LRC synchronized lyrics renderer.
+> [!WARNING]
+> TuneHive is an independent client not affiliated with, endorsed by, or connected to YouTube or Google.
 
 ---
 
-## 📂 Project Directory Structure
+<div align="center">
 
-```
-music-app/
-├── docs/
-│   ├── ARCHITECTURE.md                  # Detailed clean architecture specification
-│   ├── DSP_EQUATIONS_WHITEPAPER.md      # Mathematical derivation of Biquad IIR & Headroom
-│   ├── UI_UX_DESIGN_SPEC.md             # Skeuomorphic design tokens & color palettes
-│   └── WI_FI_SYNC_API.md                # Embedded Ktor HTTP upload API specification
-├── app/
-│   ├── CMakeLists.txt                   # NDK build configuration
-│   ├── src/main/
-│   │   ├── cpp/                         # Native C++ Audiophile Engine
-│   │   │   ├── audio_engine.h/.cpp      # Oboe stream loop & mixer
-│   │   │   ├── biquad_filter.h/.cpp     # Direct Form II Transposed filter
-│   │   │   ├── dsp_equalizer.h/.cpp     # 10-band cascaded equalizer
-│   │   │   ├── click_synthesizer.h/.cpp # Mechanical click impulse model
-│   │   │   ├── native_tag_inspector.h   # Container tag inspector
-│   │   │   └── jni_bridge.cpp           # JNI bindings
-│   │   └── java/com/ipodmodern/audio/
-│   │       ├── core/
-│   │       │   ├── audio/               # Native bridge & Foreground Service
-│   │       │   ├── database/            # Room Database & DAOs
-│   │       │   ├── haptics/             # Kinematics & LRA Haptic Engine
-│   │       │   ├── model/               # Immutable Domain models
-│   │       │   ├── parser/              # CUE Sheet & Lyrics parsers
-│   │       │   └── sync/                # Embedded Ktor Web Server
-│   │       └── ui/
-│   │           ├── components/          # ClickWheel, HoldSwitch, Badges
-│   │           ├── screens/             # DisplayScreen, CoverFlow, EQ, Menu
-│   │           ├── theme/               # Colors, Typography, Shaders
-│   │           ├── viewmodel/           # MVI / UDF ViewModels
-│   │           └── MainActivity.kt      # Main Entry Point
-│   └── src/test/                        # Unit tests for Kinematics & Parsers
-```
+<img src="Banner.png" alt="TuneHive banner" width="100%" />
 
----
+<h1><a id="features"></a>Features</h1>
 
-## 🚀 Building & Running
+<table>
+  <tr>
+    <td width="50%" valign="top">
 
-### Prerequisites
-- Android Studio Ladybug / Koala or newer
-- Android SDK Platform 35 (API 35+)
-- Android NDK (r26+ recommended)
-- CMake 3.22.1+
+#### Playback & Audio
+- **Search, browse and play** anything available on YouTube Music.
+- **Hi-Res Lossless Audio** — FLAC/ALAC from configured module sources with YouTube Music fallback.
+- **Gapless playback with true crossfade**, adjustable 0–12s.
+- **On-Device Automix** — DJ-style transitions with beat-matching, tempo-stretching, and vocal spectrogram separation.
+- **Offline Downloads** — save tracks with embedded metadata and artwork.
+- **Local music library** integration.
+- **Background playback** via foreground media session.
 
-### CLI Build
-```bash
-# Build Debug APK
-./gradlew assembleDebug
+#### Experience
+- **Animated album canvas** — motion artwork on the now-playing screen.
+- **Word-synced lyrics** — word/syllable-level highlighting from multiple sources.
+- **Dynamic, artwork-driven theming** — fluid mesh palette extracted from album art.
+- **Frosted-glass UI** — Telegram-style translucent bars via Haze and Material 3 theming.
 
-# Run Unit Tests
-./gradlew test
-```
+    </td>
+    <td width="50%" valign="top">
+
+#### Connectivity & Accounts
+- **Sign in with your Google account** for personalized content.
+- **Discord Rich Presence** — live track/artist/album and progress updates.
+- **Scrobbling** to Last.fm and ListenBrainz.
+- **Pluggable sources** — add, edit, test, and health-check module sources.
+
+#### Controls & Tweaks
+- **Per-network audio quality** — separate quality ceilings for Wi-Fi and mobile data.
+- **Playback speed control** (0.5×–2.0×) and **skip silence**.
+- **Sleep timer** — fixed presets or "stop after this track".
+- **Home Screen Widgets** — responsive 2x2 and 4x2 widgets.
+- **Stats for nerds** — codec, bit depth, sample rate, and streaming details.
+
+    </td>
+  </tr>
+</table>
+
+</div>
 
 ---
 
-## 📜 Documentation Reference
-- 📑 [System Architecture Specification](docs/ARCHITECTURE.md)
-- 🔬 [DSP Biquad Equations Whitepaper](docs/DSP_EQUATIONS_WHITEPAPER.md)
-- 🎨 [UI/UX Skeuomorphic Design Tokens](docs/UI_UX_DESIGN_SPEC.md)
-- 🌐 [Local Wi-Fi Sync Server API](docs/WI_FI_SYNC_API.md)
+<div align="center">
+
+<h1><a id="download"></a>Download</h1>
+
+Grab the latest signed or release APK from the [Releases](https://github.com/santjsx/music-palyer/releases) page. Sideloading requires enabling "Install unknown apps" for whichever app you download it with.
+
+</div>
+
+---
+
+<div align="center">
+
+<h1><a id="disclaimer"></a>Disclaimer & Legal Notice</h1>
+
+TuneHive is an independent, community-driven third-party audio player and client. It is **not** associated with Google LLC, YouTube Music, Deezer, Telegram, or any of their parent companies.
+
+* **No Media Hosting:** TuneHive does not host, upload, or store copyrighted music files. It operates strictly as an interface to scan local device storage or stream media directly from public, public-facing, or user-authenticated APIs.
+* **Fair Use & API Usage:** This software is created solely for personal research, educational, and fair-use purposes.
+* **Copyleft:** TuneHive is free software licensed under the **GNU General Public License v3.0 (GPLv3)**.
+
+</div>

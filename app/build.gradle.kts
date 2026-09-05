@@ -1,72 +1,74 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ksp)
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+/**
+ * Signing details, kept out of the repository in `keystore.properties`
+ * (see keystore.properties.example). Absent on a fresh checkout, in which case
+ * the release build still runs and simply comes out unsigned rather than
+ * failing — only whoever holds the key can produce a shippable APK.
+ */
+val signing = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
+/**
+ * Module index URL for lossless/HQ audio sourcing.
+ * Set MODULE_INDEX_URL in local.properties to enable it.
+ * If absent, the app builds fine — Settings will show a warning.
+ */
+val localProps = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+val moduleIndexUrl: String = localProps.getProperty("MODULE_INDEX_URL", "")
+val lastfmApiKey: String = (
+    localProps.getProperty("LASTFM_API_KEY")
+        ?: System.getenv("LASTFM_API_KEY")
+        ?: ""
+    ).trim()
+val lastfmSecret: String = (
+    localProps.getProperty("LASTFM_SECRET")
+        ?: System.getenv("LASTFM_SECRET")
+        ?: ""
+    ).trim()
+
 android {
-    namespace = "com.ipodmodern.audio"
-    compileSdk = 35
+    namespace = "com.music.bitchord"
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.ipodmodern.audio"
-        minSdk = 29
-        targetSdk = 35
-        versionCode = 112
-        versionName = "3.0.1"
+        applicationId = "com.music.bitchord"
+        // 26 keeps reach wide; real-time blur (RenderEffect) kicks in on API 31+,
+        // Haze falls back to a translucent scrim below that.
+        minSdk = 26
+        targetSdk = 36
+        versionCode = 113
+        versionName = "3.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        vectorDrawables {
-            useSupportLibrary = true
-        }
 
-        externalNativeBuild {
-            cmake {
-                cppFlags += "-std=c++20"
-                cppFlags += "-O3"
-                cppFlags += "-ffast-math"
-                arguments += "-DANDROID_STL=c++_shared"
-            }
-        }
+        // Lossless/HQ module index URL — empty string if not configured.
+        buildConfigField("String", "MODULE_INDEX_URL", "\"${moduleIndexUrl}\"")
 
+        // Last.fm credentials are supplied locally and never committed.
+        buildConfigField("String", "LASTFM_API_KEY", "\"${lastfmApiKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        buildConfigField("String", "LASTFM_SECRET", "\"${lastfmSecret.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+
+        // Automix's DSP analyzer (native/analyzer). 64-bit only: minSdk 26
+        // already postdates the 64-bit requirement, so a 32-bit slice would
+        // double the native payload for devices that do not exist in the
+        // install base.
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            abiFilters += listOf("arm64-v8a", "x86_64")
         }
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            signingConfig = signingConfigs.getByName("debug")
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
-    kotlinOptions {
-        jvmTarget = "21"
-        freeCompilerArgs += listOf(
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
-        )
-    }
-
-    buildFeatures {
-        compose = true
-        prefab = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     externalNativeBuild {
@@ -76,65 +78,210 @@ android {
         }
     }
 
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-            excludes += "META-INF/INDEX.LIST"
-            excludes += "META-INF/io.netty.versions.properties"
+    // applicationId can only be overridden per flavor, not per build type, so a
+    // dev/prod dimension exists purely to let both sit installed side by side
+    // on the same device instead of the dev build overwriting the prod one.
+    flavorDimensions += "env"
+    productFlavors {
+        create("dev") {
+            dimension = "env"
+            applicationId = "com.dev.bitchord"
+            resValue("string", "app_name", "TuneHive Dev")
+        }
+        create("prod") {
+            dimension = "env"
+            // Matches defaultConfig — this is the package already shipped/installed.
+        }
+    }
+
+    signingConfigs {
+        // Both halves have to be there, not just the properties file: it *names*
+        // the keystore rather than containing it, and both are gitignored
+        // separately, so a checkout can easily end up with the one and not the
+        // other. A signing config pointing at a keystore that is not on disk
+        // fails the release build outright at validateSigningRelease — which is
+        // exactly the failure the unsigned fallback above exists to avoid, so
+        // the keystore has to be looked for rather than assumed.
+        val store = signing.getProperty("storeFile")?.let { rootProject.file(it) }
+        if (store != null && store.exists()) {
+            create("release") {
+                storeFile = store
+                storePassword = signing.getProperty("storePassword")
+                keyAlias = signing.getProperty("keyAlias")
+                keyPassword = signing.getProperty("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            /*
+             * Off deliberately. Stream resolution runs YouTube's own player
+             * JavaScript through Rhino, and NewPipe, Ktor and
+             * kotlinx.serialization all reach for classes reflectively — none
+             * of which R8 can see. Shrinking that reliably is a set of keep
+             * rules to be written and then proven on a device, because the
+             * breakage it causes appears at runtime rather than at build time.
+             * Until then, a larger APK that works beats a smaller one that
+             * might not. The rules below stay wired up for when it's revisited.
+             */
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            // Null without a keystore to sign with: the build then produces
+            // app-release-unsigned.apk instead of failing outright.
+            signingConfig = signingConfigs.findByName("release")
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+    testOptions {
+        unitTests {
+            // Unit tests run against a stub android.jar whose methods throw
+            // rather than return. That is the right default for anything whose
+            // behaviour depends on the framework, and wrong for android.util.Log
+            // — which [TrackLog] calls on every decision the source layer makes,
+            // so a test of that layer fails on the logging rather than on the
+            // logic it was written to check.
+            isReturnDefaultValues = true
         }
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+/*
+ * NewPipeExtractor ships its own org.schabi.newpipe.extractor.utils.Utils, and
+ * app/src/main/java carries a patched copy at the same package path (see that
+ * file for why it exists). A debug build keeps project and library dex separate,
+ * so the project copy simply wins at class-load time and the two coexist; a
+ * release build merges every input into one dex set, where D8 rejects the
+ * duplicate type outright ("Utils is defined multiple times"). So the library's
+ * copy is stripped from its jar before it reaches dexing, leaving exactly one
+ * definition of the class in the build.
+ *
+ * The artifact is resolved on its own and non-transitive purely to re-jar it;
+ * the transitive dependencies it would otherwise have carried are declared by
+ * hand in the dependencies block below, since dropping the module drops them too.
+ */
+val newPipeExtractorRaw: Configuration by configurations.creating {
+    isTransitive = false
+    isCanBeConsumed = false
+}
 dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.activity.compose)
+    newPipeExtractorRaw("com.github.TeamNewPipe:NewPipeExtractor:v0.26.3")
+}
+val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>(
+    "stripNewPipeExtractorUtils"
+) {
+    archiveFileName.set("NewPipeExtractor-v0.26.3-noutils.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("stripped-libs"))
+    from(provider { newPipeExtractorRaw.map { zipTree(it) } }) {
+        // The class itself, plus any nested or synthetic siblings the upstream
+        // compiler emitted alongside it, so nothing from the jar's Utils survives.
+        exclude("org/schabi/newpipe/extractor/utils/Utils.class")
+        exclude("org/schabi/newpipe/extractor/utils/Utils\$*.class")
+    }
+}
 
-    // Jetpack Compose
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.extended)
+dependencies {
+    // ---- Compose (Material 3) ----
+    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    implementation(composeBom)
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.navigation:navigation-compose:2.8.5")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    debugImplementation("androidx.compose.ui:ui-tooling")
 
-    // Room Database
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
+    // ---- Media playback: Media3 / ExoPlayer ----
+    implementation("androidx.media3:media3-exoplayer:1.11.0")
+    implementation("androidx.media3:media3-session:1.11.0")
+    implementation("androidx.media3:media3-common:1.11.0")
+    implementation("androidx.media3:media3-datasource-okhttp:1.11.0")
+    // Audio is progressive, but Apple serves its motion artwork as HLS — this
+    // is what lets the animated sleeve play it. See CanvasArtworkPlayer.
+    implementation("androidx.media3:media3-exoplayer-hls:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.9.0")
 
-    // Coroutines & Serialization
-    implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.kotlinx.serialization.json)
-
-    // Embedded Ktor Server for Wi-Fi Sync
-    implementation(libs.ktor.server.core)
-    implementation(libs.ktor.server.cio)
-    implementation(libs.ktor.server.content.negotiation)
-    implementation(libs.ktor.serialization.kotlinx.json)
-    implementation(libs.ktor.server.cors)
-
-    // Media3 & MediaSession
-    implementation(libs.androidx.media3.exoplayer)
-    implementation(libs.androidx.media3.session)
-    implementation(libs.androidx.media3.common)
-    implementation(libs.androidx.media)
-
-    // Coil Image Loader
-    implementation(libs.coil.compose)
-
-    // AndroidX Palette for Dynamic Color Extraction
+    // ---- Images: Coil 3 + Palette (dominant colors for the mesh gradient) ----
+    implementation("io.coil-kt.coil3:coil-compose:3.0.4")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.4")
     implementation("androidx.palette:palette-ktx:1.0.0")
 
-    // Testing
-    testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+    // ---- Frosted glass / progressive blur (Telegram-style bars) ----
+    implementation("dev.chrisbanes.haze:haze:1.3.1")
+    implementation("dev.chrisbanes.haze:haze-materials:1.3.1")
+
+    // ---- Markdown rendering (release notes in the update dialog) ----
+    // Pure Compose, not an AndroidView wrapper — needed so the text composes
+    // correctly under the dialog's Haze blur.
+    implementation("com.halilibo.compose-richtext:richtext-ui-material3:0.20.0")
+    implementation("com.halilibo.compose-richtext:richtext-commonmark:0.20.0")
+
+    // ---- Innertube (YouTube Music) client: Ktor + kotlinx.serialization ----
+    implementation("io.ktor:ktor-client-core:3.0.3")
+    implementation("io.ktor:ktor-client-okhttp:3.0.3")
+    implementation("io.ktor:ktor-client-content-negotiation:3.0.3")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    // ---- Discord Rich Presence: the gateway is a WebSocket, so Ktor needs the plugin ----
+    implementation("io.ktor:ktor-client-websockets:3.0.3")
+
+    // ---- Stream resolution: NewPipe solves YouTube's signature + `n` throttling ----
+    // Pinned to v0.26.3, not the newer v0.26.4: v0.26.4's player-JS parser fails with
+    // "Could not parse deobfuscation function" on the current player build, which blocks
+    // WEB_REMIX's ciphered formats entirely. v0.26.3 solves the same signatures cleanly
+    // against the same player JS — confirmed side by side against PixelMusic-ref, which
+    // pins v0.26.3 and doesn't hit the parse failure.
+    //
+    // Consumed as a stripped jar rather than as the module, so its own
+    // Utils.class does not reach dexing. See newPipeExtractorStripped above; the
+    // transitive dependencies the module would have brought are listed here
+    // because dropping its artifact drops them too. If the version changes,
+    // re-derive this list with
+    //   ./gradlew :app:dependencies --configuration prodReleaseRuntimeClasspath
+    implementation(files(newPipeExtractorStripped))
+    implementation("com.github.TeamNewPipe:nanojson:e9d656ddb49a412a5a0a5d5ef20ca7ef09549996")
+    implementation("org.jsoup:jsoup:1.22.2")
+    implementation("com.google.code.findbugs:jsr305:3.0.2")
+    implementation("com.google.protobuf:protobuf-javalite:4.35.0")
+    implementation("org.mozilla:rhino:1.8.1")
+    implementation("org.mozilla:rhino-engine:1.8.1")
+
+    // ---- Auth/session storage ----
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    // ---- JS module execution: QuickJS VM for style source plugins ----
+    implementation("io.github.dokar3:quickjs-kt-android:1.0.5")
+
+    // ---- Automix: on-device beat/downbeat model (Beat This!, MIT-licensed) ----
+    // The full android artifact, not onnxruntime-mobile: mobile only loads .ort
+    // files, which would put an offline conversion step between the model and
+    // the app for a saving that does not matter in a self-distributed APK.
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.28.0")
+
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }
