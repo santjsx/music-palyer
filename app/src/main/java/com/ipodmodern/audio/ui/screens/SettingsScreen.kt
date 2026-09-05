@@ -104,7 +104,7 @@ fun SettingsScreen(
 
     val playerUiState = playerViewModel?.uiState?.collectAsState()?.value
     val selectedTheme = playerUiState?.themeBase ?: "Obsidian Dark"
-    val selectedAccentColor = playerUiState?.accentColor ?: "Mint Green"
+    val selectedAccentColor = playerUiState?.accentColor ?: "Electric Lime"
 
     // Playback Settings State
     var gaplessEnabled by remember { mutableStateOf(true) }
@@ -326,10 +326,10 @@ fun SettingsScreen(
                         Text(text = "ACCENT COLOR", color = TextMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        val accents = listOf("Mint Green", "Cyber Gold", "Electric Cyan", "Neon Rose", "Ultra Violet")
+                        val accents = listOf("Electric Lime", "Cyber Gold", "Electric Cyan", "Neon Rose", "Ultra Violet", "Apple Red")
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             accents.forEach { accent ->
                                 val isSelected = selectedAccentColor.equals(accent, ignoreCase = true) || selectedAccentColor.startsWith(accent.split(" ")[0], ignoreCase = true)
@@ -459,7 +459,7 @@ fun SettingsScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Version 2.9.0 • Horizon Audio Engine Edition",
+                                text = "Version 3.0.0 • TuneHive Ambient Neon Edition",
                                 color = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold

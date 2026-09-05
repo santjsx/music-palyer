@@ -83,11 +83,12 @@ fun CoverFlowScreen(
     }
 
     val currentAlbum = albums.getOrNull(selectedIndex.coerceIn(0, albums.size - 1))
+    val palette = com.ipodmodern.audio.ui.theme.LocalThemePalette.current
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF07080A))
+            .background(palette.bg)
             .draggable(
                 orientation = Orientation.Horizontal,
                 state = rememberDraggableState { delta ->
@@ -246,7 +247,7 @@ fun CoverFlowScreen(
                     text = currentAlbum.title,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = palette.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center
@@ -255,7 +256,7 @@ fun CoverFlowScreen(
                 Text(
                     text = "${currentAlbum.artist} • ${currentAlbum.trackCount} Tracks",
                     fontSize = 13.sp,
-                    color = Color.Gray,
+                    color = palette.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center
@@ -264,7 +265,7 @@ fun CoverFlowScreen(
                 Text(
                     text = "Tap album to play",
                     fontSize = 11.sp,
-                    color = Color(0xFF0A84FF),
+                    color = palette.accent,
                     fontWeight = FontWeight.SemiBold
                 )
             }

@@ -69,11 +69,13 @@ fun LyricsScreen(
         }
     }
 
+    val palette = com.ipodmodern.audio.ui.theme.LocalThemePalette.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .background(Color(0xFF000000))
+            .background(palette.bg)
     ) {
         // Top Bar
         Row(
@@ -88,7 +90,7 @@ fun LyricsScreen(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color(0x22FFFFFF))
+                        .background(palette.surfaceElevated)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             onBackClick()
@@ -98,7 +100,7 @@ fun LyricsScreen(
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
                         contentDescription = "Back",
-                        tint = Color.White,
+                        tint = palette.textPrimary,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -114,7 +116,7 @@ fun LyricsScreen(
                     text = "LYRICS",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFE50914),
+                    color = palette.accent,
                     letterSpacing = 1.2.sp
                 )
                 Spacer(modifier = Modifier.height(2.dp))
@@ -122,7 +124,7 @@ fun LyricsScreen(
                     text = songTitle,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = palette.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -146,13 +148,13 @@ fun LyricsScreen(
                         modifier = Modifier
                             .size(60.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF1E1F24)),
+                            .background(palette.surfaceElevated),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.MusicNote,
                             contentDescription = null,
-                            tint = Color(0xFFE50914),
+                            tint = palette.accent,
                             modifier = Modifier.size(30.dp)
                         )
                     }
@@ -160,12 +162,12 @@ fun LyricsScreen(
                         text = "No Synchronized Lyrics",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = palette.textPrimary
                     )
                     Text(
                         text = "We couldn't locate synchronized lyrics for this track on LRCLIB or locally.",
                         fontSize = 13.sp,
-                        color = Color(0xFF8E8E93),
+                        color = palette.textSecondary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -185,7 +187,7 @@ fun LyricsScreen(
                     val isActive = index == activeLyricIndex
 
                     val textColor by animateColorAsState(
-                        targetValue = if (isActive) Color.White else Color(0x55FFFFFF),
+                        targetValue = if (isActive) palette.textPrimary else palette.textMuted,
                         animationSpec = tween(280),
                         label = "lyric_color"
                     )
@@ -229,7 +231,7 @@ fun LyricsScreen(
                     .align(Alignment.TopCenter)
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color(0xFF000000), Color.Transparent)
+                            listOf(palette.bg, Color.Transparent)
                         )
                     )
             )
@@ -242,7 +244,7 @@ fun LyricsScreen(
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color.Transparent, Color(0xFF000000))
+                            listOf(Color.Transparent, palette.bg)
                         )
                     )
             )

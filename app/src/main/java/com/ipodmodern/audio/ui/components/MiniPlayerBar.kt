@@ -114,14 +114,16 @@ fun MiniPlayerBar(
         label = "mini_art_scale"
     )
 
+    val palette = com.ipodmodern.audio.ui.theme.LocalThemePalette.current
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-            .shadow(16.dp, RadiusLg, spotColor = Color(0x66000000))
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+            .shadow(16.dp, RadiusLg, spotColor = Color(0x77000000))
             .clip(RadiusLg)
-            .background(Color(0xFF16171B))
-            .border(1.dp, Color(0x1FFFFFFF), RadiusLg)
+            .background(palette.surfaceElevated)
+            .border(1.dp, palette.borderSubtle, RadiusLg)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 onBarClick()
@@ -151,7 +153,8 @@ fun MiniPlayerBar(
                             scaleY = miniArtScale
                         }
                         .clip(RadiusMd)
-                        .background(Color(0xFF22242B)),
+                        .background(palette.surface)
+                        .border(1.dp, palette.borderSubtle, RadiusMd),
                     contentAlignment = Alignment.Center
                 ) {
                     if (artworkRequest != null) {
@@ -165,7 +168,7 @@ fun MiniPlayerBar(
                         Icon(
                             imageVector = Icons.Default.MusicNote,
                             contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.8f),
+                            tint = palette.textMuted,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -183,7 +186,7 @@ fun MiniPlayerBar(
                     ) { targetTitle ->
                         Text(
                             text = targetTitle,
-                            color = Color.White,
+                            color = palette.textPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             maxLines = 1,
@@ -193,18 +196,19 @@ fun MiniPlayerBar(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = track.artist.ifBlank { "Unknown Artist" },
-                        color = Color(0xFF9E9EA4),
+                        color = palette.textSecondary,
                         fontSize = 12.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Play / Pause Icon Button (Solid White with Smooth Scale/Fade)
+                // Play / Pause Icon Button (Punchy Electric Lime Circle with Dark Icon)
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(38.dp)
                         .clip(CircleShape)
+                        .background(palette.accent)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             onPlayPauseClick()
@@ -222,8 +226,8 @@ fun MiniPlayerBar(
                         Icon(
                             imageVector = if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (playing) "Pause" else "Play",
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp)
+                            tint = palette.bg,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
@@ -231,7 +235,7 @@ fun MiniPlayerBar(
                 // Next Track Icon Button
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(38.dp)
                         .clip(CircleShape)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
@@ -242,8 +246,8 @@ fun MiniPlayerBar(
                     Icon(
                         imageVector = Icons.Default.SkipNext,
                         contentDescription = "Next",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
+                        tint = palette.textPrimary,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
             }

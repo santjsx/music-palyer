@@ -1,0 +1,1677 @@
+Product Requirements Document — TuneHive Visual Redesign
+
+Product: iPod Modern → next-generation neon/ambient music player UI
+Repository: santjsx/music-palyer
+Platform: Android
+UI: Kotlin + Jetpack Compose
+Status: Redesign specification
+Primary objective: Replace the existing skeuomorphic/iPod visual language with a premium, dark ambient music-player experience inspired by the supplied reference—while preserving the existing audio engine, data, playback capabilities, and advanced functionality.
+
+1. Executive Summary
+
+The current application has substantial technical depth: native audio infrastructure, Room, Compose UI, Cover Flow, lyrics, equalization, Wi-Fi synchronization and other functionality. The problem is not lack of features.
+
+The problem is product presentation.
+
+The existing product positions itself visually as an iPod/hardware-skeuomorphic player. The new direction should position it as a premium modern music application built around:
+
+Darkness + album art + ambient light + neon green + tactile controls.
+
+The supplied reference establishes the visual direction, but it should not be copied literally. The goal is to extract its design principles and build a coherent production-grade design system around them.
+
+The redesign must feel:
+
+premium
+immersive
+minimal
+modern
+tactile
+responsive
+visually consistent
+unmistakably music-first
+
+It must not feel like:
+
+a generic Material 3 template
+Spotify imitation
+an iPod skin
+a collection of unrelated screens
+a UI covered in unnecessary neon effects
+2. Product Vision
+Vision
+
+Create an Android music player where the music and its artwork become the visual identity of the interface.
+
+The application should feel almost like a physical listening environment:
+
+Album artwork
+      ↓
+Ambient color extraction
+      ↓
+Background atmosphere
+      ↓
+Neon accent
+      ↓
+Interactive controls
+      ↓
+Motion
+      ↓
+Immersive listening experience
+
+The UI should disappear into the listening experience rather than compete with it.
+
+3. Design North Star
+
+Every screen must satisfy five principles.
+
+3.1 Music-first
+
+Artwork and playback state receive the strongest visual hierarchy.
+
+3.2 Ambient
+
+Album artwork influences the surrounding environment through blur, gradients and subtle color illumination.
+
+3.3 Tactile
+
+Buttons should visually communicate:
+
+what is interactive
+what is currently active
+what just happened
+3.4 Restrained
+
+Neon is an accent, not the entire UI.
+
+Bad:
+
+Everything glows green.
+
+Correct:
+
+Green appears where attention or interaction is required.
+
+3.5 Systematic
+
+Every component must originate from the same design system.
+
+No screen should introduce arbitrary:
+
+corner radii
+colors
+shadows
+font sizes
+icon sizes
+spacing
+animation durations
+4. Existing Product Strategy
+
+The redesign is UI-first, architecture-preserving.
+
+The repository already contains substantial audio and application infrastructure, including native audio components, database infrastructure, parsers, synchronization, lyrics, EQ and Compose UI.
+
+Therefore:
+
+Preserve
+audio engine
+playback state
+media session
+queue
+playlists
+Room database
+metadata parsing
+lyrics
+equalizer
+CUE handling
+Wi-Fi sync
+downloads/importing
+Cover Flow where still valuable
+existing domain models
+existing repositories
+existing ViewModels where appropriate
+Replace/refactor
+visual hierarchy
+theme
+screen composition
+component styling
+navigation presentation
+player controls
+artwork presentation
+cards
+typography
+animation system
+spacing system
+surface system
+Avoid
+
+A complete backend rewrite merely because the UI is changing.
+
+That would create risk without delivering user value.
+
+5. Target User Experience
+
+The user opens the application.
+
+Instead of seeing an engineering-heavy music utility, they should immediately perceive:
+
+"This is a premium music player."
+
+The first visual impression should be:
+
+████████████████████████
+        DARKNESS
+
+     album artwork
+
+   ambient green glow
+
+       SONG TITLE
+        Artist
+
+     ───────────
+
+   ◀      ●      ▶
+
+       ♡   ↻   ⋯
+████████████████████████
+
+The interface should have enough visual depth to feel premium without becoming visually noisy.
+
+6. Design Language
+6.1 Color system
+
+The foundation is an extremely dark green-black environment.
+
+Core palette
+Token	Purpose	Target
+Background	Primary canvas	near-black green
+Surface	Cards/panels	dark olive
+SurfaceElevated	Floating controls	lighter olive
+Accent	Primary interaction	electric lime
+AccentSoft	Secondary glow	muted lime
+TextPrimary	Main text	near-white
+TextSecondary	Metadata	muted white
+TextTertiary	Supporting information	low-contrast white
+Divider	Structural separation	extremely subtle
+
+Do not hardcode colors throughout composables.
+
+All colors must originate from the design system.
+
+7. Ambient Color Engine
+
+This is one of the most important features.
+
+The current artwork should influence the environment.
+
+Input
+Current album artwork
+Processing
+Artwork
+ ↓
+Color extraction
+ ↓
+Dominant / accent colors
+ ↓
+Saturation + luminance normalization
+ ↓
+Ambient gradient
+ ↓
+Background glow
+Requirements
+
+The system must prevent ugly artwork from producing:
+
+extremely bright backgrounds
+unreadable text
+oversaturated neon
+accessibility failures
+
+Therefore the extracted color must be normalized.
+
+Fallback
+
+If extraction fails:
+
+default ambient = brand lime
+8. Typography
+
+Typography should be modern and highly legible.
+
+Hierarchy
+Display
+↓
+Screen title
+↓
+Section title
+↓
+Track title
+↓
+Artist
+↓
+Metadata
+Rules
+Track title gets high contrast.
+Artist information gets reduced contrast.
+Metadata never competes with title.
+Avoid excessive uppercase.
+Avoid decorative typography.
+Avoid more than two font families.
+Use weight, size and opacity rather than random font colors.
+9. Shape System
+
+The reference depends heavily on rounded geometry.
+
+Recommended semantic scale:
+
+XS       8dp
+SM      12dp
+MD      16dp
+LG      24dp
+XL      32dp
+FULL    999dp
+Usage
+
+8dp
+
+small chips
+compact metadata containers
+
+12dp
+
+list cards
+
+16dp
+
+standard cards
+
+24dp
+
+hero surfaces
+
+32dp
+
+large player surfaces
+
+999dp
+
+pills
+circular buttons
+chips
+
+No arbitrary 17.dp, 21.dp, 27.dp values unless there is a documented reason.
+
+10. Elevation & Surface Model
+
+Do not rely exclusively on Material elevation.
+
+Use layered surfaces:
+
+Base
+ ↓
+Surface
+ ↓
+Surface + subtle gradient
+ ↓
+Ambient glow
+ ↓
+Foreground control
+
+The UI should appear dimensional without looking like traditional neumorphism.
+
+11. Navigation Architecture
+Compact phones
+
+Use a floating bottom navigation treatment.
+
+Primary destinations:
+
+Home
+Search
+Library
+Profile / Settings
+Bottom navigation rules
+Maximum 4–5 primary destinations.
+Current destination receives lime emphasis.
+Icons remain simple.
+Labels should remain available where needed for clarity.
+Navigation bar should visually float above the ambient background.
+12. Home Screen PRD
+Objective
+
+Make the Home screen feel like a personalized music dashboard rather than a file browser.
+
+Header
+Good evening
+
+[Avatar]                          [Notifications]
+
+or:
+
+Good evening, Santhosh
+                              ○
+
+The header should remain lightweight.
+
+Category selector
+
+Horizontal scroll:
+
+[ All ] [ Party ] [ Blues ] [ Soul ] [ Hip-Hop ] ...
+
+Selected:
+
+lime background
+dark text
+
+Unselected:
+
+dark translucent surface
+light text
+Interaction
+
+Selecting a category updates the content below without navigating away.
+
+13. Popular Songs
+
+Horizontal carousel.
+
+Each card contains:
+
+┌──────────────┐
+│              │
+│   Artwork    │
+│              │
+└──────────────┘
+
+Song title
+Artist
+Requirements
+Artwork dominates.
+Text is intentionally truncated.
+Cards must have consistent aspect ratio.
+Press produces subtle scale response.
+Long-press can expose contextual actions.
+14. Collections
+
+Hero cards should communicate more information than standard song cards.
+
+Example:
+
+┌───────────────────────────────┐
+│                               │
+│  TOP SONGS                    │
+│  GLOBAL                       │
+│                               │
+│  Discover 86 songs            │
+│                               │
+│                       →       │
+└───────────────────────────────┘
+
+Artwork can occupy part of the card.
+
+Ambient gradient overlays must preserve text contrast.
+
+15. Recently Played
+
+Use compact horizontal cards.
+
+Prioritize:
+
+artwork
+title
+artist
+playback continuation
+
+Avoid giant cards for every piece of content.
+
+The home screen should remain scannable.
+
+16. Mini Player
+
+This is critical.
+
+The mini-player is effectively a persistent global control surface.
+
+Layout
+┌──────────────────────────────────┐
+│ [ART]  Song Title      ▶ / ❚❚    │
+│        Artist                    │
+└──────────────────────────────────┘
+Behavior
+
+Tap:
+
+Open Now Playing.
+
+Play/pause:
+
+Control playback without opening the player.
+
+Swipe:
+
+Optional dismissal depending on queue/state.
+
+Visual
+
+The mini-player should inherit the current artwork's ambient color.
+
+17. Now Playing — Primary Experience
+
+This is the centerpiece of the redesign.
+
+Objective
+
+Make Now Playing feel immersive rather than functional.
+
+Layout
+             Back
+             
+          More / Queue
+
+
+       blurred artwork
+      ─────────────────
+
+          ALBUM ART
+
+      ─────────────────
+
+        ♡
+
+       SONG TITLE
+         Artist
+
+    0:46 ───────── 3:18
+
+        ◀   ◉   ▶
+
+      ↻    ♡    ⋯
+
+But the central control should use the reference's concentric glowing circular design.
+
+18. Circular Player
+
+Implement as a dedicated reusable component.
+
+Layers
+Layer 1
+Ambient glow
+
+Layer 2
+Outer ring
+
+Layer 3
+Progress ring
+
+Layer 4
+Inner glow
+
+Layer 5
+Play/pause control
+
+Layer 6
+Icon
+States
+Playing
+progress → animated
+glow → subtle pulse
+artwork → subtle motion
+Paused
+progress → static
+glow → reduced
+artwork → static
+Buffering
+progress → indeterminate animation
+play control → loading indicator
+19. Artwork Treatment
+
+Artwork should exist in three visual layers:
+
+          Foreground
+             ↓
+       sharp album art
+
+             ↓
+
+       soft blurred copy
+
+             ↓
+
+       darkened ambient field
+
+This creates the depth visible in the reference.
+
+Requirements
+
+Foreground artwork:
+
+sharp
+high quality
+correct aspect ratio
+consistent corner treatment
+
+Background:
+
+enlarged
+blurred
+darkened
+low opacity
+color-enhanced
+20. Playback Controls
+
+Primary controls:
+
+Previous
+Play/Pause
+Next
+
+Secondary:
+
+Shuffle
+Repeat
+Favorite
+Queue
+Lyrics
+Hierarchy
+
+Play/pause must dominate.
+
+Previous/next are secondary.
+
+Everything else is tertiary.
+
+Do not give every button identical visual weight.
+
+21. Seek Bar
+
+The reference's circular player is visually distinctive, but a standard linear seek control may be better for precise seeking.
+
+Therefore:
+
+Mobile default
+
+Circular progress around player.
+
+Optional gesture
+
+Dragging around the circular ring seeks.
+
+Accessibility fallback
+
+Provide an accessible seek control semantics so screen readers and alternative input can operate it.
+
+22. Queue
+
+The queue should inherit the same design language.
+
+Queue
+
+Playing Now
+┌────────────────────────────┐
+│ artwork  Song              │
+│          Artist            │
+└────────────────────────────┘
+
+Next Up
+
+1. Song
+2. Song
+3. Song
+
+Current item:
+
+lime accent
+subtle glow
+explicit playing indicator
+23. Library
+
+Library must feel like a music collection rather than Android settings.
+
+Primary sections:
+
+Songs
+Albums
+Artists
+Playlists
+Folders
+Favorites
+Downloads
+View switching
+
+Support:
+
+Grid
+List
+
+Grid for visual browsing.
+
+List for large libraries.
+
+24. Search
+
+Search should be fast and visually quiet.
+
+Search state
+Search music...
+
+Recent searches
+Results
+
+Grouped:
+
+Songs
+Artists
+Albums
+Playlists
+
+Artwork should be used where meaningful.
+
+25. Album Screen
+
+Hero artwork:
+
+          artwork
+
+Album title
+Artist
+2026 • 12 songs
+
+[ Play ]    [ Shuffle ]
+
+Track list
+
+Ambient album artwork should influence the background subtly.
+
+26. Artist Screen
+Artist
+
+[large artist identity]
+
+Popular
+Albums
+Singles
+
+Don't over-design artist pages.
+
+Music discovery is the priority.
+
+27. Playlist Screen
+
+Playlist header:
+
+Artwork / collage
+
+Playlist Name
+Description
+Tracks
+
+[ Play ] [ Shuffle ]
+
+Actions:
+
+edit
+reorder
+add tracks
+delete
+28. Lyrics
+
+The current lyrics functionality should remain.
+
+Redesign around:
+
+ambient background
+        ↓
+minimal lyrics surface
+        ↓
+current line emphasized
+        ↓
+surrounding lines de-emphasized
+
+Current lyric:
+
+high contrast
+slightly larger
+optional subtle glow
+
+Future lyrics:
+
+reduced opacity
+
+Past lyrics:
+
+lower emphasis
+29. Equalizer
+
+The EQ is an advanced feature and should not dominate the primary experience.
+
+Use a dedicated advanced interface.
+
+Possible structure:
+
+Equalizer
+
+Preset
+[ Flat ▼ ]
+
+Preamp
+────────────
+
+31Hz   62Hz   125Hz ...
+ │       │      │
+ │       │      │
+ ●       ●      ●
+
+Advanced
+
+Visual language should remain consistent with the new design.
+
+30. Cover Flow
+
+Do not automatically delete it.
+
+It is technically distinctive and could remain as an optional visual browsing mode.
+
+However:
+
+Cover Flow should no longer define the identity of the entire application.
+
+It becomes a feature, not the brand.
+
+31. Wi-Fi Sync
+
+Keep functionality.
+
+Redesign only the presentation.
+
+Example:
+
+Import Music
+
+Wi-Fi Sync
+
+● Waiting for connection
+
+http://device-address:8080
+
+[ Copy Address ]
+
+Transfer progress:
+
+Uploading
+
+██████████████░░░░
+
+Track 14 of 32
+32. Motion Design System
+
+Animation must communicate state, not merely decorate the UI.
+
+Durations
+
+Suggested semantic tokens:
+
+Micro       ~100ms
+Fast        ~160ms
+Standard    ~250ms
+Emphasis    ~350ms
+Ambient     ~600–1000ms
+
+Don't animate everything.
+
+Required animations
+Play button
+play → pause
+
+Use morph/crossfade.
+
+Artwork
+
+Very subtle scale/opacity changes during playback.
+
+Navigation
+
+Shared-axis or fade/slide transitions.
+
+Mini-player
+
+Animate from bottom surface into full player.
+
+Category selection
+
+Subtle pill movement/color transition.
+
+Progress
+
+Smoothly interpolate playback position.
+
+33. Haptics
+
+Existing haptic infrastructure should be retained where useful.
+
+Use haptics for:
+
+play/pause
+scrub interactions
+toggles
+meaningful confirmations
+
+Do not vibrate for every tap.
+
+Haptics should reinforce physicality.
+
+34. Accessibility Requirements
+
+This is non-negotiable.
+
+Minimum requirements
+Touch targets should meet Android accessibility expectations.
+Screen reader labels for icon-only controls.
+Content descriptions for artwork where meaningful.
+Dynamic font scaling.
+Contrast validation.
+Do not communicate state using color alone.
+Playback state must be exposed semantically.
+Seek functionality must remain accessible without circular gestures.
+
+The neon aesthetic cannot override accessibility.
+
+35. Adaptive Layout
+
+Do not design only for one phone resolution.
+
+Compose is explicitly designed to support adaptive layouts across different window sizes, orientations and form factors. Android recommends window size classes and Material 3 Adaptive for this purpose.
+
+Compact
+
+Bottom navigation:
+
+Home | Search | Library | Settings
+Medium
+
+Navigation rail + content.
+
+Expanded
+
+Potential:
+
+Navigation rail
+      │
+      ├── Library/list
+      │
+      └── Detail/player
+Tablet
+
+Now Playing could become:
+
+┌──────────────┬────────────────────────────┐
+│ queue        │                            │
+│              │       album artwork        │
+│              │                            │
+│              │       controls             │
+└──────────────┴────────────────────────────┘
+
+This is preferable to stretching a phone layout across a tablet. Android's current adaptive guidance explicitly favors window-size-aware layouts rather than simply scaling a compact UI.
+
+36. Performance Requirements
+
+The redesign must not turn the player into a GPU-heavy visual demo.
+
+Requirements
+Smooth scrolling.
+No unnecessary recompositions.
+Artwork caching.
+Avoid repeated bitmap processing.
+Avoid continuous expensive blur operations.
+Ambient background updates only when artwork changes.
+Animations should be suspendable when app is backgrounded.
+No unnecessary allocations during playback.
+Circular progress must remain smooth during active playback.
+Target
+60 FPS baseline
+90/120 FPS where supported
+
+The UI must remain responsive while the native audio engine is operating.
+
+37. Audio Architecture Boundary
+
+The redesign must not couple UI components directly to low-level audio implementation.
+
+Conceptually:
+
+                 UI
+                  │
+             UI State
+                  │
+             ViewModel
+                  │
+          Playback abstraction
+                  │
+          ┌───────┴────────┐
+          │                │
+       Media3          Native Audio
+
+If Media3 is used for a given playback path, its Player abstraction already exposes standard operations such as play, pause, seek and track information.
+
+The UI should not care which underlying playback implementation provides those operations.
+
+38. State Management
+
+Use a unidirectional flow:
+
+User action
+     ↓
+Intent
+     ↓
+ViewModel
+     ↓
+Domain / Playback layer
+     ↓
+State
+     ↓
+Compose UI
+
+Never:
+
+Composable
+    ↓
+directly mutates random global playback state
+
+This will make the redesign dramatically easier to maintain.
+
+39. Component System
+
+Create a formal UI component library.
+
+Foundation
+AmbientBackground
+GlowSurface
+GlassSurface
+NeonAccent
+GradientSurface
+Content
+AlbumArt
+SongRow
+SongCard
+AlbumCard
+ArtistCard
+PlaylistCard
+CollectionCard
+Controls
+NeonButton
+IconButton
+PlayButton
+CircularPlayer
+SeekControl
+ToggleChip
+CategoryChip
+Navigation
+BottomNavigation
+NavigationRail
+MiniPlayer
+Feedback
+LoadingState
+EmptyState
+ErrorState
+Snackbar
+Toast
+40. Design Tokens
+
+Create one central source of truth:
+
+Colors
+Typography
+Spacing
+Shapes
+Elevation
+Motion
+Glow
+Artwork
+
+Example conceptually:
+
+Theme
+ ├── Colors
+ ├── Typography
+ ├── Shapes
+ ├── Dimensions
+ ├── Motion
+ └── Effects
+
+Components consume tokens.
+
+Screens consume components.
+
+Screens should not invent tokens.
+
+41. Loading States
+
+Every network/import/library operation needs an intentional loading state.
+
+Bad:
+
+blank screen.
+
+Good:
+
+Artwork placeholder
+Text skeleton
+Subtle ambient shimmer
+
+Avoid excessive skeleton animation.
+
+42. Empty States
+
+Example:
+
+No music yet
+
+Your library is empty.
+
+Import your first album to start listening.
+
+[ Import Music ]
+
+Empty states should tell users:
+
+what happened
+why
+what to do next
+43. Error States
+
+Errors must be actionable.
+
+Instead of:
+
+Error loading tracks.
+
+Use:
+
+Couldn't load your library
+
+The music index couldn't be refreshed.
+
+[ Try Again ]
+
+Technical details belong behind an optional diagnostic action.
+
+44. Orientation
+Portrait
+
+Primary mobile experience.
+
+Landscape
+
+Now Playing should become substantially different:
+
+Artwork             Controls
+────────────        ─────────────
+album art            title
+                     seek
+                     playback
+                     actions
+
+Do not simply rotate the portrait layout.
+
+45. Dark Mode
+
+The primary product is dark-first.
+
+If a light theme exists, it must be intentionally designed.
+
+Do not generate a light theme by mechanically inverting colors.
+
+The reference's identity depends heavily on dark surfaces.
+
+46. Interaction Rules
+
+Every interactive component needs:
+
+Default
+Pressed
+Focused
+Selected
+Disabled
+Loading
+
+Example:
+
+Play button
+Default
+→ subtle glow
+
+Pressed
+→ scale 0.96
+
+Playing
+→ stronger glow
+
+Disabled
+→ reduced contrast
+
+Loading
+→ progress indicator
+47. Gesture Rules
+
+Use gestures selectively.
+
+Supported
+horizontal carousel scrolling
+artwork/player interactions
+swipe navigation where appropriate
+queue reorder
+circular seeking
+Avoid
+hidden critical functionality behind gestures
+swipe-only deletion
+gesture-only playback control
+
+Every important operation needs a visible alternative.
+
+48. Search & Discovery Behavior
+
+Search should support:
+
+Songs
+Albums
+Artists
+Playlists
+Folders
+
+Search results should update without destroying the current playback session.
+
+Opening a result should not automatically stop playback.
+
+49. Playback Persistence
+
+Redesign must preserve:
+
+current song
+position
+queue
+repeat mode
+shuffle mode
+playback state
+
+UI recreation must never unexpectedly reset playback.
+
+50. Background Playback
+
+The redesign must not compromise background playback.
+
+When the user leaves the application:
+
+Playback continues
+       ↓
+Media notification
+       ↓
+Lock screen controls
+       ↓
+Headset/Bluetooth interactions
+
+UI redesign and playback lifecycle must remain independent.
+
+51. Notification Design
+
+Update media notification artwork and metadata consistently.
+
+Controls:
+
+Previous | Play/Pause | Next
+
+Where supported, expose appropriate additional actions.
+
+52. Quality Requirements
+Visual
+
+Screens should be evaluated against:
+
+spacing
+alignment
+typography
+color
+contrast
+artwork treatment
+corner radii
+animation
+iconography
+
+Not merely:
+
+"It looks roughly similar."
+
+53. Screenshot Regression Testing
+
+Create golden/reference screenshots for:
+
+Home
+empty
+normal
+long titles
+many categories
+Now Playing
+playing
+paused
+buffering
+long title
+missing artwork
+bright artwork
+dark artwork
+Library
+empty
+populated
+grid
+list
+Search
+empty
+results
+no results
+Queue
+empty
+populated
+long queue
+
+This prevents visual regression.
+
+54. Device Matrix
+
+At minimum validate:
+
+Compact
+small Android phone
+standard Android phone
+tall phone
+Medium
+foldable / medium-width device
+Expanded
+tablet
+System states
+portrait
+landscape
+split-screen
+font scaling
+dark environment
+light environment if supported
+55. Performance Acceptance Criteria
+
+The redesign is not complete until:
+
+Scrolling
+
+No visible jank in major Lazy lists.
+
+Artwork
+
+No visible flicker during navigation.
+
+Player
+
+Progress remains visually synchronized.
+
+Navigation
+
+Screen transitions don't freeze playback.
+
+Memory
+
+Artwork-heavy screens don't continuously accumulate bitmaps.
+
+Background
+
+Playback remains stable when the app is backgrounded.
+
+56. Functional Acceptance Criteria
+
+The redesign must pass:
+
+Playback
+Play
+Pause
+Next
+Previous
+Seek
+Queue
+Shuffle
+Repeat
+Library
+Browse
+Search
+Albums
+Artists
+Playlists
+Favorites
+Advanced
+Lyrics
+EQ
+Wi-Fi sync
+CUE tracks
+Cover Flow
+
+Where these capabilities already exist, redesign must not remove them merely for visual simplicity.
+
+57. Security & Privacy
+
+The redesign must not introduce unnecessary permissions.
+
+Any existing:
+
+local network
+storage
+notification
+audio
+Bluetooth
+
+permissions should be reviewed for necessity.
+
+The UI should clearly communicate why an operation requires permission.
+
+58. Analytics / Product Metrics
+
+If analytics are appropriate for the product, track behavioral outcomes, not meaningless UI events.
+
+Useful metrics:
+
+Engagement
+songs played/session
+listening duration
+sessions/week
+tracks completed
+Discovery
+search → playback conversion
+album → playback conversion
+playlist → playback conversion
+UX
+player opens
+skip rate
+seek interactions
+queue usage
+Reliability
+playback failures
+crashes
+ANRs
+library indexing failures
+59. Success Metrics
+
+The redesign succeeds if:
+
+UX
+
+Users can:
+
+find music quickly
+start playback quickly
+understand playback state immediately
+control playback without friction
+Visual
+
+The application is perceived as:
+
+premium / modern / immersive
+
+rather than:
+
+technical / experimental / skeuomorphic
+
+Engineering
+
+The redesign:
+
+doesn't destabilize playback
+doesn't introduce significant performance regression
+reduces visual duplication
+creates reusable components
+improves maintainability
+60. Migration Strategy
+
+This should be done incrementally.
+
+Phase 0 — Baseline
+
+Freeze existing functionality.
+
+Create:
+
+screenshot baseline
+performance baseline
+playback regression tests
+Phase 1 — Design Foundation
+
+Build:
+
+Colors
+Typography
+Shapes
+Spacing
+Motion
+Glow
+Ambient artwork system
+
+Nothing else.
+
+Phase 2 — Component Library
+
+Build:
+
+AlbumArt
+SongCard
+SongRow
+Chip
+NeonButton
+PlayButton
+CircularPlayer
+MiniPlayer
+BottomNavigation
+GlowSurface
+Phase 3 — Home
+
+Replace current Home UI.
+
+Keep existing ViewModel/data.
+
+Phase 4 — Now Playing
+
+This is the highest-priority redesign.
+
+Implement:
+
+ambient artwork
+circular player
+neon glow
+playback controls
+seek
+lyrics
+queue access
+Phase 5 — Library/Search
+
+Redesign browsing surfaces.
+
+Phase 6 — Secondary Screens
+
+Redesign:
+
+Album
+Artist
+Playlist
+Queue
+Lyrics
+Equalizer
+Settings
+Wi-Fi Sync
+Phase 7 — Adaptive UI
+
+Add:
+
+tablet layout
+landscape player
+navigation rail
+multi-pane layouts
+
+Android's adaptive Compose APIs are appropriate for this stage.
+
+Phase 8 — Polish
+
+Perform:
+
+animation tuning
+haptic tuning
+typography tuning
+accessibility audit
+performance profiling
+screenshot comparison
+61. What NOT to Build
+
+This is important because the reference image can tempt an implementation into visual excess.
+
+Do not add:
+
+random glassmorphism everywhere
+huge neon borders
+permanent particle effects
+excessive blur
+animated backgrounds constantly consuming GPU
+unnecessary 3D
+excessive gradients
+giant floating buttons
+meaningless music visualizers
+fake audio-reactive effects
+excessive shadows
+five different shades of green for every component
+
+The reference works because the effects are controlled.
+
+62. Definition of Done
+
+A screen is complete only when all of these are true:
+
+Visual
+Matches the design system.
+Correct spacing.
+Correct typography.
+Correct surface hierarchy.
+Correct artwork treatment.
+Correct interactive states.
+Functional
+Existing behavior preserved.
+Loading handled.
+Empty handled.
+Error handled.
+Long content handled.
+Accessibility
+Touch targets valid.
+Screen reader usable.
+Font scaling works.
+Contrast acceptable.
+State isn't communicated by color alone.
+Performance
+Smooth scrolling.
+No unnecessary bitmap processing.
+No noticeable animation jank.
+No playback degradation.
+Adaptive
+Compact layout validated.
+Landscape validated.
+Expanded layout validated.
+Engineering
+Reusable components.
+No duplicated visual constants.
+UI state separated from business logic.
+Preview/test coverage for critical components.
+63. Final Product Architecture
+
+The desired end state is:
+
+                    ┌────────────────────┐
+                    │     Compose UI     │
+                    └─────────┬──────────┘
+                              │
+                       Design System
+                              │
+             ┌────────────────┼────────────────┐
+             │                │                │
+          Screens         Components       Motion
+             │                │                │
+             └────────────────┼────────────────┘
+                              │
+                         ViewModels
+                              │
+                         UI State
+                              │
+                     Domain / Repository
+                              │
+              ┌───────────────┼───────────────┐
+              │               │               │
+             Room          Playback        Services
+                              │
+                    ┌─────────┴─────────┐
+                    │                   │
+                 Media3            Native Audio
+
+This is the important distinction:
+
+The visual redesign should be a new product skin built on top of a mature music engine—not a rewrite of the mature music engine.
+
+64. Product Identity
+
+The final application should have a recognizable identity independent of the reference image.
+
+Brand attributes
+
+Dark
+Ambient
+Tactile
+Audiophile
+Minimal
+Luminous
+Modern
+
+One-line product definition
+
+A premium local music player where album artwork becomes the atmosphere.
+
+That is the design direction I'd use as the governing principle for every future screen.
+
+Priority order
+
+If development time becomes constrained, do not spread effort evenly across every screen.
+
+Use:
+
+P0 — Critical
+
+Design system
+Home
+Now Playing
+Mini-player
+Navigation
+Playback-state consistency
+
+P1 — Important
+
+Library
+Search
+Albums
+Artists
+Playlists
+Queue
+
+P2 — Advanced
+
+Lyrics
+Equalizer
+Cover Flow
+Wi-Fi Sync
+Advanced settings
+
+P3 — Polish
+
+Advanced animations
+Haptics
+Tablet optimization
+Screenshot regression suite
+Performance optimization
+
+The biggest mistake would be spending two weeks making the EQ beautiful while Home and Now Playing still look like two different applications.
+
+The product's visual identity lives primarily in Home + Now Playing + Mini Player + Navigation. Those four surfaces should be treated as the first-class redesign target.
+
+For implementation, this direction is also aligned with current Android guidance: Compose is intended for modern/adaptive UI, Material 3 provides the theming foundation, and the adaptive libraries support navigation and multi-pane layouts across window sizes.

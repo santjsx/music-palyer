@@ -216,14 +216,16 @@ fun ModernLibraryScreen(
     // MAIN LIBRARY HOME VIEW
     var activeCategoryTab by remember(initialCategory) { mutableStateOf(initialCategory) }
 
+    val palette = com.ipodmodern.audio.ui.theme.LocalThemePalette.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF000000))
+            .background(palette.bg)
             .statusBarsPadding()
             .padding(horizontal = 16.dp)
     ) {
-        // 1. Top Bar: Back Arrow + Red Checkmark + Profile Avatar
+        // 1. Top Bar: Back Arrow + Accent Checkmark + Profile Avatar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -243,7 +245,7 @@ fun ModernLibraryScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = Color.White,
+                    tint = palette.textPrimary,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -252,11 +254,11 @@ fun ModernLibraryScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Red Tick / Checkmark Action
+                // Accent Tick / Checkmark Action
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = "Select",
-                    tint = Color(0xFFE50914),
+                    tint = palette.accent,
                     modifier = Modifier
                         .size(22.dp)
                         .clickable {
@@ -269,7 +271,7 @@ fun ModernLibraryScreen(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF282A30))
+                        .background(palette.surfaceElevated)
                         .clickable {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             onOpenSettings()
@@ -279,7 +281,7 @@ fun ModernLibraryScreen(
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = "Profile & Settings",
-                        tint = Color.White.copy(alpha = 0.8f),
+                        tint = palette.textPrimary.copy(alpha = 0.8f),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -292,8 +294,8 @@ fun ModernLibraryScreen(
                 .fillMaxWidth()
                 .height(44.dp)
                 .clip(RadiusFull)
-                .background(Color(0xFF16171B))
-                .border(1.dp, Color(0x1AFFFFFF), RadiusFull)
+                .background(palette.surfaceElevated)
+                .border(1.dp, palette.borderSubtle, RadiusFull)
                 .padding(horizontal = 14.dp),
             contentAlignment = Alignment.CenterStart
         ) {
@@ -304,20 +306,20 @@ fun ModernLibraryScreen(
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = null,
-                    tint = Color(0xFF8E8E93),
+                    tint = palette.textSecondary,
                     modifier = Modifier.size(18.dp)
                 )
                 BasicTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     singleLine = true,
-                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
-                    cursorBrush = SolidColor(Color(0xFFE50914)),
+                    textStyle = TextStyle(color = palette.textPrimary, fontSize = 14.sp),
+                    cursorBrush = SolidColor(palette.accent),
                     decorationBox = { inner ->
                         if (searchQuery.isEmpty()) {
                             Text(
                                 text = "Search this folder",
-                                color = Color(0xFF636366),
+                                color = palette.textMuted,
                                 fontSize = 14.sp
                             )
                         }

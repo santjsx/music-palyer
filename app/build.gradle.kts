@@ -13,8 +13,8 @@ android {
         applicationId = "com.ipodmodern.audio"
         minSdk = 29
         targetSdk = 35
-        versionCode = 110
-        versionName = "2.9.0"
+        versionCode = 111
+        versionName = "3.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

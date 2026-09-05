@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,19 +24,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.NotificationsNone
-import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,38 +45,34 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.ipodmodern.audio.core.model.Track
-import com.ipodmodern.audio.ui.components.SleekCard
-import com.ipodmodern.audio.ui.components.SleekIconButton
-import com.ipodmodern.audio.ui.theme.MintAccent
-import com.ipodmodern.audio.ui.theme.ObsidianBg
-import com.ipodmodern.audio.ui.theme.ObsidianBorder
-import com.ipodmodern.audio.ui.theme.ObsidianElevated
-import com.ipodmodern.audio.ui.theme.ObsidianPill
-import com.ipodmodern.audio.ui.theme.ObsidianSurface
-import com.ipodmodern.audio.ui.theme.ObsidianTrackBg
+import com.ipodmodern.audio.ui.components.AddToPlaylistSheet
+import com.ipodmodern.audio.ui.components.AmbientBackground
+import com.ipodmodern.audio.ui.components.CategorySelectorRow
+import com.ipodmodern.audio.ui.components.CollectionHeroCard
+import com.ipodmodern.audio.ui.components.HomeSectionHeader
+import com.ipodmodern.audio.ui.components.PopularSongCard
+import com.ipodmodern.audio.ui.components.SongRowItem
+import com.ipodmodern.audio.ui.theme.LocalThemePalette
 import com.ipodmodern.audio.ui.theme.RadiusFull
 import com.ipodmodern.audio.ui.theme.RadiusLg
-import com.ipodmodern.audio.ui.theme.RadiusMd
-import com.ipodmodern.audio.ui.theme.RadiusSm
-import com.ipodmodern.audio.ui.theme.RadiusXl
-import com.ipodmodern.audio.ui.theme.TextMuted
-import com.ipodmodern.audio.ui.theme.TextPrimary
-import com.ipodmodern.audio.ui.theme.TextSecondary
 import com.ipodmodern.audio.ui.viewmodel.PlayerViewModel
-import java.io.File
 import java.util.Calendar
 
+/**
+ * ModernHomeScreen implements PRD Sections 12-15:
+ * - Ambient Dark Canvas with artwork glow influence
+ * - Personalized greeting header with quick search & sync actions
+ * - Interactive horizontal category selector pills ([All], [Party], [Blues], [Soul], etc.)
+ * - Popular Songs horizontal carousel with dominant artwork and quick play
+ * - Curated collections hero cards with ambient gradient overlays
+ * - Recently Played carousel
+ * - Filtered songs list with high-contrast typography and instant playback
+ */
 @Composable
 fun ModernHomeScreen(
     playerViewModel: PlayerViewModel,
@@ -94,11 +85,21 @@ fun ModernHomeScreen(
     onNavigateToSearch: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val palette = LocalThemePalette.current
     val uiState by playerViewModel.uiState.collectAsState()
-    val progressState by playerViewModel.playbackProgress.collectAsState()
     val view = LocalView.current
 
-    var searchQuery by remember { mutableStateOf("") }
+    val allTracks = uiState.allTracks
+    val currentTrack = uiState.currentTrack
+    val isPlaying = uiState.isPlaying
+    val favoriteIds = uiState.favoriteTrackIds
+
+    var selectedCategory by remember { mutableStateOf("All") }
+    var selectedActionTrack by remember { mutableStateOf<Track?>(null) }
+
+    val categories = remember {
+        listOf("All", "Party", "Blues", "Soul", "Hip-Hop", "Rock", "Jazz", "Electronic")
+    }
 
     // Dynamic greeting based on time of day
     val greeting = remember {
@@ -110,460 +111,335 @@ fun ModernHomeScreen(
         }
     }
 
-    // PRD 3.2.1 & 3.2.2 Standardized Surface & Geometry
-    val ScreenCanvasBg = Color(0xFF000000)
-    val CardContainerBg = Color(0xFF161618)
-    val CardShape = RoundedCornerShape(12.dp)
+    // Filtered tracks based on the category pill
+    val filteredTracks = remember(selectedCategory, allTracks) {
+        if (selectedCategory.equals("All", ignoreCase = true)) {
+            allTracks
+        } else {
+            allTracks.filter { track ->
+                track.genre.contains(selectedCategory, ignoreCase = true) ||
+                        track.album.contains(selectedCategory, ignoreCase = true) ||
+                        track.title.contains(selectedCategory, ignoreCase = true)
+            }
+        }
+    }
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(ScreenCanvasBg)
-            .statusBarsPadding()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
-        contentPadding = PaddingValues(top = 10.dp, bottom = 180.dp)
+    // Popular / Featured tracks (top slice or all)
+    val popularTracks = remember(allTracks) {
+        if (allTracks.size > 8) allTracks.take(8) else allTracks
+    }
+
+    // Recently played (first 6 or reversed)
+    val recentlyPlayed = remember(allTracks) {
+        if (allTracks.size > 4) allTracks.takeLast(6).reversed() else allTracks
+    }
+
+    AmbientBackground(
+        modifier = modifier,
+        ambientColor = palette.accent,
+        ambientAlpha = 0.18f
     ) {
-        // 1. Top Bar: Hamburger Menu + Notifications Bell
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SleekIconButton(
-                    icon = Icons.Default.Menu,
-                    onClick = { onOpenSyncHub() },
-                    size = 40.dp,
-                    iconSize = 20.dp,
-                    contentDescription = "Menu"
-                )
-
-                SleekIconButton(
-                    icon = Icons.Default.NotificationsNone,
-                    onClick = { onOpenSyncHub() },
-                    size = 40.dp,
-                    iconSize = 20.dp,
-                    contentDescription = "Notifications"
-                )
-            }
-        }
-
-        // 2. Greeting Header
-        item {
-            Column {
-                Text(
-                    text = greeting,
-                    color = MintAccent,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.5.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Let the music\nheal your soul.",
-                    color = TextPrimary,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 30.sp
-                )
-            }
-        }
-
-        // 3. Search Bar Capsule -> Tapping opens dedicated real-time search
-        item {
-            val homePalette = com.ipodmodern.audio.ui.theme.LocalThemePalette.current
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .clip(RadiusFull)
-                    .background(CardContainerBg)
-                    .border(1.dp, Color(0x18FFFFFF), RadiusFull)
-                    .clickable {
-                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                        onNavigateToSearch()
-                    }
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding(),
+            contentPadding = PaddingValues(bottom = 140.dp) // Room for mini player & bottom nav island
+        ) {
+            // 1. Top Header: Time-aware greeting, profile / actions (PRD 12)
+            item {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = TextMuted,
-                        modifier = Modifier.size(20.dp)
-                    )
-
-                    Text(
-                        text = "Search songs, albums, artists...",
-                        color = TextMuted,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-        }
-
-        // 4. Continue Listening (Hero Track Card)
-        val continueTrack = uiState.lastPlayedTrack ?: uiState.currentTrack ?: uiState.allTracks.firstOrNull()
-        if (continueTrack != null) {
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = "Continue Listening",
-                        color = TextPrimary,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    val artworkFile = remember(continueTrack.artworkUri) {
-                        continueTrack.artworkUri?.let { File(it) }
+                    Column {
+                        Text(
+                            text = greeting,
+                            color = palette.textSecondary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.5.sp
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "TuneHive Music",
+                            color = palette.textPrimary,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-0.5).sp
+                        )
                     }
 
-                    val currentPos = if (uiState.currentTrack?.id == continueTrack.id && (uiState.isPlaying || progressState.positionMs > 0)) {
-                        progressState.positionMs
-                    } else {
-                        uiState.lastSavedPositionMs
-                    }
-                    val currentDur = if (progressState.durationMs > 0) progressState.durationMs else continueTrack.durationMs
-
-                    val progress = if (currentDur > 0) {
-                        (currentPos.toFloat() / currentDur.toFloat()).coerceIn(0f, 1f)
-                    } else 0f
-
-                    val posMin = (currentPos / 1000) / 60
-                    val posSec = (currentPos / 1000) % 60
-                    val posStr = if (posSec < 10) "$posMin:0$posSec" else "$posMin:$posSec"
-                    val timeFormatted = "$posStr / ${continueTrack.formattedDuration}"
-
-                    val isTrackActive = uiState.currentTrack?.id == continueTrack.id && uiState.isPlaying
-
-                    // Borderless Content Container (PRD 3.2.1 & 3.2.2)
-                    SleekCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = CardContainerBg,
-                        borderColor = Color.Transparent,
-                        shape = CardShape,
-                        onClick = {
-                            if (!uiState.isPlaying) {
-                                playerViewModel.resumeContinueListening()
-                            }
-                            onNavigateToNowPlaying()
-                        }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            // Artwork
-                            Box(
-                                modifier = Modifier
-                                    .size(54.dp)
-                                    .clip(CardShape)
-                                    .background(Color(0xFF22242B)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (artworkFile != null) {
-                                    AsyncImage(
-                                        model = artworkFile,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.MusicNote,
-                                        contentDescription = null,
-                                        tint = MintAccent,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
-
-                            // Metadata & Progress Line
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = continueTrack.title,
-                                    color = TextPrimary,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = continueTrack.artist,
-                                    color = TextSecondary,
-                                    fontSize = 12.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                // Progress Line + Time Text
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(3.dp)
-                                            .clip(RadiusFull)
-                                            .background(ObsidianTrackBg)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth(progress)
-                                                .fillMaxHeight()
-                                                .background(MintAccent)
-                                        )
-                                    }
-
-                                    Text(
-                                        text = timeFormatted,
-                                        color = TextMuted,
-                                        fontSize = 10.sp,
-                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                                    )
-                                }
-                            }
-
-                            // Play/Pause Trigger
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isTrackActive) MintAccent else ObsidianElevated)
-                                    .clickable {
-                                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                        playerViewModel.resumeContinueListening()
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = if (isTrackActive) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                    contentDescription = if (isTrackActive) "Pause" else "Play",
-                                    tint = if (isTrackActive) ObsidianBg else MintAccent,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 5. Recently Played (Horizontal Carousel)
-        val allSongs = uiState.allTracks
-        if (allSongs.isNotEmpty()) {
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Action buttons (Search, Sync Hub)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Recently Played",
-                            color = TextPrimary,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        // Wi-Fi Sync Indicator / Button
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(palette.surfaceElevated)
+                                .border(1.dp, palette.borderSubtle, CircleShape)
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                    onOpenSyncHub()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Wifi,
+                                contentDescription = "Wi-Fi Sync",
+                                tint = palette.accent,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
 
-                        Text(
-                            text = "See all",
-                            color = TextMuted,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.clickable { onNavigateToSongs() }
-                        )
-                    }
-
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(horizontal = 2.dp)
-                    ) {
-                        items(
-                            items = allSongs.take(8),
-                            key = { it.id },
-                            contentType = { "recent_track_card" }
-                        ) { track ->
-                            val trackArt = remember(track.artworkUri) {
-                                track.artworkUri?.let { File(it) }
-                            }
-
-                            Column(
-                                modifier = Modifier
-                                    .width(110.dp)
-                                    .clip(CardShape)
-                                    .clickable {
-                                        playerViewModel.playTrack(track)
-                                        onNavigateToNowPlaying()
-                                    }
-                            ) {
-                                // Borderless Square Card with Play Overlay (PRD 3.2.1 & 3.2.2)
-                                Box(
-                                    modifier = Modifier
-                                        .size(110.dp)
-                                        .clip(CardShape)
-                                        .background(CardContainerBg),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (trackArt != null) {
-                                        AsyncImage(
-                                            model = trackArt,
-                                            contentDescription = null,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    } else {
-                                        Icon(
-                                            imageVector = Icons.Default.MusicNote,
-                                            contentDescription = null,
-                                            tint = MintAccent,
-                                            modifier = Modifier.size(32.dp)
-                                        )
-                                    }
-
-
-
-                                    // Play icon overlay pill
-                                    val cardAccent = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.BottomEnd)
-                                            .padding(6.dp)
-                                            .size(26.dp)
-                                            .clip(CircleShape)
-                                            .background(ObsidianBg.copy(alpha = 0.8f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.PlayArrow,
-                                            contentDescription = "Play",
-                                            tint = cardAccent,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                Text(
-                                    text = track.title,
-                                    color = TextPrimary,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = track.artist,
-                                    color = TextSecondary,
-                                    fontSize = 11.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                        // Search Shortcut
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(palette.surfaceElevated)
+                                .border(1.dp, palette.borderSubtle, CircleShape)
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                    onNavigateToSearch()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = palette.textPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     }
                 }
             }
-        }
 
-        // 6. Your Library Shortcuts (4-Column Grid)
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = "Your Library",
-                    color = TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+            // 2. Category Selector Chips (PRD 12)
+            item {
+                CategorySelectorRow(
+                    categories = categories,
+                    selectedCategory = selectedCategory,
+                    onCategorySelected = { cat ->
+                        selectedCategory = cat
+                    },
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
+            }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    LibraryShortcutItem(
-                        icon = Icons.Default.MusicNote,
-                        title = "Songs",
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToSongs
+            // 3. Popular Songs Carousel (PRD 13)
+            if (popularTracks.isNotEmpty()) {
+                item {
+                    HomeSectionHeader(
+                        title = "Popular Songs",
+                        onSeeAllClick = onNavigateToSongs
                     )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        items(popularTracks, key = { "pop_${it.id}" }) { track ->
+                            PopularSongCard(
+                                track = track,
+                                isPlaying = isPlaying,
+                                isCurrent = currentTrack?.id == track.id,
+                                onClick = {
+                                    playerViewModel.playTrack(track)
+                                    onNavigateToNowPlaying()
+                                },
+                                onPlayDirect = {
+                                    if (currentTrack?.id == track.id) {
+                                        playerViewModel.togglePlayPause()
+                                    } else {
+                                        playerViewModel.playTrack(track)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
 
-                    LibraryShortcutItem(
-                        icon = Icons.Default.Album,
-                        title = "Albums",
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToAlbums
+            // 4. Curated Collections Hero Banners (PRD 14)
+            if (allTracks.isNotEmpty()) {
+                item {
+                    HomeSectionHeader(title = "Featured Collections")
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        // Card 1: Top Songs Global
+                        item {
+                            CollectionHeroCard(
+                                title = "Top Songs Global",
+                                subtitle = "Most played audio tracks",
+                                gradientColors = listOf(
+                                    Color(0xFF0D2818),
+                                    Color(0xFF144D29),
+                                    palette.surface
+                                ),
+                                trackCount = allTracks.size,
+                                onPlayClick = {
+                                    playerViewModel.playTrack(allTracks.first())
+                                    onNavigateToNowPlaying()
+                                },
+                                onClick = onNavigateToSongs,
+                                modifier = Modifier.width(260.dp)
+                            )
+                        }
+
+                        // Card 2: Discover Mix
+                        item {
+                            CollectionHeroCard(
+                                title = "Discover Flow",
+                                subtitle = "Fresh selections tailored to you",
+                                gradientColors = listOf(
+                                    Color(0xFF0F2B26),
+                                    Color(0xFF1B4D45),
+                                    palette.surface
+                                ),
+                                trackCount = (allTracks.size / 2).coerceAtLeast(1),
+                                onPlayClick = {
+                                    val shuffled = allTracks.shuffled()
+                                    if (shuffled.isNotEmpty()) {
+                                        playerViewModel.playTrack(shuffled.first())
+                                        onNavigateToNowPlaying()
+                                    }
+                                },
+                                onClick = onNavigateToAlbums,
+                                modifier = Modifier.width(260.dp)
+                            )
+                        }
+
+                        // Card 3: Favorites Mix
+                        item {
+                            val favTracks = allTracks.filter { favoriteIds.contains(it.id) }
+                            CollectionHeroCard(
+                                title = "Favorites Mix",
+                                subtitle = "${favTracks.size} saved favorites",
+                                gradientColors = listOf(
+                                    Color(0xFF281E0D),
+                                    Color(0xFF4D3814),
+                                    palette.surface
+                                ),
+                                trackCount = favTracks.size,
+                                onPlayClick = {
+                                    if (favTracks.isNotEmpty()) {
+                                        playerViewModel.playTrack(favTracks.first())
+                                        onNavigateToNowPlaying()
+                                    } else if (allTracks.isNotEmpty()) {
+                                        playerViewModel.playTrack(allTracks.first())
+                                        onNavigateToNowPlaying()
+                                    }
+                                },
+                                onClick = onNavigateToPlaylists,
+                                modifier = Modifier.width(260.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+
+            // 5. Recently Played Carousel (PRD 15)
+            if (recentlyPlayed.isNotEmpty()) {
+                item {
+                    HomeSectionHeader(
+                        title = "Recently Played",
+                        onSeeAllClick = onNavigateToSongs
                     )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        items(recentlyPlayed, key = { "recent_${it.id}" }) { track ->
+                            PopularSongCard(
+                                track = track,
+                                isPlaying = isPlaying,
+                                isCurrent = currentTrack?.id == track.id,
+                                onClick = {
+                                    playerViewModel.playTrack(track)
+                                    onNavigateToNowPlaying()
+                                },
+                                onPlayDirect = {
+                                    if (currentTrack?.id == track.id) {
+                                        playerViewModel.togglePlayPause()
+                                    } else {
+                                        playerViewModel.playTrack(track)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
 
-                    LibraryShortcutItem(
-                        icon = Icons.Default.Person,
-                        title = "Artists",
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToArtists
-                    )
+            // 6. Tracks List (Active Category Filtered)
+            item {
+                HomeSectionHeader(
+                    title = if (selectedCategory == "All") "All Tracks" else "$selectedCategory Tracks",
+                    onSeeAllClick = onNavigateToSongs
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
 
-                    LibraryShortcutItem(
-                        icon = Icons.AutoMirrored.Filled.QueueMusic,
-                        title = "Playlists",
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToPlaylists
+            if (filteredTracks.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No songs found for $selectedCategory",
+                            color = palette.textMuted,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            } else {
+                items(filteredTracks.take(15), key = { "row_${it.id}" }) { track ->
+                    SongRowItem(
+                        track = track,
+                        isCurrent = currentTrack?.id == track.id,
+                        isPlaying = isPlaying,
+                        isFavorite = favoriteIds.contains(track.id),
+                        onTrackClick = {
+                            playerViewModel.playTrack(track)
+                            onNavigateToNowPlaying()
+                        },
+                        onFavoriteClick = {
+                            playerViewModel.toggleFavorite(track.id)
+                        },
+                        onOptionsClick = {
+                            selectedActionTrack = track
+                        },
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp)
                     )
                 }
             }
         }
     }
-}
 
-@Composable
-private fun LibraryShortcutItem(
-    icon: ImageVector,
-    title: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    val view = LocalView.current
-    val CardShape = RoundedCornerShape(12.dp)
-    val CardContainerBg = Color(0xFF161618)
-
-    SleekCard(
-        modifier = modifier.height(78.dp),
-        backgroundColor = CardContainerBg,
-        borderColor = Color.Transparent,
-        shape = CardShape,
-        onClick = {
-            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-            onClick()
-        }
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            val itemAccent = com.ipodmodern.audio.ui.theme.LocalThemePalette.current.accent
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = itemAccent,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = title,
-                color = TextSecondary,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
+    // Add to Playlist Bottom Sheet
+    if (selectedActionTrack != null) {
+        AddToPlaylistSheet(
+            track = selectedActionTrack!!,
+            playerViewModel = playerViewModel,
+            onDismiss = { selectedActionTrack = null }
+        )
     }
 }

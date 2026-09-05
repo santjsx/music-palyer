@@ -350,22 +350,13 @@ fun ModernMusicAppContent(
                     onTabSelected = { tab ->
                         playerViewModel.hapticEngine.performClick()
                         activeScreen = when (tab) {
-                            ModernTab.EXPLORE -> ScreenType.MENU_MAIN
+                            ModernTab.HOME -> ScreenType.MENU_MAIN
+                            ModernTab.SEARCH -> ScreenType.SEARCH
                             ModernTab.LIBRARY -> {
                                 libraryCategory = com.ipodmodern.audio.ui.screens.LibraryCategory.SONGS
                                 ScreenType.MENU_MUSIC
                             }
-                            ModernTab.PLAY -> {
-                                if (playerState.currentTrack != null) {
-                                    ScreenType.NOW_PLAYING
-                                } else if (playerState.allTracks.isNotEmpty()) {
-                                    playerViewModel.playTrack(playerState.allTracks.first())
-                                    ScreenType.NOW_PLAYING
-                                } else {
-                                    ScreenType.MENU_MUSIC
-                                }
-                            }
-                            ModernTab.SEARCH -> ScreenType.SEARCH
+                            ModernTab.SETTINGS -> ScreenType.SETTINGS
                         }
                     }
                 )

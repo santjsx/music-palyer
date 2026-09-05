@@ -53,10 +53,10 @@ import com.ipodmodern.audio.ui.theme.TextPrimary
 import com.ipodmodern.audio.ui.theme.TextSecondary
 
 enum class ModernTab(val title: String, val icon: ImageVector) {
-    PLAY("Play", Icons.Default.PlayArrow),
-    EXPLORE("Explore", Icons.Default.Explore),
-    LIBRARY("Library", Icons.AutoMirrored.Filled.QueueMusic),
-    SEARCH("Search", Icons.Default.Search)
+    HOME("Home", Icons.Default.Home),
+    SEARCH("Search", Icons.Default.Search),
+    LIBRARY("Library", Icons.Default.LibraryMusic),
+    SETTINGS("Settings", Icons.Default.Settings)
 }
 
 @Composable
@@ -66,24 +66,23 @@ fun ModernBottomNavIsland(
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
+    val palette = com.ipodmodern.audio.ui.theme.LocalThemePalette.current
 
     val activeTab = when (currentScreen) {
-        ScreenType.MENU_MAIN -> ModernTab.EXPLORE
-        ScreenType.MENU_MUSIC, ScreenType.MENU_SONGS, ScreenType.MENU_ALBUMS, ScreenType.MENU_ARTISTS, ScreenType.PLAYLISTS, ScreenType.PLAYLIST_DETAIL -> ModernTab.LIBRARY
-        ScreenType.NOW_PLAYING, ScreenType.COVER_FLOW -> ModernTab.PLAY
+        ScreenType.MENU_MAIN -> ModernTab.HOME
         ScreenType.SEARCH -> ModernTab.SEARCH
-        ScreenType.SETTINGS, ScreenType.SYNC_SERVER -> ModernTab.EXPLORE
+        ScreenType.SETTINGS, ScreenType.SYNC_SERVER, ScreenType.EQUALIZER -> ModernTab.SETTINGS
         else -> ModernTab.LIBRARY
     }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 24.dp, end = 24.dp, bottom = 16.dp)
-            .shadow(18.dp, RadiusFull, spotColor = Color(0x77000000))
+            .padding(start = 20.dp, end = 20.dp, bottom = 16.dp)
+            .shadow(20.dp, RadiusFull, spotColor = Color(0x88000000))
             .clip(RadiusFull)
-            .background(Color(0xFF141519).copy(alpha = 0.85f))
-            .border(1.dp, Color(0x22FFFFFF), RadiusFull)
+            .background(palette.surface.copy(alpha = 0.92f))
+            .border(1.dp, palette.borderSubtle, RadiusFull)
             .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
         Row(
@@ -91,10 +90,9 @@ fun ModernBottomNavIsland(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val palette = com.ipodmodern.audio.ui.theme.LocalThemePalette.current
             val activeAccent = palette.accent
             val activePillBg = palette.pillBg
-            val activePillBorder = palette.accentGlow
+            val activePillBorder = palette.borderHighlight
 
             ModernTab.values().forEach { tab ->
                 val isSelected = tab == activeTab
@@ -121,7 +119,7 @@ fun ModernBottomNavIsland(
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             onTabSelected(tab)
                         }
-                        .padding(horizontal = if (isSelected) 20.dp else 16.dp, vertical = 6.dp),
+                        .padding(horizontal = if (isSelected) 18.dp else 14.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -131,13 +129,13 @@ fun ModernBottomNavIsland(
                         Icon(
                             imageVector = tab.icon,
                             contentDescription = tab.title,
-                            tint = if (isSelected) activeAccent else Color(0xFF8E8E93),
+                            tint = if (isSelected) activeAccent else palette.textSecondary,
                             modifier = Modifier.size(22.dp)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = tab.title,
-                            color = if (isSelected) activeAccent else Color(0xFF8E8E93),
+                            color = if (isSelected) activeAccent else palette.textSecondary,
                             fontSize = 11.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                         )
