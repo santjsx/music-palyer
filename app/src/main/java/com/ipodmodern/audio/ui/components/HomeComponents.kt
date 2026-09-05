@@ -197,15 +197,15 @@ fun PopularSongCard(
         label = "pop_song_scale"
     )
 
-    val artworkFile = remember(track.artworkUri) {
-        track.artworkUri?.let { File(it) }
-    }
-    val artworkRequest = remember(artworkFile) {
-        artworkFile?.let {
+    val artworkRequest = remember(track.artworkUri) {
+        track.artworkUri?.let { uri ->
             ImageRequest.Builder(context)
-                .data(it)
+                .data(uri)
                 .size(360)
                 .crossfade(true)
+                .memoryCacheKey("pop_${track.id}_$uri")
+                .diskCacheKey("pop_${track.id}_$uri")
+                .allowHardware(true)
                 .build()
         }
     }
@@ -438,15 +438,15 @@ fun SongRowItem(
     val context = LocalContext.current
     val view = LocalView.current
 
-    val artworkFile = remember(track.artworkUri) {
-        track.artworkUri?.let { File(it) }
-    }
-    val artworkRequest = remember(artworkFile) {
-        artworkFile?.let {
+    val artworkRequest = remember(track.artworkUri) {
+        track.artworkUri?.let { uri ->
             ImageRequest.Builder(context)
-                .data(it)
+                .data(uri)
                 .size(120)
                 .crossfade(true)
+                .memoryCacheKey("row_${track.id}_$uri")
+                .diskCacheKey("row_${track.id}_$uri")
+                .allowHardware(true)
                 .build()
         }
     }

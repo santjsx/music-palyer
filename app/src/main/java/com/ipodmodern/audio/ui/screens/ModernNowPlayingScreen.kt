@@ -90,6 +90,9 @@ import com.ipodmodern.audio.ui.viewmodel.PlayerViewModel
 import java.io.File
 import java.util.Locale
 
+import kotlinx.coroutines.flow.StateFlow
+import com.ipodmodern.audio.ui.viewmodel.PlaybackProgress
+
 /**
  * ModernNowPlayingScreen implements PRD Sections 17-21:
  * - Full-bleed ambient glow influenced by current artwork
@@ -110,7 +113,6 @@ fun ModernNowPlayingScreen(
 ) {
     val palette = LocalThemePalette.current
     val uiState by playerViewModel.uiState.collectAsState()
-    val progressState by playerViewModel.playbackProgress.collectAsState()
     val view = LocalView.current
     val context = LocalContext.current
 
@@ -122,15 +124,15 @@ fun ModernNowPlayingScreen(
 
     var isOptionsSheetOpen by remember { mutableStateOf(false) }
 
-    val artworkFile = remember(track?.artworkUri) {
-        track?.artworkUri?.let { File(it) }
-    }
-    val artworkRequest = remember(artworkFile) {
-        artworkFile?.let {
+    val artworkRequest = remember(track?.artworkUri) {
+        track?.artworkUri?.let { uri ->
             ImageRequest.Builder(context)
-                .data(it)
+                .data(uri)
                 .size(600)
                 .crossfade(true)
+                .memoryCacheKey("now_playing_${track.id}_$uri")
+                .diskCacheKey("now_playing_${track.id}_$uri")
+                .allowHardware(true)
                 .build()
         }
     }
@@ -141,11 +143,6 @@ fun ModernNowPlayingScreen(
         animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow),
         label = "art_scale_anim"
     )
-
-    // Position and duration calculation
-    val durationMs = if (progressState.durationMs > 0) progressState.durationMs else (track?.durationMs ?: 0L)
-    val positionMs = progressState.positionMs.coerceIn(0L, durationMs.coerceAtLeast(1L))
-    val progressFraction = if (durationMs > 0) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
 
     val scrollState = rememberScrollState()
 
@@ -366,8 +363,8 @@ fun ModernNowPlayingScreen(
 
             // 4. Sleek 3.dp Micro-Timeline Scrubber (PRD Section 21)
             NowPlayingTimelineScrubber(
-                durationMs = durationMs,
-                positionMs = positionMs,
+                progressFlow = playerViewModel.playbackProgress,
+                trackDurationMs = track?.durationMs ?: 0L,
                 onSeek = { targetMs ->
                     playerViewModel.seekTo(targetMs)
                 }
@@ -402,15 +399,16 @@ fun ModernNowPlayingScreen(
                     )
                 }
 
-                // Flagship 6-Layer Concentric Glowing Circular Player
+                // Flagship 6-Layer Concentric Glowing Circular Player (Zero-recomposition)
                 CircularPlayer(
                     isPlaying = isPlaying,
-                    progressFraction = progressFraction,
+                    progressFlow = playerViewModel.playbackProgress,
                     onPlayPauseClick = {
                         playerViewModel.togglePlayPause()
                     },
                     onSeekFraction = { fraction ->
-                        val seekTarget = (fraction * durationMs).toLong()
+                        val dur = playerViewModel.playbackProgress.value.durationMs.let { if (it > 0) it else (track?.durationMs ?: 0L) }
+                        val seekTarget = (fraction * dur).toLong()
                         playerViewModel.seekTo(seekTarget)
                     },
                     size = 190.dp,
@@ -564,12 +562,15 @@ fun ModernNowPlayingScreen(
  */
 @Composable
 private fun NowPlayingTimelineScrubber(
-    durationMs: Long,
-    positionMs: Long,
+    progressFlow: StateFlow<PlaybackProgress>,
+    trackDurationMs: Long,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val palette = LocalThemePalette.current
+    val progressState by progressFlow.collectAsState()
+    val durationMs = if (progressState.durationMs > 0) progressState.durationMs else trackDurationMs
+    val positionMs = progressState.positionMs.coerceIn(0L, durationMs.coerceAtLeast(1L))
     var isDragging by remember { mutableStateOf(false) }
     var dragFraction by remember { mutableFloatStateOf(0f) }
 

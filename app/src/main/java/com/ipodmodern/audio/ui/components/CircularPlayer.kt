@@ -50,6 +50,12 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ipodmodern.audio.ui.theme.LocalThemePalette
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.draw.drawBehind
+import com.ipodmodern.audio.ui.viewmodel.PlaybackProgress
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -58,7 +64,7 @@ import kotlin.math.sin
 /**
  * CircularPlayer implements the 6-layer concentric glowing circular player
  * specified in PRD Section 18:
- * - Layer 1: Ambient glow (subtle pulsing when playing)
+ * - Layer 1: Ambient glow (zero-recomposition GPU-composited pulse)
  * - Layer 2: Outer dark circular ring
  * - Layer 3: Neon lime progress ring (rotational touch seeking)
  * - Layer 4: Inner subtle glow & bevel
@@ -68,7 +74,8 @@ import kotlin.math.sin
 @Composable
 fun CircularPlayer(
     isPlaying: Boolean,
-    progressFraction: Float, // 0.0f .. 1.0f
+    progressFlow: StateFlow<PlaybackProgress>? = null,
+    progressFraction: Float = 0f, // Fallback if progressFlow is not supplied
     onPlayPauseClick: () -> Unit,
     onSeekFraction: (Float) -> Unit,
     modifier: Modifier = Modifier,
@@ -81,22 +88,19 @@ fun CircularPlayer(
     var dragAngleFraction by remember { mutableFloatStateOf(0f) }
     var isButtonPressed by remember { mutableStateOf(false) }
 
-    val displayFraction = if (isDragging) dragAngleFraction else progressFraction.coerceIn(0f, 1f)
-
     // Pulse animation for playing state ambient glow (Layer 1)
     val infiniteTransition = rememberInfiniteTransition(label = "ambient_glow_pulse")
-    val glowPulse by infiniteTransition.animateFloat(
-        initialValue = 0.85f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glow_scale"
-    )
-
-    val currentGlowScale = if (isPlaying) glowPulse else 0.85f
-    val currentGlowAlpha = if (isPlaying) 0.35f else 0.15f
+    val glowPulse = if (isPlaying) {
+        infiniteTransition.animateFloat(
+            initialValue = 0.88f,
+            targetValue = 1.12f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2400, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "glow_scale"
+        )
+    } else null
 
     // Spring press scale for center play/pause button (Layer 5)
     val buttonScale by animateFloatAsState(
@@ -104,6 +108,14 @@ fun CircularPlayer(
         animationSpec = spring(dampingRatio = 0.65f, stiffness = 1800f),
         label = "play_btn_spring"
     )
+
+    val glowColors = remember(palette.accent) {
+        listOf(
+            palette.accent.copy(alpha = 0.32f),
+            palette.accent.copy(alpha = 0.10f),
+            Color.Transparent
+        )
+    }
 
     Box(
         modifier = modifier
@@ -140,95 +152,42 @@ fun CircularPlayer(
             },
         contentAlignment = Alignment.Center
     ) {
-        // Layer 1, 2, 3, 4: Ambient Glow + Outer Ring + Progress Arc + Dial Thumb
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val center = Offset(this.size.width / 2f, this.size.height / 2f)
-            val strokeWidth = 5.dp.toPx()
-            val radius = (this.size.minDimension - strokeWidth * 3) / 2f
+        // Layer 1: Atmospheric Outer Ambient Glow (Composited on GPU, zero recomposition)
+        Spacer(
+            modifier = Modifier
+                .size(size)
+                .graphicsLayer {
+                    val scale = if (isPlaying && glowPulse != null) glowPulse.value else 0.85f
+                    scaleX = scale
+                    scaleY = scale
+                    alpha = if (isPlaying) 1.0f else 0.35f
+                }
+                .drawBehind {
+                    val center = Offset(this.size.width / 2f, this.size.height / 2f)
+                    val strokeWidth = 5.dp.toPx()
+                    val radius = (this.size.minDimension - strokeWidth * 3) / 2f
+                    val glowR = radius * 1.35f
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = glowColors,
+                            center = center,
+                            radius = glowR
+                        ),
+                        radius = glowR,
+                        center = center
+                    )
+                }
+        )
 
-            // Layer 1: Atmospheric Outer Ambient Glow
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        palette.accent.copy(alpha = currentGlowAlpha),
-                        palette.accent.copy(alpha = currentGlowAlpha * 0.4f),
-                        Color.Transparent
-                    ),
-                    center = center,
-                    radius = radius * (1.35f * currentGlowScale)
-                ),
-                radius = radius * (1.35f * currentGlowScale),
-                center = center
-            )
-
-            // Layer 2: Inactive Outer Circular Ring Track
-            drawArc(
-                color = palette.surfaceElevated,
-                startAngle = -90f,
-                sweepAngle = 360f,
-                useCenter = false,
-                topLeft = Offset(center.x - radius, center.y - radius),
-                size = Size(radius * 2, radius * 2),
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-            )
-
-            // Layer 3: Active Neon Lime Circular Progress Ring
-            val sweepAngle = 360f * displayFraction
-            if (sweepAngle > 0.5f) {
-                // Soft glow underneath the arc
-                drawArc(
-                    color = palette.accentGlow,
-                    startAngle = -90f,
-                    sweepAngle = sweepAngle,
-                    useCenter = false,
-                    topLeft = Offset(center.x - radius, center.y - radius),
-                    size = Size(radius * 2, radius * 2),
-                    style = Stroke(width = strokeWidth + 6.dp.toPx(), cap = StrokeCap.Round)
-                )
-
-                // Crisp electric lime arc
-                drawArc(
-                    color = palette.accent,
-                    startAngle = -90f,
-                    sweepAngle = sweepAngle,
-                    useCenter = false,
-                    topLeft = Offset(center.x - radius, center.y - radius),
-                    size = Size(radius * 2, radius * 2),
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                )
-
-                // Tactile Dial Thumb dot
-                val thumbAngleRad = Math.toRadians((-90f + sweepAngle).toDouble())
-                val thumbX = center.x + (radius * cos(thumbAngleRad)).toFloat()
-                val thumbY = center.y + (radius * sin(thumbAngleRad)).toFloat()
-
-                // Glow around thumb
-                drawCircle(
-                    color = palette.accent.copy(alpha = 0.4f),
-                    radius = 10.dp.toPx(),
-                    center = Offset(thumbX, thumbY)
-                )
-                // Crisp thumb dot
-                drawCircle(
-                    color = palette.accent,
-                    radius = 6.dp.toPx(),
-                    center = Offset(thumbX, thumbY)
-                )
-                drawCircle(
-                    color = Color.White,
-                    radius = 3.dp.toPx(),
-                    center = Offset(thumbX, thumbY)
-                )
-            }
-
-            // Layer 4: Inner Bevel Ring
-            drawCircle(
-                color = palette.borderSubtle,
-                radius = radius - 14.dp.toPx(),
-                center = center,
-                style = Stroke(width = 1.dp.toPx())
-            )
-        }
+        // Layers 2, 3, 4: Inactive Ring + Isolated Progress Arc + Inner Bevel
+        CircularProgressCanvas(
+            progressFlow = progressFlow,
+            fallbackFraction = progressFraction,
+            isDragging = isDragging,
+            dragAngleFraction = dragAngleFraction,
+            palette = palette,
+            modifier = Modifier.size(size)
+        )
 
         // Layer 5 & 6: Center Play / Pause Tactile Button with Spring Press
         Box(
@@ -283,6 +242,100 @@ fun CircularPlayer(
                 )
             }
         }
+    }
+}
+
+/**
+ * Isolated progress and ring track canvas to prevent recomposition of parent button and controls.
+ */
+@Composable
+private fun CircularProgressCanvas(
+    progressFlow: StateFlow<PlaybackProgress>?,
+    fallbackFraction: Float,
+    isDragging: Boolean,
+    dragAngleFraction: Float,
+    palette: com.ipodmodern.audio.ui.theme.ThemePalette,
+    modifier: Modifier = Modifier
+) {
+    val currentProgress by (progressFlow ?: remember { MutableStateFlow(PlaybackProgress()) }).collectAsState()
+    val progressFraction = if (currentProgress.durationMs > 0) {
+        (currentProgress.positionMs.toFloat() / currentProgress.durationMs.toFloat()).coerceIn(0f, 1f)
+    } else fallbackFraction.coerceIn(0f, 1f)
+
+    val displayFraction = if (isDragging) dragAngleFraction else progressFraction
+
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val strokeWidth = 5.dp.toPx()
+        val radius = (size.minDimension - strokeWidth * 3) / 2f
+
+        // Layer 2: Inactive Outer Circular Ring Track
+        drawArc(
+            color = palette.surfaceElevated,
+            startAngle = -90f,
+            sweepAngle = 360f,
+            useCenter = false,
+            topLeft = Offset(center.x - radius, center.y - radius),
+            size = Size(radius * 2, radius * 2),
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+        )
+
+        // Layer 3: Active Neon Lime Circular Progress Ring
+        val sweepAngle = 360f * displayFraction
+        if (sweepAngle > 0.5f) {
+            // Soft glow underneath the arc
+            drawArc(
+                color = palette.accentGlow,
+                startAngle = -90f,
+                sweepAngle = sweepAngle,
+                useCenter = false,
+                topLeft = Offset(center.x - radius, center.y - radius),
+                size = Size(radius * 2, radius * 2),
+                style = Stroke(width = strokeWidth + 6.dp.toPx(), cap = StrokeCap.Round)
+            )
+
+            // Crisp electric lime arc
+            drawArc(
+                color = palette.accent,
+                startAngle = -90f,
+                sweepAngle = sweepAngle,
+                useCenter = false,
+                topLeft = Offset(center.x - radius, center.y - radius),
+                size = Size(radius * 2, radius * 2),
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+
+            // Tactile Dial Thumb dot
+            val thumbAngleRad = Math.toRadians((-90f + sweepAngle).toDouble())
+            val thumbX = center.x + (radius * cos(thumbAngleRad)).toFloat()
+            val thumbY = center.y + (radius * sin(thumbAngleRad)).toFloat()
+
+            // Glow around thumb
+            drawCircle(
+                color = palette.accent.copy(alpha = 0.4f),
+                radius = 10.dp.toPx(),
+                center = Offset(thumbX, thumbY)
+            )
+            // Crisp thumb dot
+            drawCircle(
+                color = palette.accent,
+                radius = 6.dp.toPx(),
+                center = Offset(thumbX, thumbY)
+            )
+            drawCircle(
+                color = Color.White,
+                radius = 3.dp.toPx(),
+                center = Offset(thumbX, thumbY)
+            )
+        }
+
+        // Layer 4: Inner Bevel Ring
+        drawCircle(
+            color = palette.borderSubtle,
+            radius = radius - 14.dp.toPx(),
+            center = center,
+            style = Stroke(width = 1.dp.toPx())
+        )
     }
 }
 

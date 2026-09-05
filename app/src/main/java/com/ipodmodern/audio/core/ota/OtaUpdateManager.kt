@@ -52,7 +52,24 @@ class OtaUpdateManager(private val context: Context) {
     }
 
     /**
-     * Checks GitHub API for newer releases compared to CURRENT_APP_VERSION.
+     * Resolves the current version name dynamically from PackageManager.
+     */
+    fun getCurrentVersion(): String {
+        return try {
+            val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(context.packageName, 0)
+            }
+            packageInfo.versionName ?: CURRENT_APP_VERSION
+        } catch (e: Exception) {
+            CURRENT_APP_VERSION
+        }
+    }
+
+    /**
+     * Checks GitHub API for newer releases compared to installed version.
      */
     fun checkForUpdates(isManualCheck: Boolean = false) {
         if (_updateState.value is UpdateStatus.Checking || _updateState.value is UpdateStatus.Downloading) {
@@ -60,6 +77,7 @@ class OtaUpdateManager(private val context: Context) {
         }
 
         _updateState.value = UpdateStatus.Checking
+        val currentInstalledVersion = getCurrentVersion()
 
         scope.launch {
             try {
@@ -68,7 +86,7 @@ class OtaUpdateManager(private val context: Context) {
                     requestMethod = "GET"
                     connectTimeout = 12000
                     readTimeout = 12000
-                    setRequestProperty("User-Agent", "iPodModern-Audio-Android")
+                    setRequestProperty("User-Agent", "TuneHive-Music-Android")
                     setRequestProperty("Accept", "application/vnd.github.v3+json")
                 }
 
@@ -82,33 +100,42 @@ class OtaUpdateManager(private val context: Context) {
                     val bodyNotes = json.optString("body", "Bug fixes and performance improvements.")
                     val publishedAt = json.optString("published_at", "")
 
-                    // Find APK asset
+                    // Prioritize app-release.apk specifically to avoid signature mismatch
                     var apkUrl: String? = null
                     var apkSize: Long = 0L
 
                     val assetsArray = json.optJSONArray("assets")
                     if (assetsArray != null) {
+                        var bestAsset: JSONObject? = null
                         for (i in 0 until assetsArray.length()) {
                             val asset = assetsArray.getJSONObject(i)
                             val name = asset.optString("name", "")
-                            if (name.endsWith(".apk", ignoreCase = true)) {
-                                apkUrl = asset.optString("browser_download_url")
-                                apkSize = asset.optLong("size", 0L)
+                            if (name.equals("app-release.apk", ignoreCase = true)) {
+                                bestAsset = asset
                                 break
+                            } else if (bestAsset == null && name.contains("release", ignoreCase = true) && name.endsWith(".apk", ignoreCase = true)) {
+                                bestAsset = asset
+                            } else if (bestAsset == null && name.endsWith(".apk", ignoreCase = true)) {
+                                bestAsset = asset
                             }
+                        }
+
+                        if (bestAsset != null) {
+                            apkUrl = bestAsset.optString("browser_download_url")
+                            apkSize = bestAsset.optLong("size", 0L)
                         }
                     }
 
                     if (apkUrl.isNullOrBlank()) {
                         _updateState.value = if (isManualCheck) {
-                            UpdateStatus.UpToDate(CURRENT_APP_VERSION)
+                            UpdateStatus.UpToDate(currentInstalledVersion)
                         } else {
                             UpdateStatus.Idle
                         }
                         return@launch
                     }
 
-                    val isNewer = isVersionNewer(remoteVersion, CURRENT_APP_VERSION)
+                    val isNewer = isVersionNewer(remoteVersion, currentInstalledVersion)
                     if (isNewer) {
                         val updateInfo = AppUpdateInfo(
                             tagName = tagName,
@@ -121,7 +148,7 @@ class OtaUpdateManager(private val context: Context) {
                         _updateState.value = UpdateStatus.Available(updateInfo)
                     } else {
                         _updateState.value = if (isManualCheck) {
-                            UpdateStatus.UpToDate(CURRENT_APP_VERSION)
+                            UpdateStatus.UpToDate(currentInstalledVersion)
                         } else {
                             UpdateStatus.Idle
                         }
@@ -165,7 +192,7 @@ class OtaUpdateManager(private val context: Context) {
                     targetFile.delete()
                 }
 
-                // Download through redirect chain
+                // Download through redirect chain (supporting 301, 302, 303, 307, 308)
                 var currentUrl = info.downloadUrl
                 var connection: HttpURLConnection
                 var redirectCount = 0
@@ -174,20 +201,32 @@ class OtaUpdateManager(private val context: Context) {
                     val url = URL(currentUrl)
                     connection = (url.openConnection() as HttpURLConnection).apply {
                         instanceFollowRedirects = false
-                        connectTimeout = 15000
-                        readTimeout = 20000
-                        setRequestProperty("User-Agent", "iPodModern-Audio-Android")
+                        connectTimeout = 20000
+                        readTimeout = 30000
+                        setRequestProperty("User-Agent", "TuneHive-Music-Android")
+                        setRequestProperty("Accept", "application/octet-stream, application/vnd.android.package-archive")
                     }
 
                     val status = connection.responseCode
-                    if (status == HttpURLConnection.HTTP_MOVED_TEMP ||
-                        status == HttpURLConnection.HTTP_MOVED_PERM ||
-                        status == HttpURLConnection.HTTP_SEE_OTHER
-                    ) {
-                        currentUrl = connection.getHeaderField("Location")
+                    if (status in listOf(
+                        HttpURLConnection.HTTP_MOVED_PERM,
+                        HttpURLConnection.HTTP_MOVED_TEMP,
+                        HttpURLConnection.HTTP_SEE_OTHER,
+                        307, // Temporary Redirect
+                        308  // Permanent Redirect
+                    )) {
+                        val nextUrl = connection.getHeaderField("Location")
+                        if (nextUrl.isNullOrBlank()) {
+                            throw Exception("Redirect received with empty Location header")
+                        }
+                        currentUrl = nextUrl
                         redirectCount++
                         if (redirectCount > 8) throw Exception("Too many redirects")
                         continue
+                    }
+
+                    if (status != HttpURLConnection.HTTP_OK) {
+                        throw Exception("Update server returned HTTP $status (${connection.responseMessage})")
                     }
                     break
                 }
@@ -209,9 +248,9 @@ class OtaUpdateManager(private val context: Context) {
 
                             val now = System.currentTimeMillis()
                             val timeDelta = now - lastSpeedCalcTime
-                            if (timeDelta >= 400) {
+                            if (timeDelta >= 350) {
                                 val bytesDelta = downloadedBytes - lastBytesForSpeed
-                                currentSpeedBps = (bytesDelta * 1000) / timeDelta
+                                currentSpeedBps = (bytesDelta * 1000) / timeDelta.coerceAtLeast(1)
                                 lastSpeedCalcTime = now
                                 lastBytesForSpeed = downloadedBytes
 
@@ -280,6 +319,7 @@ class OtaUpdateManager(private val context: Context) {
                 setDataAndType(apkUri, "application/vnd.android.package-archive")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
             activityContext.startActivity(installIntent)
         } catch (e: Exception) {

@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,45 +62,62 @@ fun AmbientBackground(
 
     val animatedGlowColor by animateColorAsState(
         targetValue = targetGlowColor,
-        animationSpec = tween(durationMillis = 800),
+        animationSpec = tween(durationMillis = 600),
         label = "ambient_glow_anim"
     )
+
+    val primaryColors = remember(animatedGlowColor, ambientAlpha) {
+        listOf(
+            animatedGlowColor.copy(alpha = ambientAlpha),
+            animatedGlowColor.copy(alpha = ambientAlpha * 0.45f),
+            Color.Transparent
+        )
+    }
+
+    val secondaryColors = remember(animatedGlowColor, ambientAlpha) {
+        listOf(
+            animatedGlowColor.copy(alpha = ambientAlpha * 0.35f),
+            Color.Transparent
+        )
+    }
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(palette.bg)
     ) {
-        // Soft atmospheric radial glow
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val canvasW = size.width
-            val canvasH = size.height
+        // Hardware-cached atmospheric radial glow layer (zero-overhead during scroll)
+        Spacer(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer()
+                .drawBehind {
+                    val canvasW = size.width
+                    val canvasH = size.height
 
-            // Primary top-center ambient bloom
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        animatedGlowColor.copy(alpha = ambientAlpha),
-                        animatedGlowColor.copy(alpha = ambientAlpha * 0.45f),
-                        Color.Transparent
-                    ),
-                    center = Offset(canvasW * 0.5f, canvasH * 0.28f),
-                    radius = canvasW * 0.85f
-                )
-            )
+                    // Primary top-center ambient bloom
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = primaryColors,
+                            center = Offset(canvasW * 0.5f, canvasH * 0.28f),
+                            radius = canvasW * 0.85f
+                        ),
+                        radius = canvasW * 0.85f,
+                        center = Offset(canvasW * 0.5f, canvasH * 0.28f)
+                    )
 
-            // Secondary subtle bottom bloom
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        animatedGlowColor.copy(alpha = ambientAlpha * 0.35f),
-                        Color.Transparent
-                    ),
-                    center = Offset(canvasW * 0.8f, canvasH * 0.85f),
-                    radius = canvasW * 0.65f
-                )
-            )
-        }
+                    // Secondary subtle bottom bloom
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = secondaryColors,
+                            center = Offset(canvasW * 0.8f, canvasH * 0.85f),
+                            radius = canvasW * 0.65f
+                        ),
+                        radius = canvasW * 0.65f,
+                        center = Offset(canvasW * 0.8f, canvasH * 0.85f)
+                    )
+                }
+        )
 
         content()
     }
